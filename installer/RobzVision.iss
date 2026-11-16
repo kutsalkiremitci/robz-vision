@@ -58,12 +58,12 @@ LanguageDetectionMethod=none
 Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 
 [CustomMessages]
-WelcomeText=Robz Vision, oyunlardaki İngilizce altyazıları canlı olarak Türkçeye çevirir ve çeviriyi ekranınızda ve OBS yayınınızda gösterir.%n%nKurulum birkaç saniye sürer. İlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez indirilir.
 LaunchApp=Robz Vision'ı başlat
 UninstallShortcut=Robz Vision'ı kaldır
 
 [Messages]
-WelcomeLabel2=[name/ver] bilgisayarınıza kurulacak.%n%n{cm:WelcomeText}
+; Not: [Messages] içinde {cm:...} gibi sabitler açılmaz; metin doğrudan buraya yazılmalı.
+WelcomeLabel2=[name/ver] bilgisayarınıza kurulacak.%n%nRobz Vision, oyunlardaki İngilizce altyazıları canlı olarak Türkçeye çevirir; çeviriyi ekranınızda ve OBS yayınınızda gösterir.%n%nİlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez indirilir.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
