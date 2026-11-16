@@ -1,8 +1,7 @@
 <p align="center">
-  <img src="altyazitr/data/logo.png" width="120" alt="Robz Vision logosu">
+  <img src="docs/gorseller/banner.png" width="100%"
+       alt="Robz Vision: neon RV logosu ve ad; gün batımında çizgili bir güneş, sakin deniz ve palmiye siluetleri. Alt yazı: İngilizce oyun altyazılarını Türkçeye çevirir.">
 </p>
-
-<h1 align="center">Robz Vision</h1>
 
 <p align="center">
   Oyunlardaki İngilizce altyazıları ekrandan okuyup bilgisayarınızda Türkçeye çeviren,<br>
@@ -10,9 +9,11 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-MIT-2BC4AE" alt="Lisans: MIT"></a>
-  <img src="https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-3FD8EE" alt="Platform: Windows 10 / 11">
-  <img src="https://img.shields.io/badge/Python-3.12-FF4D94" alt="Python 3.12">
+  <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="https://img.shields.io/github/v/release/kutsalkiremitci/robz-vision?style=flat-square&label=s%C3%BCr%C3%BCm&labelColor=0C0B1D&color=FF4D94" alt="Son sürüm"></a>
+  <img src="https://img.shields.io/badge/Windows-10%20%2F%2011-3FD8EE?style=flat-square&labelColor=0C0B1D" alt="Windows 10 / 11">
+  <img src="https://img.shields.io/badge/Python-3.12-3FD8EE?style=flat-square&labelColor=0C0B1D" alt="Python 3.12">
+  <img src="https://img.shields.io/badge/aray%C3%BCz-T%C3%BCrk%C3%A7e-2BC4AE?style=flat-square&labelColor=0C0B1D" alt="Arayüz: Türkçe">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-MIT-2BC4AE?style=flat-square&labelColor=0C0B1D" alt="Lisans: MIT"></a>
 </p>
 
 <p align="center">
@@ -21,6 +22,14 @@
 </p>
 <p align="center"><sub>Altta oyunun İngilizce altyazısı, üstünde Robz Vision'ın çevirisi.
 Görüntü, depodaki test sahnesinden (<code>tools/test_penceresi.py</code>) alınmıştır.</sub></p>
+
+<p align="center">
+  <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="docs/gorseller/indir.png" width="186" alt="Hemen indir"></a>
+</p>
+<p align="center"><sub>Windows 10 / 11, 64 bit. Kurulum dosyası ya da taşınabilir zip; yönetici izni istemez.<br>
+Adım adım anlatım için <a href="docs/KULLANIM.md">kullanım kılavuzu</a>.</sub></p>
+
+<p align="center"><img src="docs/gorseller/ayirici.png" width="100%" alt=""></p>
 
 ## Neden?
 
@@ -54,6 +63,19 @@ PC oyunları, PS Remote Play ve Xbox uygulaması gibi uzaktan oynatma pencereler
 - **İsteğe bağlı motorlar.** Ollama ile yerel bir dil modeli, kendi anahtarınızla Google Gemini ya da DeepL.
   Önce yerel çeviri görünür, daha iyi sonuç gelince yerine geçer. Hata olursa yerel çeviriyle devam eder.
 - Global kısayollar, sistem tepsisi, çeviri önbelleği ve baştan sona Türkçe arayüz.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/gorseller/gorunum.png" alt="Görünüm sayfası: önizleme, hazır stiller ve yazı ayarları"><br>
+      <sub>Görünüm sayfası: canlı önizleme, hazır stiller ve yazı ayarları.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/gorseller/ceviri.png" alt="Çeviri sayfası: motor seçimi, yerel model durumu ve sözlük"><br>
+      <sub>Çeviri sayfası: motor seçimi, yerel model durumu ve sözlük.</sub>
+    </td>
+  </tr>
+</table>
 
 ## Nasıl çalışır
 
@@ -95,12 +117,15 @@ flowchart LR
 olması gerekir. PS Remote Play ya da Xbox uygulamasıyla uzaktan oynatabilir veya capture kartının görüntüsünü
 bir pencerede açabilirsiniz. Ayrıntılar ve OBS kurulumu için [kullanım kılavuzu](docs/KULLANIM.md).
 
+<p align="center"><img src="docs/gorseller/ayirici.png" width="100%" alt=""></p>
+
 ## Kurulum
 
-**Kurulum dosyası (önerilen).** [Releases](../../releases) sayfasından `RobzVision-Kurulum-<sürüm>.exe`
-dosyasını indirip çalıştırın ve sihirbazda **İleri**'ye basarak kurun. Yönetici izni istemez; program kendi
-kullanıcı klasörünüze kurulur, Başlat menüsüne eklenir ve *Ayarlar → Uygulamalar*'dan kaldırılabilir.
-İlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez indirilir; indirme bitince program açılır.
+**Kurulum dosyası (önerilen).** [Releases](https://github.com/kutsalkiremitci/robz-vision/releases/latest)
+sayfasından `RobzVision-Kurulum-<sürüm>.exe` dosyasını indirip çalıştırın ve sihirbazda **İleri**'ye basarak
+kurun. Yönetici izni istemez; program kendi kullanıcı klasörünüze kurulur, Başlat menüsüne eklenir ve
+*Ayarlar → Uygulamalar*'dan kaldırılabilir. İlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez
+indirilir; indirme bitince program açılır.
 
 **Taşınabilir sürüm.** `RobzVision-<sürüm>-win64.zip` dosyasını kısa bir klasöre (ör. `C:\RobzVision`)
 çıkarıp `RobzVision.exe`'yi çalıştırın.
@@ -237,6 +262,8 @@ yeniden kurulumda tekrar indirme gerekmesin diye kalır; isterseniz bu klasörle
 Hata bildirirken günlük dosyasını ekleyin: *Ayarlar → Uygulama → Günlükler* ya da
 `%LOCALAPPDATA%\RobzVision\Logs`.
 
+<p align="center"><img src="docs/gorseller/ayirici.png" width="100%" alt=""></p>
+
 ## Geliştirme
 
 ```powershell
@@ -250,7 +277,7 @@ python -m venv .venv
 |---|---|
 | `tools/test_penceresi.py` | Oyun olmadan denemek için İngilizce altyazılı sahte bir oyun penceresi |
 | `tools/arayuz_goruntusu.py` | Arayüzün tüm ekranlarını pencere açmadan PNG olarak kaydeder |
-| `tools/readme_gorselleri.py` | Bu sayfadaki görselleri `docs/gorseller/` altında yeniden üretir |
+| `tools/readme_gorselleri.py` | Bu sayfadaki görselleri (banner dahil) `docs/gorseller/` altında yeniden üretir |
 | `tools/kurulum_gorselleri.py`, `tools/logo_hazirla.py` | Kurulum sihirbazı görselleri, logo ve simge |
 | `derle.bat`, `kurulum_paketi.bat` | Taşınabilir sürüm (PyInstaller) ve kurulum dosyası (Inno Setup 6) |
 
@@ -285,7 +312,8 @@ Robz Vision bağımsız, gönüllü bir açık kaynak projedir. Rockstar Games, 
 Interactive Entertainment, Microsoft, OBS Project, Kick, Twitch, YouTube, Google veya DeepL ile bağlantılı
 değildir ve bu şirketlerce desteklenmez. Grand Theft Auto, GTA ve Rockstar Games, Take-Two Interactive
 Software, Inc.'in ticari markalarıdır; adı geçen diğer markalar da sahiplerine aittir. Bu depoda hiçbir oyuna
-ait logo veya görsel yoktur; demo görüntüleri depodaki sahte test sahnesinden üretilmiştir.
+ait logo veya görsel yoktur; demo görüntüleri depodaki sahte test sahnesinden üretilmiştir, tanıtım görseli
+(gün batımı, deniz ve palmiyeler) `tools/readme_gorselleri.py` içinde kodla çizilir.
 
 [^diller]: PlayStation'ın resmî GTA VI destek sayfasındaki dil tablosu 13 metin dili listeler (İngilizce,
 Fransızca, Almanca, İtalyanca, Japonca, Korece, Lehçe, Brezilya Portekizcesi, Rusça, Basitleştirilmiş ve
