@@ -1,0 +1,40 @@
+# Değişiklik geçmişi
+
+Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
+[Keep a Changelog](https://keepachangelog.com/tr-TR/1.1.0/)'a, sürüm numaraları
+[Anlamsal Sürümleme](https://semver.org/lang/tr/)'ye dayanır.
+
+## [Yayımlanmadı]
+
+## [1.0.0] - 2026-11-16
+
+İlk genel sürüm.
+
+### Eklendi
+
+- Ekran bölgesinden ya da belirli bir uygulama penceresinden İngilizce altyazı okuma. Pencere modu, pencere
+  başka pencerelerin arkasında kalsa da çalışır (Windows Graphics Capture).
+- Değişim algılama: altyazı değişmedikçe OCR çalışmaz; harf harf beliren altyazılar sabitlenince okunur.
+- İki OCR motoru: Windows OCR (varsayılan) ve RapidOCR (PP-OCR, ONNX).
+- Okuma temizliği: satır birleştirme, konuşmacı adını ayırma, İngilizce kelime listesiyle kalite puanı,
+  titreyen okumaları tekilleştirme ve daha temiz okuma gelince çeviriyi düzeltme.
+- Yerel ve ücretsiz çeviri: quickmt-en-tr modeli (CTranslate2, CPU). Model ilk açılışta bir kez indirilir
+  (yaklaşık 400 MB).
+- İsteğe bağlı çeviri motorları: Ollama (TranslateGemma, Gemma 4, Qwen 3.5, Hy-MT2), Google Gemini ve
+  DeepL API Free. Hibrit mod önce yerel çeviriyi gösterir; hata ya da kota sınırında yerel çeviriyle devam
+  eder.
+- Sözlük, bağlam satırları, oyun bağlamı notu ve diske kaydedilen çeviri önbelleği.
+- Ekranda taşınabilir, boyutlandırılabilir altyazı kutusu. Varsayılan olarak ekran yakalamaya girmez;
+  "Yayında da görünsün" ile OBS Ekran Yakalama'da görünür.
+- OBS Tarayıcı Kaynağı için yalnızca `127.0.0.1`'i dinleyen yerel sunucu ve WebSocket ile anlık güncelleme.
+  İsteğe bağlı olarak OBS'te İngilizce altyazının üstünü kapatma.
+- Görünüm sayfası: canlı önizleme, hazır stiller (Klasik, Sinema, Kutulu, Sarı, Minimal), yazı tipi, boyut,
+  renk, kenar, gölge, arka plan, konuşmacı rengi ve İngilizce orijinali gösterme.
+- "Ocean Drive gecesi" tasarım sistemine dayanan PySide6 arayüzü, ilk açılış tanıtım turu, global kısayollar
+  (`Ctrl+Alt+T`, `Ctrl+Alt+H`, `Ctrl+Alt+C`) ve sistem tepsisi.
+- Yönetici izni istemeyen Inno Setup kurulum sihirbazı ve taşınabilir zip. Etiket gönderildiğinde GitHub
+  Actions ile derleme ve Releases'e yükleme.
+- Eski "AltyazıTR" adıyla oluşturulmuş ayarlar ve indirilmiş model ilk açılışta yeni klasörlere taşınır.
+
+[Yayımlanmadı]: ../../compare/v1.0.0...HEAD
+[1.0.0]: ../../releases/tag/v1.0.0

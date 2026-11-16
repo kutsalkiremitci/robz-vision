@@ -1,0 +1,44 @@
+name: Öneri
+description: Yeni bir özellik, oyuna özel ayar ya da belge önerisi.
+title: "[Öneri] "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: tur
+    attributes:
+      label: Tür
+      options:
+        - Yeni özellik
+        - Oyuna özel ayar veya ipucu
+        - Arayüz ve kullanım kolaylığı
+        - Çeviri kalitesi
+        - Belge
+    validations:
+      required: true
+
+  - type: textarea
+    id: oneri
+    attributes:
+      label: Öneriniz
+      description: Hangi sorunu çözüyor? Nasıl çalışmasını istersiniz?
+    validations:
+      required: true
+
+  - type: textarea
+    id: oyun-ayari
+    attributes:
+      label: Oyuna özel ayar (yalnızca bu türde)
+      description: Bir oyunda iyi çalışan ayarları paylaşıyorsanız doldurun.
+      placeholder: |
+        Oyun ve platform: GTA VI, PS5, capture kartı + OBS Pencereli Projektör
+        Oyun içi altyazı ayarları: büyük boy, arka plan açık
+        Okuma yöntemi ve bölge: Uygulama penceresi, ekranın alt %20'si
+        OCR motoru: Windows OCR
+        Parlaklık eşiği / Algılama / Kararlılık: 140 / Akıllı / 3 kare
+        Sözlüğe eklenenler: Lucia, Jason, Vice City, Leonida
+
+  - type: textarea
+    id: ek
+    attributes:
+      label: Ek bilgi
+      description: Ekran görüntüsü, örnek altyazı, benzer bir araçtaki çözüm… Kişisel bilgi paylaşmayın.

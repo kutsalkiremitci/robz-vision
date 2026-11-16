@@ -1,0 +1,115 @@
+name: Hata bildirimi
+description: Bir şey beklendiği gibi çalışmıyor.
+title: "[Hata] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bildirmeden önce README'deki **SSS ve sorun giderme** bölümüne bakın; çoğu sorunun çözümü orada.
+
+        Paylaştığınız günlükte ve ekran görüntülerinde kişisel bilgi (sohbet, ad, telefon numarası) ya da
+        API anahtarı olmadığından emin olun. `ayarlar.json` dosyasını eklemeyin.
+
+  - type: input
+    id: surum
+    attributes:
+      label: Robz Vision sürümü
+      description: Ayarlar → Uygulama → Sürüm, ya da kenar çubuğunun altı.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kurulum
+    attributes:
+      label: Kurulum türü
+      options:
+        - Kurulum dosyası (RobzVision-Kurulum-….exe)
+        - Taşınabilir zip
+        - Kaynak koddan
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows sürümü
+      description: Ayarlar → Sistem → Hakkında.
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+
+  - type: input
+    id: oyun
+    attributes:
+      label: Oyun ve platform
+      description: Oyunu nasıl oynuyorsunuz? PC, uzaktan oynatma, capture kartı…
+      placeholder: "GTA VI, PS5, PS Remote Play"
+
+  - type: dropdown
+    id: okuma
+    attributes:
+      label: Okuma yöntemi
+      options:
+        - Ekran bölgesi
+        - Uygulama penceresi
+
+  - type: dropdown
+    id: ocr
+    attributes:
+      label: OCR motoru
+      options:
+        - Windows OCR
+        - RapidOCR
+
+  - type: dropdown
+    id: ceviri
+    attributes:
+      label: Çeviri motoru
+      options:
+        - Yerel (quickmt)
+        - Ollama
+        - Google Gemini
+        - DeepL
+        - Çeviri yok
+
+  - type: textarea
+    id: ne-oldu
+    attributes:
+      label: Ne oldu?
+      description: Gördüğünüz hata mesajını olduğu gibi yazın.
+    validations:
+      required: true
+
+  - type: textarea
+    id: beklenen
+    attributes:
+      label: Ne bekliyordunuz?
+
+  - type: textarea
+    id: adimlar
+    attributes:
+      label: Nasıl tekrarlanır?
+      placeholder: |
+        1. Bölge seç ile altyazı alanını seçtim
+        2. Başlat'a bastım
+        3. …
+
+  - type: textarea
+    id: gunluk
+    attributes:
+      label: Günlük dosyası ve ekran görüntüsü
+      description: |
+        Günlük: `%LOCALAPPDATA%\RobzVision\Logs` klasöründeki en son dosya (Ayarlar → Uygulama → Günlükler).
+        Dosyayı buraya sürükleyip bırakabilirsiniz. Ekran görüntüsünde yalnızca altyazı bölgesi görünsün.
+
+  - type: checkboxes
+    id: kontrol
+    attributes:
+      label: Kontrol
+      options:
+        - label: README'deki SSS bölümüne baktım.
+          required: true
+        - label: Eklediğim dosyalarda kişisel bilgi ya da API anahtarı yok.
+          required: true
