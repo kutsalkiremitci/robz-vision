@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Robz Vision altyazı</title>
+<style>
+  :root {
+    --font: 'Segoe UI', Arial, sans-serif;
+    --size: 4.074vh;
+    --weight: 700;
+    --color: #ffffff;
+    --stroke: 0.556vh;
+    --stroke-color: #000000;
+    --shadow: 0 0.315vh 0.926vh rgba(0,0,0,.85);
+    --bg: rgba(0,0,0,.45);
+    --speaker: #ffd54a;
+    --bottom: 8vh;
+    --maxw: 80vw;
+    --fade: 180ms;
+    --orig-size: .55em;
+    --orig-display: none;
+    --mask: rgba(16,16,16,.92);
+  }
+  html, body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh;
+    background: transparent; overflow: hidden;
+  }
+  #mask {
+    position: absolute; display: none; background: var(--mask);
+    border-radius: .6vh; filter: blur(.4vh);
+    transition: opacity var(--fade) ease; opacity: 0;
+  }
+  #mask.on { opacity: 1; }
+  #wrap {
+    position: absolute; left: 0; right: 0; bottom: var(--bottom);
+    display: flex; justify-content: center; pointer-events: none;
+  }
+  #box {
+    font-size: var(--size);
+    max-width: var(--maxw);
+    padding: .18em .6em .22em;
+    border-radius: .35em;
+    background: var(--bg);
+    text-align: center;
+    opacity: 0;
+    transform: translateY(.25em);
+    transition: opacity var(--fade) ease, transform var(--fade) ease;
+  }
+  #box.on { opacity: 1; transform: none; }
+  #text {
+    font-family: var(--font);
+    font-size: 1em;
+    font-weight: var(--weight);
+    line-height: 1.28;
+    color: var(--color);
+    -webkit-text-stroke: var(--stroke) var(--stroke-color);
+    paint-order: stroke fill;
+    text-shadow: var(--shadow);
+    white-space: pre-line;
+    overflow-wrap: break-word;
+    text-wrap: balance;
+  }
+  #speaker { color: var(--speaker); }
+  #orig {
+    display: var(--orig-display);
+    font-family: var(--font);
+    font-size: var(--orig-size);
+    font-weight: 600;
+    color: rgba(255,255,255,.82);
+    -webkit-text-stroke: calc(var(--stroke) * .6) var(--stroke-color);
+    paint-order: stroke fill;
+    margin-top: .15em;
+  }
+  #status {
+    position: absolute; top: 1vh; left: 1vh; font: 600 1.6vh 'Segoe UI', Arial, sans-serif;
+    color: #fff; background: rgba(200,40,40,.85); padding: .3vh .8vh; border-radius: .5vh;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div id="mask"></div>
+<div id="wrap"><div id="box"><div id="text"><span id="speaker"></span><span id="line"></span></div><div id="orig"></div></div></div>
+<div id="status">Robz Vision bağlantısı yok</div>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const box = $('box'), line = $('line'), speaker = $('speaker'), orig = $('orig');
+  const mask = $('mask'), status = $('status'), css = document.documentElement.style;
+  const params = new URLSearchParams(location.search);
+  const host = location.protocol === 'http:' ? location.host : '127.0.0.1:8765';
+  const WS = `ws://${host}/ws`;
+  let delay = 300, hideTimer = null, everConnected = false;
+
+  function showSub(m) {
+    if (m.text) {
+      clearTimeout(hideTimer);
+      speaker.textContent = m.speaker ? m.speaker + ': ' : '';
+      line.textContent = m.text;
+      orig.textContent = m.original || '';
+      box.classList.add('on');
+    } else {
+      box.classList.remove('on');
+    }
+  }
+
+  function showMask(r) {
+    if (!r) { mask.classList.remove('on'); return; }
+    Object.assign(mask.style, {
+      display: 'block', left: (r[0] * 100) + 'vw', top: (r[1] * 100) + 'vh',
+      width: (r[2] * 100) + 'vw', height: (r[3] * 100) + 'vh'
+    });
+    requestAnimationFrame(() => mask.classList.add('on'));
+  }
+
+  function connect() {
+    let ws;
+    try { ws = new WebSocket(WS); } catch (e) { setTimeout(connect, delay); return; }
+    ws.onopen = () => { delay = 300; everConnected = true; status.style.display = 'none'; };
+    ws.onmessage = (e) => {
+      let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+      if (m.type === 'sub') showSub(m);
+      else if (m.type === 'style') { for (const [k, v] of Object.entries(m.vars || {})) css.setProperty('--' + k, v); }
+      else if (m.type === 'mask') showMask(m.rect);
+    };
+    ws.onclose = () => {
+      // Uygulama kapanırsa ekranda eski yazı kalmasın
+      box.classList.remove('on'); mask.classList.remove('on');
+      if (everConnected && params.has('durum')) status.style.display = 'block';
+      setTimeout(connect, delay);
+      delay = Math.min(delay * 2, 4000);
+    };
+  }
+
+  if (params.has('ornek')) {
+    showSub({text: 'Şimdi İstanbul\'a dönüyoruz — ğüşıöç ĞÜŞİÖÇ', speaker: 'LUCIA', original: 'We are heading back now.'});
+  }
+  connect();
+})();
+</script>
+</body>
+</html>

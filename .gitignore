@@ -1,0 +1,37 @@
+# Sanal ortamlar
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Derleme çıktıları (PyInstaller, Inno Setup, GitHub Actions zip'i)
+build/
+dist/
+RobzVision-*-win64.zip
+
+# Günlükler ve geçici dosyalar
+*.log
+logs/
+*.tmp
+*.bak
+.tv/
+arayuz_goruntuleri/
+
+# Editör ve işletim sistemi
+.idea/
+.vscode/
+.claude/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Not: installer/*.bmp, assets/robzvision.ico, altyazitr/data/* ve docs/gorseller/* bilerek depodadır.

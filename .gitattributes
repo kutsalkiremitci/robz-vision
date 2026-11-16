@@ -1,0 +1,9 @@
+# Windows betikleri CRLF satır sonlarıyla kalmalı (cmd.exe LF ile bazen hatalı çalışır)
+*.bat text eol=crlf
+*.iss text eol=crlf
+# İkili dosyalar
+*.png binary
+*.jpg binary
+*.ico binary
+*.bmp binary
+*.gif binary

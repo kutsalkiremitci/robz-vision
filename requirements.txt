@@ -1,0 +1,28 @@
+# Robz Vision çalışma zamanı bağımlılıkları (Windows 10 2004+ / Windows 11, Python 3.11-3.13)
+PySide6-Essentials>=6.8,<7
+numpy>=1.26
+opencv-python>=4.10
+windows-capture>=2.0
+mss>=10.0
+rapidfuzz>=3.9
+platformdirs>=4.0
+aiohttp>=3.10
+requests>=2.31
+
+# Çeviri (yerel, ücretsiz)
+ctranslate2>=4.5
+sentencepiece>=0.2
+huggingface_hub>=0.30
+
+# OCR: Windows'un yerleşik OCR'ı (pywinrt)
+winrt-runtime>=3.0
+winrt-Windows.Foundation>=3.0
+winrt-Windows.Foundation.Collections>=3.0
+winrt-Windows.Globalization>=3.0
+winrt-Windows.Graphics.Imaging>=3.0
+winrt-Windows.Media.Ocr>=3.0
+winrt-Windows.Storage.Streams>=3.0
+
+# OCR: alternatif motor (RapidOCR + PP-OCRv6, ONNX)
+rapidocr>=3.9
+onnxruntime>=1.20
