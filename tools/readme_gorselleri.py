@@ -5,7 +5,9 @@ Kullanım:  python tools/readme_gorselleri.py [banner] [demo] [arayuz]
 
 Çıktı:
   banner.png          1280×640 tanıtım görseli; GitHub "Social preview" olarak da yüklenebilir
-  demo.gif            sahte oyun sahnesi: İngilizce altyazı → Türkçe çeviri kutusu (döngü)
+  ayirici.png         README bölümleri arasındaki ince ufuk çizgisi (saydam zemin)
+  indir.png           README'deki "Hemen indir" düğmesi (2x çözünürlük, saydam köşeler)
+  demo.gif           sahte oyun sahnesi: İngilizce altyazı → Türkçe çeviri kutusu (döngü)
   demo_once.png       aynı sahnenin çevirisiz hâli
   demo_sonra.png      aynı sahnenin çevirili hâli
   ana_pencere.png     Ana sayfa              (tools/arayuz_goruntusu.py çıktısından)
@@ -27,7 +29,9 @@ from __future__ import annotations
 
 import contextlib
 import io
+import math
 import os
+import random
 import runpy
 import subprocess
 import sys
@@ -199,95 +203,421 @@ def demo() -> None:
     _save_png(_to_pil(demo_kare(1280, 720, idx, True, (speaker, tr))), OUT / "demo_sonra.png")
 
 
-# --- banner ---------------------------------------------------------------------------------------------
-def banner() -> None:
-    from PySide6.QtCore import QPointF, QRectF
-    from PySide6.QtGui import QColor, QFont, QFontMetricsF, QImage, QLinearGradient, QPainter, QRadialGradient
+# --- banner, bölüm ayırıcı ve indirme düğmesi -----------------------------------------------------------
+# Vice City / GTA VI esintili bir gün batımı; yalnızca esin. Oyunların logosu, yazı tipi ya da görselleri
+# kullanılmaz: gökyüzü, çizgili güneş, deniz ve palmiyeler burada QPainter ile çizilir, marka işareti
+# projenin kendi logosudur (altyazitr/data/logo.png). Token'lara ek olarak kullanılan tonlar logodan alındı.
+BANNER_W, BANNER_H = 1280, 640
+UFUK = 446                                   # ufuk çizgisinin y'si
+GOK = ((0.0, "#0C0B1D"), (0.40, "#181040"), (0.70, "#2F1458"), (0.88, "#521A69"), (1.0, "#7C2170"))
+GUNES = ((0.0, "#FFE27A"), (0.50, "#FF9A5C"), (1.0, "#FF4D94"))   # logodaki V: sarı → turuncu → pembe
+DENIZ = ((0.0, "#1B1142"), (0.35, "#120D30"), (1.0, "#0A0918"))
+PALMIYE_ON = "#07051A"                       # öndeki palmiyeler
+PALMIYE_ARKA = "#1A0F38"                     # uzaktaki palmiye (pusla açılır)
+SLOGAN = "İngilizce oyun altyazılarını Türkçeye çevirir."
 
-    from altyazitr.config import StyleCfg
+
+def _pil_to_qimage(im):
+    from PySide6.QtGui import QImage
+
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    out = QImage()
+    out.loadFromData(buf.getvalue(), "PNG")
+    return out.convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
+
+
+def _isilti(w: int, h: int, ciz, renk: str, yaricap: float, opaklik: float):
+    """ciz(painter, renk) ile çizilen şeklin bulanık, tek renkli ışıltı katmanı (neon parlaması).
+
+    Bulanıklık yalnız maskeye uygulanır; böylece saydam kenarlarda koyu saçak oluşmaz."""
+    from PIL import Image, ImageFilter
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QColor, QImage, QPainter
+
+    maske = QImage(w, h, QImage.Format.Format_RGB32)
+    maske.fill(Qt.GlobalColor.black)
+    p = QPainter(maske)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    ciz(p, QColor("white"))
+    p.end()
+    a = _to_pil(maske).convert("L").filter(ImageFilter.GaussianBlur(yaricap))
+    a = a.point(lambda v: min(255, round(v * opaklik)))
+    c = QColor(renk)
+    katman = Image.new("RGBA", (w, h), (c.red(), c.green(), c.blue(), 0))
+    katman.putalpha(a)
+    return _pil_to_qimage(katman)
+
+
+def _gecis_rengi(duraklar, t: float):
+    from PySide6.QtGui import QColor
+
+    t = max(0.0, min(1.0, t))
+    for (t0, c0), (t1, c1) in zip(duraklar, duraklar[1:]):
+        if t <= t1:
+            a, b = QColor(c0), QColor(c1)
+            k = 0.0 if t1 == t0 else (t - t0) / (t1 - t0)
+            return QColor.fromRgbF(a.redF() + (b.redF() - a.redF()) * k, a.greenF() + (b.greenF() - a.greenF()) * k,
+                                   a.blueF() + (b.blueF() - a.blueF()) * k)
+    return QColor(duraklar[-1][1])
+
+
+def _dogrusal(x0, y0, x1, y1, duraklar):
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QColor, QLinearGradient
+
+    g = QLinearGradient(QPointF(x0, y0), QPointF(x1, y1))
+    for t, c in duraklar:
+        g.setColorAt(t, QColor(c) if isinstance(c, str) else c)
+    return g
+
+
+def _renk(hex_renk: str, alfa: float):
+    from PySide6.QtGui import QColor
+
+    c = QColor(hex_renk)
+    c.setAlphaF(max(0.0, min(1.0, alfa)))
+    return c
+
+
+def _gunes_yolu(cx: float, cy: float, r: float, ufuk: float):
+    """Retro güneş: ufukta kesilen daire; alt yarısında aşağı doğru kalınlaşan yatay boşluklar."""
+    from PySide6.QtCore import QPointF, QRectF
+    from PySide6.QtGui import QPainterPath
+
+    yol = QPainterPath()
+    yol.addEllipse(QPointF(cx, cy), r, r)
+    ust = QPainterPath()
+    ust.addRect(QRectF(cx - r - 2, cy - r - 2, 2 * r + 4, ufuk - (cy - r) + 2))
+    yol = yol.intersected(ust)
+    y0, n = cy - r * 0.40, 7
+    adim = (ufuk - y0) / n
+    for i in range(n):
+        kalinlik = 2.0 + i * 1.6
+        bosluk = QPainterPath()
+        bosluk.addRect(QRectF(cx - r - 2, y0 + adim * (i + 0.55) - kalinlik / 2, 2 * r + 4, kalinlik))
+        yol = yol.subtracted(bosluk)
+    return yol
+
+
+def _bezier(p0, c, p1, t: float):
+    u = 1 - t
+    return (u * u * p0[0] + 2 * u * t * c[0] + t * t * p1[0], u * u * p0[1] + 2 * u * t * c[1] + t * t * p1[1])
+
+
+def _bezier_teget(p0, c, p1, t: float):
+    dx = 2 * (1 - t) * (c[0] - p0[0]) + 2 * t * (p1[0] - c[0])
+    dy = 2 * (1 - t) * (c[1] - p0[1]) + 2 * t * (p1[1] - c[1])
+    n = math.hypot(dx, dy) or 1.0
+    return dx / n, dy / n
+
+
+def _cokgen(noktalar):
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QPainterPath, QPolygonF
+
+    yol = QPainterPath()
+    yol.addPolygon(QPolygonF([QPointF(x, y) for x, y in noktalar]))
+    yol.closeSubpath()
+    return yol
+
+
+def _yaprak(tepe, aci: float, boy: float, sarkma: float):
+    """Tek palmiye yaprağı: kavisli ana damar boyunca, uca doğru incelen tırtıklı yaprakçıklar."""
+    ca, sa = math.cos(math.radians(aci)), math.sin(math.radians(aci))
+    p0 = tepe
+    c = (tepe[0] + ca * boy * 0.55, tepe[1] + sa * boy * 0.55 - boy * 0.16)
+    p1 = (tepe[0] + ca * boy, tepe[1] + sa * boy + boy * sarkma)
+    genislik = boy * 0.19
+    n = 15
+    sol, sag = [], []
+    for i in range(1, n + 1):
+        t = i / (n + 1)
+        x, y = _bezier(p0, c, p1, t)
+        tx, ty = _bezier_teget(p0, c, p1, t)
+        nx, ny = -ty, tx
+        w = genislik * math.sin(math.pi * t ** 0.8) * (1.05 - 0.4 * t)
+        for yon, liste in ((1, sol), (-1, sag)):
+            asagi = (ny * yon) > 0  # yere bakan taraf: yaprakçıklar daha uzun sarkar
+            k = 1.3 if asagi else 0.72
+            uc = (x + nx * yon * w * k - tx * w * 0.55, y + ny * yon * w * k - ty * w * 0.55 + w * 0.45)
+            xm, ym = _bezier(p0, c, p1, t + 0.5 / (n + 1))
+            girinti = (xm + nx * yon * w * 0.14, ym + ny * yon * w * 0.14)
+            liste += [uc, girinti]
+    return _cokgen([p0] + sol + [p1] + sag[::-1])
+
+
+# (açı°, boy oranı): 0° sağ, -90° yukarı, +90° aşağı (ekran koordinatı)
+YAPRAKLAR = ((-176, 1.0), (-150, 1.06), (-124, 0.92), (-98, 0.78), (-74, 0.86), (-46, 1.0), (-16, 1.06),
+             (14, 0.96), (166, 0.96), (52, 0.72), (128, 0.72))
+
+
+def _palmiye(p, taban: tuple[float, float], boy: float, egim: float, tac: float, renk: str, yapraklar=YAPRAKLAR):
+    """Palmiye silueti: kavisli, yukarı doğru incelen boğumlu gövde, yelpaze tacı ve hindistancevizleri."""
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QColor, QPainterPath
+
+    tepe = (taban[0] + egim * boy, taban[1] - boy)
+    kontrol = (taban[0] + egim * boy * 0.12, taban[1] - boy * 0.62)
+    n = 90
+    sol, sag = [], []
+    for i in range(n + 1):
+        t = i / n
+        x, y = _bezier(taban, kontrol, tepe, t)
+        tx, ty = _bezier_teget(taban, kontrol, tepe, t)
+        w = boy * (0.040 * (1 - t) + 0.020 * t)
+        if (t * boy / 15.0) % 1.0 < 0.22:  # gövde boğumları
+            w *= 1.12
+        sol.append((x - ty * w / 2, y + tx * w / 2))
+        sag.append((x + ty * w / 2, y - tx * w / 2))
+    yol = _cokgen(sol + sag[::-1])
+    for aci, oran in yapraklar:
+        yatay = math.cos(math.radians(aci)) ** 2
+        yol = yol.united(_yaprak(tepe, aci, tac * oran, 0.12 + 0.30 * yatay))
+    for dx, dy in ((-0.05, 0.05), (0.03, 0.06), (-0.01, 0.10)):
+        hc = QPainterPath()
+        hc.addEllipse(QPointF(tepe[0] + dx * tac, tepe[1] + dy * tac), tac * 0.042, tac * 0.042)
+        yol = yol.united(hc)
+    p.fillPath(yol, QColor(renk))
+
+
+def _baslik_yolu(font, x: float, taban: float, metin: str):
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QPainterPath
+
+    yol = QPainterPath()
+    yol.addText(QPointF(x, taban), font, metin)
+    return yol
+
+
+def banner_ciz(W: int = BANNER_W, H: int = BANNER_H):
+    """1280×640 tanıtım görseli (QImage). Ayrıca GitHub "Social preview" olarak yüklenebilir."""
+    from PySide6.QtCore import QPointF, QRectF, Qt
+    from PySide6.QtGui import QFont, QFontMetricsF, QImage, QPainter, QRadialGradient
+
     from altyazitr.gui.tokens import C, F
-    from altyazitr.render import make_font, paint_subtitle
+
+    _qt_app()
+    img = QImage(W, H, QImage.Format.Format_ARGB32_Premultiplied)
+    p = QPainter(img)
+    for hint in (QPainter.RenderHint.Antialiasing, QPainter.RenderHint.SmoothPixmapTransform,
+                 QPainter.RenderHint.TextAntialiasing):
+        p.setRenderHint(hint)
+
+    # yazı ölçüleri önce: güneş, yazı bloğunun sağında kalacak biçimde yerleşir
+    baslik = QFont()
+    baslik.setFamilies([F.DISPLAY_SEMIBOLD, F.DISPLAY, F.BODY_FALLBACK])
+    baslik.setPixelSize(92)
+    bfm = QFontMetricsF(baslik)
+    slogan = QFont()
+    slogan.setFamilies([F.BODY, F.BODY_FALLBACK])
+    slogan.setPixelSize(26)
+    sfm = QFontMetricsF(slogan)
+
+    logo_kenar = 208
+    lx, merkez_y = 86, 292
+    ly = merkez_y - logo_kenar / 2
+    tx = lx + logo_kenar + 52
+    bosluk = 26
+    blok_h = bfm.capHeight() + bosluk + sfm.ascent() + sfm.descent()
+    baslik_taban = merkez_y - blok_h / 2 + bfm.capHeight()
+    slogan_taban = baslik_taban + bosluk + sfm.ascent()
+    yazi_sag = tx + max(bfm.horizontalAdvance("Robz Vision"), sfm.horizontalAdvance(SLOGAN))
+
+    R = 168
+    sx, sy = max(1050.0, yazi_sag + R + 60), UFUK - 40
+
+    # gökyüzü
+    p.fillRect(QRectF(0, 0, W, UFUK), _dogrusal(0, 0, 0, UFUK, GOK))
+    # güneşin çevresindeki sıcak hava: ufka basık, geniş bir pembe-turuncu hale
+    p.save()
+    p.translate(sx, UFUK)
+    p.scale(1.0, 0.5)
+    hale = QRadialGradient(QPointF(0, 0), 720)
+    for t, c, a in ((0.0, "#FF7A6B", 0.70), (0.30, "#FF4D94", 0.38), (0.62, "#9A2A8C", 0.14), (1.0, "#4A1A63", 0.0)):
+        hale.setColorAt(t, _renk(c, a))
+    p.fillRect(QRectF(-W * 2, -UFUK * 2 - 10, W * 4, UFUK * 2 + 10), hale)
+    p.restore()
+    # ufkun hemen üstünde ince ılık pus
+    p.fillRect(QRectF(0, UFUK - 70, W, 70),
+               _dogrusal(0, UFUK - 70, 0, UFUK, ((0.0, _renk("#FF6F8E", 0.0)), (1.0, _renk("#FF6F8E", 0.22)))))
+
+    # yıldızlar: yalnızca gökyüzünün koyu üst kısmında, seyrek ve soluk
+    rng = random.Random(1987)
+    p.setPen(Qt.PenStyle.NoPen)
+    for _ in range(70):
+        x, y = rng.uniform(0, W), rng.uniform(0, UFUK * 0.48)
+        if lx - 30 < x < lx + logo_kenar + 30 and y > ly - 30:
+            continue
+        alfa = rng.uniform(0.18, 0.62) * (1 - y / (UFUK * 0.55))
+        r = rng.choice((0.7, 0.9, 1.1, 1.4))
+        p.setBrush(_renk(C.TEXT, alfa))
+        p.drawEllipse(QPointF(x, y), r, r)
+
+    # güneş: arkasında yumuşak parlama, sonra çizgili disk
+    gunes = _gunes_yolu(sx, sy, R, UFUK)
+    p.drawImage(0, 0, _isilti(W, H, lambda q, c: q.fillPath(gunes, c), "#FF6A88", 38, 0.55))
+    p.fillPath(gunes, _dogrusal(0, sy - R, 0, UFUK, GUNES))
+
+    # deniz
+    p.fillRect(QRectF(0, UFUK, W, H - UFUK), _dogrusal(0, UFUK, 0, H, DENIZ))
+    p.save()
+    p.translate(sx, UFUK)
+    p.scale(1.0, 0.28)
+    yansima = QRadialGradient(QPointF(0, 0), 560)
+    for t, c, a in ((0.0, "#FF5C8A", 0.42), (0.45, "#C0307F", 0.14), (1.0, "#4A1A63", 0.0)):
+        yansima.setColorAt(t, _renk(c, a))
+    p.fillRect(QRectF(-W * 2, 0, W * 4, (H - UFUK) * 4), yansima)
+    p.restore()
+    # su yüzeyi: perspektifte sıklaşan, kesik kesik soluk çizgiler
+    rng = random.Random(42)
+    for j in range(1, 17):
+        d = (j / 17) ** 1.6
+        y = UFUK + 4 + d * (H - UFUK - 6)
+        x = rng.uniform(-80, 40)
+        while x < W:
+            uzun = rng.uniform(40, 220) * (0.6 + d)
+            p.fillRect(QRectF(x, y, uzun, 1.0 + d * 1.2), _renk("#8E7BD6", 0.05 + 0.07 * (1 - d)))
+            x += uzun + rng.uniform(30, 160)
+    # güneşin denizdeki yansıması: uzaklaştıkça kısalan, aralığı açılan çizgiler
+    rng = random.Random(7)
+    y = UFUK + 5.0
+    while y < H:
+        d = (y - UFUK) / (H - UFUK)
+        yari = R * (0.92 - 0.62 * d) * rng.uniform(0.78, 1.08)
+        kalin = 1.6 + 3.6 * d
+        renk = _gecis_rengi(GUNES, 1.0 - min(1.0, d * 1.25))
+        renk.setAlphaF(max(0.0, 0.85 * (1 - d) ** 1.4))
+        x0, x1 = sx - yari, sx + yari
+        kesik = rng.uniform(0.25, 0.75)
+        orta = x0 + (x1 - x0) * kesik
+        acik = rng.uniform(4, 14) * (0.4 + d)
+        p.fillRect(QRectF(x0, y, orta - acik / 2 - x0, kalin), renk)
+        p.fillRect(QRectF(orta + acik / 2, y, x1 - orta - acik / 2, kalin), renk)
+        y += kalin + 3.5 + 13 * d
+
+    # neon ufuk çizgisi (camgöbeği), hafif parlamayla
+    ufuk_yolu = _cokgen(((0, UFUK - 1), (W, UFUK - 1), (W, UFUK + 1), (0, UFUK + 1)))
+    p.drawImage(0, 0, _isilti(W, H, lambda q, c: q.fillPath(ufuk_yolu, c), C.CYAN, 5, 0.9))
+    p.fillRect(QRectF(0, UFUK - 0.75, W, 1.5),
+               _dogrusal(0, 0, W, 0, ((0.0, _renk(C.CYAN, 0.55)), (0.5, _renk(C.CYAN, 0.95)),
+                                      (1.0, _renk(C.CYAN, 0.55)))))
+
+    # palmiyeler: kenarlarda; sağdaki uzak palmiye güneşin önünde
+    _palmiye(p, (1140, H + 60), 360, 0.10, 118, PALMIYE_ARKA)
+    _palmiye(p, (1322, H + 70), 660, -0.17, 176, PALMIYE_ON)
+    _palmiye(p, (-34, H + 70), 640, 0.11, 168, PALMIYE_ON,
+             yapraklar=((-150, 1.0), (-118, 0.9), (-92, 0.8), (-62, 0.92), (-34, 1.06), (-6, 1.08),
+                        (22, 0.96), (56, 0.74), (150, 0.8)))
+
+    # logo: kendi renkleriyle, üstüne çerçeve/gölge eklenmeden
+    logo = QImage(str(ROOT / "altyazitr" / "data" / "logo.png"))
+    p.drawImage(QRectF(lx, ly, logo_kenar, logo_kenar), logo)
+
+    # ad: Bahnschrift SemiBold, beyazdan açık pembeye; arkasında pembe neon parlaması
+    ad = _baslik_yolu(baslik, tx - 3, baslik_taban, "Robz Vision")
+    p.drawImage(0, 0, _isilti(W, H, lambda q, c: q.fillPath(ad, c), C.PINK, 14, 0.85))
+    p.drawImage(0, 0, _isilti(W, H, lambda q, c: q.fillPath(ad, c), "#FF7AB0", 3, 0.55))
+    p.fillPath(ad, _dogrusal(0, baslik_taban - bfm.capHeight(), 0, baslik_taban,
+                             ((0.0, "#FFFFFF"), (1.0, "#FFDCEB"))))
+    p.setFont(slogan)
+    p.setPen(_renk(C.TEXT, 0.86))
+    p.drawText(QPointF(tx, slogan_taban), SLOGAN)
+    p.end()
+    return img.convertToFormat(QImage.Format.Format_RGB32)
+
+
+def ayirici_ciz(W: int = 1280, H: int = 24):
+    """Bölüm ayırıcı: uçlarda sönen camgöbeği, ortada pembe-turuncu ince ufuk çizgisi (saydam zemin)."""
+    from PySide6.QtCore import QRectF, Qt
+    from PySide6.QtGui import QImage, QPainter
+
+    from altyazitr.gui.tokens import C
+
+    _qt_app()
+    img = QImage(W, H, QImage.Format.Format_ARGB32_Premultiplied)
+    img.fill(Qt.GlobalColor.transparent)
+    p = QPainter(img)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    y = H / 2
+    duraklar = ((0.0, _renk(C.CYAN, 0.0)), (0.22, _renk(C.CYAN, 0.85)), (0.42, _renk(C.PINK, 1.0)),
+                (0.5, _renk(C.ORANGE, 1.0)), (0.58, _renk(C.PINK, 1.0)), (0.78, _renk(C.CYAN, 0.85)),
+                (1.0, _renk(C.CYAN, 0.0)))
+    # parlama yalnızca çizginin göründüğü yerde: ortada pembe, yanlarda daha soluk camgöbeği
+    for renk, profil in ((C.PINK, ((0.24, 0.0), (0.5, 1.0), (0.76, 0.0))),
+                         (C.CYAN, ((0.04, 0.0), (0.24, 0.8), (0.42, 0.0), (0.58, 0.0), (0.76, 0.8), (0.96, 0.0)))):
+        maske = _dogrusal(0, 0, W, 0, tuple((t, _renk("#FFFFFF", a)) for t, a in profil))
+        cizim = lambda q, _c, m=maske: q.fillRect(QRectF(0, y - 1, W, 2), m)  # noqa: E731
+        p.drawImage(0, 0, _isilti(W, H, cizim, renk, 3.5, 0.75))
+    p.fillRect(QRectF(0, y - 1, W, 2), _dogrusal(0, 0, W, 0, duraklar))
+    p.end()
+    return img
+
+
+def indir_dugmesi_ciz(olcek: int = 2):
+    """README'deki "Hemen indir" düğmesi: uygulamanın birincil düğmesi gibi pembe dolgu, koyu yazı, indirme ikonu.
+
+    `olcek` kat çözünürlükte çizilir; README'de mantıksal genişlikle (img width) gösterilir."""
+    from PySide6.QtCore import QPointF, QRectF, Qt
+    from PySide6.QtGui import QColor, QFont, QFontMetricsF, QImage, QPainter, QPainterPath, QPen
+
+    from altyazitr.gui.tokens import C, F
+
+    _qt_app()
+    font = QFont()
+    font.setFamilies([F.DISPLAY_SEMIBOLD, F.DISPLAY, F.BODY_FALLBACK])
+    font.setPixelSize(20 * olcek)
+    fm = QFontMetricsF(font)
+    metin = "Hemen indir"
+    ikon, ara, yan = 20 * olcek, 10 * olcek, 24 * olcek
+    W = int(yan + ikon + ara + fm.horizontalAdvance(metin) + yan)
+    H = 52 * olcek
+    img = QImage(W, H, QImage.Format.Format_ARGB32_Premultiplied)
+    img.fill(Qt.GlobalColor.transparent)
+    p = QPainter(img)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+    zemin = QPainterPath()
+    zemin.addRoundedRect(QRectF(0, 0, W, H), 6 * olcek, 6 * olcek)  # DESIGN.md: düğmeler 6 px
+    p.fillPath(zemin, QColor(C.PINK))
+    # indirme ikonu: uygulamanın ikon setiyle aynı dil (24 birim ızgara, 1.75 çizgi, yuvarlak uç)
+    k = ikon / 24
+    ox, oy = yan, (H - ikon) / 2
+    kalem = QPen(QColor(C.INVERSE), 1.9 * k * 1.2)
+    kalem.setCapStyle(Qt.PenCapStyle.RoundCap)
+    kalem.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    p.setPen(kalem)
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    pt = lambda x, y: QPointF(ox + x * k, oy + y * k)  # noqa: E731
+    p.drawLine(pt(12, 3.5), pt(12, 15))
+    p.drawPolyline([pt(7, 10), pt(12, 15), pt(17, 10)])
+    p.drawPolyline([pt(4, 15.5), pt(4, 20), pt(20, 20), pt(20, 15.5)])
+    p.setFont(font)
+    p.setPen(QColor(C.INVERSE))
+    taban = (H + fm.capHeight()) / 2
+    p.drawText(QPointF(yan + ikon + ara, taban), metin)
+    p.end()
+    return img
+
+
+def banner() -> None:
+    from PIL import Image
 
     _qt_app()
     print("Banner:")
-    W, H = 1280, 640
-    img = QImage(W, H, QImage.Format.Format_RGB32)
-    p = QPainter(img)
-    p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-    p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-    p.fillRect(0, 0, W, H, QColor(C.BG))
+    _save_png(_to_pil(banner_ciz()), OUT / "banner.png")
+    for ad, qimg in (("ayirici.png", ayirici_ciz()), ("indir.png", indir_dugmesi_ciz())):
+        buf = io.BytesIO(bytes(_qimage_png(qimg)))
+        _save_png(Image.open(buf).convert("RGBA"), OUT / ad)
 
-    title = QFont()
-    title.setFamilies([F.DISPLAY_CONDENSED, F.DISPLAY, F.BODY_FALLBACK])
-    title.setPixelSize(100)
-    tfm = QFontMetricsF(title)
-    body = QFont()
-    body.setFamilies([F.BODY, F.BODY_FALLBACK])
-    body.setPixelSize(29)
-    bfm = QFontMetricsF(body)
-    src = QFont(body)
-    src.setPixelSize(20)
-    sfm = QFontMetricsF(src)
-    tagline = ("Oyunlardaki İngilizce altyazıları ekrandan okur,", "yerel olarak Türkçeye çevirir.")
-    st = StyleCfg()
-    sample_px = 30
-    sample = "Sana buraya geri gelmemeni söylemiştim."
-    sample_en = "I told you not to come back here."
-    sfont = make_font(st, sample_px)
-    sample_w = QFontMetricsF(sfont).horizontalAdvance(sample)
-    box_w, box_h = sample_w + sample_px * 1.4 + 8, QFontMetricsF(sfont).lineSpacing() + sample_px * 0.36 + 6
 
-    # dikey düzen: ad, gün batımı çizgisi, açıklama, örnek çeviri; blok ve logo dikeyde ortalanır
-    rule_gap, rule_h, after_rule = 12, 4, 30
-    tag_h = bfm.lineSpacing() * 1.08 * len(tagline)
-    block_h = (tfm.ascent() + tfm.descent() + rule_gap + rule_h + after_rule + tag_h + 36
-               + sfm.lineSpacing() + 4 + box_h)
-    top = (H - block_h) / 2
+def _qimage_png(img) -> bytes:
+    from PySide6.QtCore import QBuffer, QIODevice
 
-    # logonun arkasında çok hafif bir pembe ışıma (kurulum sihirbazı görselleriyle aynı dil)
-    logo_side = 236
-    lx, ly = 104, (H - logo_side) / 2
-    glow = QRadialGradient(QPointF(lx + logo_side / 2, ly + logo_side / 2), logo_side * 1.15)
-    g0, g1 = QColor(C.PINK), QColor(C.PINK)
-    g0.setAlphaF(0.13)
-    g1.setAlphaF(0.0)
-    glow.setColorAt(0, g0)
-    glow.setColorAt(1, g1)
-    p.fillRect(0, 0, W, H, glow)
-    logo = QImage(str(ROOT / "altyazitr" / "data" / "logo.png"))
-    p.drawImage(QRectF(lx, ly, logo_side, logo_side), logo)
-
-    x = lx + logo_side + 64
-    p.setFont(title)
-    p.setPen(QColor(C.TEXT))
-    base = top + tfm.ascent()
-    p.drawText(QPointF(x - 4, base), "Robz Vision")
-    # gün batımı çizgisi (canlı başlık bandının alt çizgisiyle aynı geçiş)
-    rule_y = base + tfm.descent() + rule_gap
-    grad = QLinearGradient(QPointF(x, 0), QPointF(x + 132, 0))
-    grad.setColorAt(0, QColor(C.PINK))
-    grad.setColorAt(1, QColor(C.ORANGE))
-    p.fillRect(QRectF(x, rule_y, 132, rule_h), grad)
-    p.setFont(body)
-    p.setPen(QColor(C.TEXT_2))
-    y = rule_y + rule_h + after_rule
-    for line in tagline:
-        p.drawText(QPointF(x, y + bfm.ascent()), line)
-        y += bfm.lineSpacing() * 1.08
-
-    # örnek: oyundaki İngilizce satır ve uygulamanın kendi altyazı çizimiyle Türkçesi
-    y += 36
-    p.setFont(src)
-    p.setPen(QColor(C.TEXT_3))
-    p.drawText(QPointF(x, y + sfm.ascent()), sample_en)
-    y += sfm.lineSpacing() + 4
-    p.save()
-    p.translate(x - (box_w - sample_w) / 2, y)  # yazı sola hizalı, kutu dolgusu soldan taşar
-    paint_subtitle(p, box_w, box_h, st, sample, in_box=True, ref_height=1080 * sample_px / st.font_size)
-    p.restore()
-    p.end()
-    _save_png(_to_pil(img), OUT / "banner.png")
+    buf = QBuffer()
+    buf.open(QIODevice.OpenModeFlag.WriteOnly)
+    img.save(buf, "PNG")
+    return bytes(buf.data())
 
 
 # --- arayüz ekran görüntüleri ---------------------------------------------------------------------------
