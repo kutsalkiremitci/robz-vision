@@ -173,10 +173,17 @@ h1 {
 .hero-meta { margin-top: 14px; font-size: .9375rem; color: var(--text-2); }
 
 .scene {
+  --overlap: 0px; /* sahnenin metnin altına girdiği pay; bu bant tamamen saydam tutulur */
   position: relative;
   height: clamp(330px, min(max(38.75vw, 250px + 14vw), 58svh), 620px);
 }
-.scene-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Geniş ekranda çizim genişlikle büyür ve üstü kırpılır: üst kısmı gökyüzüne yumuşakça karıştır, sert kenar
+   ve metnin arkasına uzanan bina kalmasın. */
+.scene-art {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent var(--overlap), #000 calc(var(--overlap) + 130px));
+          mask-image: linear-gradient(to bottom, transparent var(--overlap), #000 calc(var(--overlap) + 130px));
+}
 .palm {
   position: absolute; bottom: -3%;
   width: auto; aspect-ratio: 520 / 730;
@@ -250,7 +257,7 @@ h1 {
 
 @media (min-width: 960px) {
   .brand img { width: 72px; height: 72px; }
-  .scene { margin-top: -150px; }
+  .scene { --overlap: 48px; margin-top: calc(-1 * var(--overlap)); }
 }
 @media (max-width: 760px) {
   .nav { display: none; }
