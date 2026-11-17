@@ -46,7 +46,6 @@ class WindowInfo:
     hwnd: int
     title: str
     exe: str
-    pid: int
     width: int
     height: int
 
@@ -129,7 +128,7 @@ def list_windows() -> list[WindowInfo]:
         w, h = (b[2] - b[0], b[3] - b[1]) if b else (0, 0)
         if w < 120 or h < 80:
             return True
-        out.append(WindowInfo(int(hwnd), title, _exe_name(pid.value), pid.value, w, h))
+        out.append(WindowInfo(int(hwnd), title, _exe_name(pid.value), w, h))
         return True
 
     user32.EnumWindows(WNDENUMPROC(cb), 0)

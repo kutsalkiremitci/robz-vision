@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from collections.abc import Sequence
 
 import numpy as np
@@ -49,7 +48,6 @@ class WindowCapturer:
         self.fps = max(1, fps)
         self.closed = False
         self.frame_count = 0
-        self.last_frame_t = 0.0
         self._lock = threading.Lock()
         self._roi: np.ndarray | None = None
         self._full: np.ndarray | None = None
@@ -133,7 +131,6 @@ class WindowCapturer:
             full = np.ascontiguousarray(buf[cy0:cy1, cx0:cx1, :3])
         with self._lock:
             self._roi = roi
-            self.last_frame_t = time.monotonic()
             if full is not None:
                 self._full = full
                 self._want_full = False
@@ -157,9 +154,6 @@ class WindowCapturer:
         with self._lock:
             return self._full
 
-    def target_rect(self) -> tuple[int, int, int, int] | None:
-        return winutil.client_rect_screen(self.hwnd)
-
     @property
     def alive(self) -> bool:
         return not self.closed and winutil.is_window(self.hwnd)
@@ -169,11 +163,8 @@ class RegionCapturer:
     """mss ile ekranın sabit bir bölgesini yakalar (fiziksel piksel). Kendi ekran altyazımız
     WDA_EXCLUDEFROMCAPTURE ile işaretli olduğundan bu yakalamaya girmez (test edildi)."""
 
-    def __init__(self, rect: Sequence[int], fps: int = 10):
+    def __init__(self, rect: Sequence[int]):
         self.rect = tuple(int(v) for v in rect)
-        self.fps = fps
-        self.closed = False
-        self.hwnd = None
         self._local = threading.local()
 
     def _sct(self):

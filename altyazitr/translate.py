@@ -19,7 +19,6 @@ import threading
 import time
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
-from pathlib import Path
 
 from rapidfuzz import fuzz, process
 
@@ -59,13 +58,13 @@ class Glossary:
     def __bool__(self) -> bool:
         return bool(self.entries)
 
-    def protect(self, text: str, keep_only: bool = True) -> tuple[str, dict[str, str]]:
-        """Terimleri yer tutucuyla değiştirir. keep_only=True iken yalnızca *çevrilmeyecek*
-        terimler (ad, mekan) korunur: çevirisi olan sıradan kelimeleri yer tutucuya çevirmek
-        NMT'nin dilbilgisini bozuyor (testte 'cop→polis' cümleyi bozdu)."""
+    def protect(self, text: str) -> tuple[str, dict[str, str]]:
+        """Yalnızca *çevrilmeyecek* terimleri (ad, mekan) yer tutucuyla değiştirir: çevirisi olan
+        sıradan kelimeleri yer tutucuya çevirmek NMT'nin dilbilgisini bozuyor (testte 'cop→polis'
+        cümleyi bozdu)."""
         mapping: dict[str, str] = {}
         for i, ((en, tr), pat) in enumerate(zip(self.entries, self._pats)):
-            if keep_only and tr and tr.casefold() != en.casefold():
+            if tr and tr.casefold() != en.casefold():
                 continue
             if pat.search(text):
                 tok = self.TOKEN.format(i)
@@ -150,7 +149,7 @@ class TranslationCache:
         self._dirty = False
 
     def save(self, path) -> None:
-        if not getattr(self, "_dirty", False):
+        if not self._dirty:
             return
         with self._lock:
             items = list(self._d.items())
@@ -168,7 +167,6 @@ class TranslationCache:
 class Translator:
     key = "base"
     label = ""
-    is_fast = False  # hibrit modda "hızlı ön çeviri" olarak kullanılabilir mi
 
     def prepare(self, status: StatusCb) -> None:
         """Modeli indirir/yükler. Uzun sürebilir; çeviri iş parçacığında çağrılır."""
@@ -183,7 +181,6 @@ class Translator:
 class NoTranslator(Translator):
     key = "none"
     label = "Çeviri yok (yalnızca İngilizce göster)"
-    is_fast = True
 
     def translate(self, text: str, context: Context = ()) -> str:
         return text
@@ -201,9 +198,9 @@ QUICKMT_MODEL_MIN_BYTES = 300_000_000  # bundan küçük model.bin yarım/bozuk 
 ProgressCb = Callable[[float], None]
 
 
-def quickmt_downloaded(path=None) -> bool:
-    """Gerekli tüm dosyalar var ve model.bin tam boyutlu mu? path verilmezse QUICKMT_DIR."""
-    d = Path(path) if path is not None else QUICKMT_DIR
+def quickmt_downloaded() -> bool:
+    """QUICKMT_DIR'de gerekli tüm dosyalar var ve model.bin tam boyutlu mu?"""
+    d = QUICKMT_DIR
     try:
         if not all((d / f).is_file() for f in QUICKMT_REQUIRED):
             return False
@@ -286,10 +283,10 @@ def _snapshot_download():
     return snapshot_download
 
 
-def download_quickmt(status: StatusCb, *, target_dir=None, progress: ProgressCb | None = None) -> None:
-    """quickmt modelini indirir (varsayılan: QUICKMT_DIR). status: Türkçe durum metni,
+def download_quickmt(status: StatusCb, *, progress: ProgressCb | None = None) -> None:
+    """quickmt modelini QUICKMT_DIR'e indirir. status: Türkçe durum metni,
     progress: 0..1 oran (bitene kadar en fazla 0,99). Hata → TranslatorError."""
-    target = Path(target_dir) if target_dir is not None else QUICKMT_DIR
+    target = QUICKMT_DIR
     target.mkdir(parents=True, exist_ok=True)
     snapshot_download = _snapshot_download()
     done = threading.Event()
@@ -317,7 +314,7 @@ def download_quickmt(status: StatusCb, *, target_dir=None, progress: ProgressCb 
     finally:
         done.set()
         t.join(2.0)
-    if not quickmt_downloaded(target):
+    if not quickmt_downloaded():
         raise TranslatorError("Çeviri modeli eksik indirildi. Lütfen tekrar deneyin.\n"
                               f"Ayrıntı: {target} klasöründe gerekli dosyalar eksik.")
     if progress is not None:
@@ -349,7 +346,6 @@ def _add_cuda_dll_dirs() -> None:
 class QuickMtTranslator(Translator):
     key = "quickmt"
     label = "Yerel hızlı çeviri — quickmt (ücretsiz, önerilen)"
-    is_fast = True
 
     def __init__(self, glossary: Glossary, device: str = "cpu"):
         self.glossary = glossary
@@ -730,9 +726,3 @@ def create_translator(cfg, glossary: Glossary) -> Translator:
     if cfg.engine == "none":
         return NoTranslator()
     return QuickMtTranslator(glossary, cfg.quickmt_device)
-
-
-def measure(fn: Callable[[], str]) -> tuple[str, float]:
-    t = time.perf_counter()
-    out = fn()
-    return out, (time.perf_counter() - t) * 1000

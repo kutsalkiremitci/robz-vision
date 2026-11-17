@@ -161,14 +161,13 @@ def _write_model(d, model_bytes=2000):
 def test_quickmt_downloaded_checks_files_and_size(monkeypatch, tmp_path):
     monkeypatch.setattr(T, "QUICKMT_MODEL_MIN_BYTES", 1000)
     d = tmp_path / "m"
-    assert not T.quickmt_downloaded(d)
-    _write_model(d, model_bytes=500)  # yarım model.bin
-    assert not T.quickmt_downloaded(d)
-    _write_model(d, model_bytes=2000)
-    assert T.quickmt_downloaded(d)
-    (d / "tgt.spm.model").unlink()
-    assert not T.quickmt_downloaded(d)
     monkeypatch.setattr(T, "QUICKMT_DIR", d)
+    assert not T.quickmt_downloaded()
+    _write_model(d, model_bytes=500)  # yarım model.bin
+    assert not T.quickmt_downloaded()
+    _write_model(d, model_bytes=2000)
+    assert T.quickmt_downloaded()
+    (d / "tgt.spm.model").unlink()
     assert not T.quickmt_downloaded()
 
 
@@ -198,8 +197,8 @@ def test_download_quickmt_success_reports_progress(monkeypatch, tmp_path):
     assert any("/ 404 MB" in m for m in msgs[:-1])
 
 
-def test_download_quickmt_legacy_signature(monkeypatch, tmp_path):
-    """gui/pages.py: download_quickmt(lambda m: ...) — tek konumsal argümanla çalışmalı."""
+def test_download_quickmt_status_only(monkeypatch, tmp_path):
+    """QuickMtTranslator.prepare: download_quickmt(status) — tek konumsal argümanla çalışmalı."""
     monkeypatch.setattr(T, "QUICKMT_MODEL_MIN_BYTES", 1000)
     monkeypatch.setattr(T, "QUICKMT_DIR", tmp_path)
     monkeypatch.setattr(T, "_snapshot_download", _fake_snapshot(tmp_path, _write_model))
@@ -215,17 +214,19 @@ def test_download_quickmt_legacy_signature(monkeypatch, tmp_path):
 def test_download_quickmt_error_messages(monkeypatch, tmp_path, exc, network):
     def boom(_d):
         raise exc
+    monkeypatch.setattr(T, "QUICKMT_DIR", tmp_path)
     monkeypatch.setattr(T, "_snapshot_download", _fake_snapshot(tmp_path, boom))
     with pytest.raises(TranslatorError) as ei:
-        T.download_quickmt(lambda m: None, target_dir=tmp_path)
+        T.download_quickmt(lambda m: None)
     assert (NET_HEAD in str(ei.value)) is network
     assert ei.value.__cause__ is exc
 
 
 def test_download_quickmt_incomplete(monkeypatch, tmp_path):
+    monkeypatch.setattr(T, "QUICKMT_DIR", tmp_path)
     monkeypatch.setattr(T, "_snapshot_download", _fake_snapshot(tmp_path, lambda d: None))
     with pytest.raises(TranslatorError, match="eksik"):
-        T.download_quickmt(lambda m: None, target_dir=tmp_path)
+        T.download_quickmt(lambda m: None)
 
 
 def test_snapshot_download_has_progress_bars_disabled(monkeypatch):

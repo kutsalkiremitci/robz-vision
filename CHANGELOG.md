@@ -34,7 +34,6 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   (`Ctrl+Alt+T`, `Ctrl+Alt+H`, `Ctrl+Alt+C`) ve sistem tepsisi.
 - Yönetici izni istemeyen Inno Setup kurulum sihirbazı ve taşınabilir zip. Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
-- Eski "AltyazıTR" adıyla oluşturulmuş ayarlar ve indirilmiş model ilk açılışta yeni klasörlere taşınır.
 
 [Yayımlanmadı]: ../../compare/v1.0.0...HEAD
 [1.0.0]: ../../releases/tag/v1.0.0

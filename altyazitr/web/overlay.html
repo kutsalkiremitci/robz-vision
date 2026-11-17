@@ -90,11 +90,10 @@
   const params = new URLSearchParams(location.search);
   const host = location.protocol === 'http:' ? location.host : '127.0.0.1:8765';
   const WS = `ws://${host}/ws`;
-  let delay = 300, hideTimer = null, everConnected = false;
+  let delay = 300, everConnected = false;
 
   function showSub(m) {
     if (m.text) {
-      clearTimeout(hideTimer);
       speaker.textContent = m.speaker ? m.speaker + ': ' : '';
       line.textContent = m.text;
       orig.textContent = m.original || '';

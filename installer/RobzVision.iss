@@ -47,7 +47,7 @@ MinVersion=10.0.19041
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=commandline
 ; Program açıksa kurulum/kaldırma önce kapatılmasını ister (uygulamanın tek örnek kilidi).
-AppMutex=AltyaziTR_TekOrnek
+AppMutex=RobzVision_TekOrnek
 CloseApplications=yes
 RestartApplications=no
 ; Program yalnızca Türkçe olduğu için kurulum da her zaman Türkçe açılır.

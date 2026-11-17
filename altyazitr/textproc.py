@@ -86,7 +86,7 @@ def assemble(lines: Sequence[OcrLine], keep_lowest_block: bool = True,
         return "", None, []
     blocks: list[list[list[OcrLine]]] = [[rows[0]]]
     heights = [max(1.0, max(x.h for x in r)) for r in rows]
-    hm = statistics.median(heights) if heights else 1.0
+    hm = statistics.median(heights)
     for prev, row in zip(rows, rows[1:]):
         prev_bottom = max(x.y + x.h for x in prev)
         top = min(x.y for x in row)

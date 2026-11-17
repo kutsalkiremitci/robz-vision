@@ -49,7 +49,7 @@ def english_score(text: str) -> float:
     if not toks:
         return 0.0
     total = 0.0
-    for i, raw in enumerate(toks):
+    for raw in toks:
         t = raw.strip(_PUNCT)
         if not t:
             total += 0.5  # yalnız noktalama ("...", "-")

@@ -120,11 +120,9 @@ class Pipeline(QObject):
     error = Signal(str)
     running_changed = Signal(bool)
     preview = Signal(QImage, float)
-    ocr_text = Signal(str, float)
     subtitle = Signal(dict)
     same = Signal()
     gone = Signal()
-    target_changed = Signal(object)  # hwnd | None
 
     def __init__(self, settings: Settings):
         super().__init__()
@@ -139,9 +137,7 @@ class Pipeline(QObject):
         self.cache = TranslationCache()
         self.cache.load(CACHE_FILE)
         self.capturer: WindowCapturer | RegionCapturer | None = None
-        self.target_hwnd: int | None = None
         self.preview_enabled = True
-        self.translator_name = ""
 
     # --- yönetim --------------------------------------------------------
     @property
@@ -191,15 +187,9 @@ class Pipeline(QObject):
                 last = self._alive == 0
             if last:
                 self.capturer = None
-                self._set_target(None)
                 self.running_changed.emit(False)
                 self.status.emit("Durduruldu")
                 log.info("İşlem hattı durdu")
-
-    def _set_target(self, hwnd: int | None) -> None:
-        if hwnd != self.target_hwnd:
-            self.target_hwnd = hwnd
-            self.target_changed.emit(hwnd)
 
     def grab_full_frame(self, timeout: float = 2.0) -> np.ndarray | None:
         """Pencere modunda çalışan yakalamadan tam kare (bölge seçimi için)."""
@@ -213,7 +203,7 @@ class Pipeline(QObject):
             if not c.is_ready():
                 self.status.emit("Önce çevrilecek bölgeyi seçin.")
                 return None
-            cap = RegionCapturer(c.rect, c.fps)
+            cap = RegionCapturer(c.rect)
             cap.start()
             self.status.emit("Seçilen ekran bölgesi okunuyor")
             return cap
@@ -232,7 +222,6 @@ class Pipeline(QObject):
             self.status.emit(f"Pencere yakalanamadı: {e}")
             return None
         self.status.emit(f"Yakalanıyor: {win.title}")
-        self._set_target(win.hwnd)
         return cap
 
     def _capture_loop(self) -> None:
@@ -252,7 +241,6 @@ class Pipeline(QObject):
                     if cap is not None:
                         cap.stop()
                         cap = self.capturer = None
-                        self._set_target(None)
                         gate.reset()
                         self._ocr_slot.put(("gone", t0, None))
                         self.status.emit("Pencere kapandı, yeniden aranıyor…")
@@ -347,7 +335,6 @@ class Pipeline(QObject):
                     continue
                 ms = (time.perf_counter() - t1) * 1000
                 text, speaker, confs = assemble(lines, o.keep_lowest_block, o.detect_speaker)
-                self.ocr_text.emit(text if not speaker else f"{speaker}: {text}", ms)
                 if not text.strip():
                     self._emit_gone(t)
                     continue
@@ -409,7 +396,6 @@ class Pipeline(QObject):
         if main is None:
             self._run.clear()
             return
-        self.translator_name = main.label
         model_tag = f"{main.key}:{getattr(main, 'model', '')}"
         hist: deque[tuple[str, str]] = deque(maxlen=max(0, tc.context_lines) or 1)
         last_t = 0.0
@@ -425,13 +411,12 @@ class Pipeline(QObject):
                 t1 = time.perf_counter()
                 out = self.cache.get(ck)
                 cached = out is not None
-                final = True
                 if out is None:
                     quick = None
                     if fast is not None and tc.hybrid:
                         quick = self._safe_fast(fast, ev["text"])
                         if quick and ev["seq"] == self.tracker.seq:
-                            self._emit_sub(ev, quick, t1, final=False, cached=False, engine=fast.label)
+                            self._emit_sub(ev, quick, t1, cached=False, engine=fast.label)
                     ctx = list(hist) if tc.context_lines > 0 else []
                     try:
                         out = main.translate(ev["text"], ctx)
@@ -456,7 +441,7 @@ class Pipeline(QObject):
                 if tc.context_lines > 0:
                     hist.append((ev["text"], out))
                 last_t = ev["t"]
-                self._emit_sub(ev, out, t1, final=final, cached=cached, engine=main.label)
+                self._emit_sub(ev, out, t1, cached=cached, engine=main.label)
         finally:
             for tr in (main, fast):
                 if tr is not None:
@@ -475,10 +460,9 @@ class Pipeline(QObject):
             log.debug("Hızlı çeviri hatası", exc_info=True)
             return None
 
-    def _emit_sub(self, ev: dict, text: str, t1: float, final: bool, cached: bool, engine: str) -> None:
+    def _emit_sub(self, ev: dict, text: str, t1: float, cached: bool, engine: str) -> None:
         self.subtitle.emit({
-            "seq": ev["seq"], "text": text, "original": ev["text"], "speaker": ev["speaker"],
-            "final": final, "cached": cached, "engine": engine,
+            "text": text, "original": ev["text"], "speaker": ev["speaker"], "cached": cached, "engine": engine,
             "ocr_ms": ev.get("ocr_ms", 0.0), "tr_ms": (time.perf_counter() - t1) * 1000,
             "latency_ms": (time.monotonic() - ev["t"]) * 1000,
         })

@@ -35,17 +35,6 @@ def wrap_text(fm: QFontMetricsF, text: str, maxw: float) -> list[str]:
     return out
 
 
-def paint_cover(p: QPainter, W: float, H: float, st: StyleCfg, rect: tuple[float, float, float, float]) -> None:
-    """Orijinal altyazının üstünü kapatan kutu (rect: 0..1 oransal)."""
-    x, y, w, h = rect
-    pad = st.mask_pad_percent / 100.0
-    c = QColor(st.mask_color)
-    c.setAlphaF(max(0.0, min(1.0, st.mask_opacity)))
-    p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(c)
-    p.drawRoundedRect(QRectF((x - pad) * W, (y - pad) * H, (w + 2 * pad) * W, (h + 2 * pad) * H), 6, 6)
-
-
 def paint_subtitle(p: QPainter, W: float, H: float, st: StyleCfg, text: str, speaker: str | None = None,
                    original: str = "", scale: float = 1.0, *, ref_height: float | None = None,
                    in_box: bool = False) -> None:

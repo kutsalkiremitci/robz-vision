@@ -94,8 +94,8 @@ def main() -> int:
         home_url.setText(DOC_URL)
     try:
         # örnek içerik: son çeviri + durum
-        ctx.pipeline.subtitle.emit({"seq": 1, "text": "Arabaya bin, Vice City'ye gidiyoruz.", "speaker": "LUCIA",
-                                    "original": "Get in the car, we're going to Vice City.", "final": True,
+        ctx.pipeline.subtitle.emit({"text": "Arabaya bin, Vice City'ye gidiyoruz.", "speaker": "LUCIA",
+                                    "original": "Get in the car, we're going to Vice City.",
                                     "cached": False, "engine": "Yerel", "ocr_ms": 6.0, "tr_ms": 24.0,
                                     "latency_ms": 310.0})
         ctx.pipeline.status.emit("Seçilen ekran bölgesi okunuyor")

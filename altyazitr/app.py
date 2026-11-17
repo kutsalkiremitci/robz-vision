@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 
-from PySide6.QtCore import QLibraryInfo, QLocale, QObject, Qt, QTimer, QTranslator, Signal
+from PySide6.QtCore import QLibraryInfo, QLocale, QObject, QTimer, QTranslator, Signal
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from altyazitr import APP_NAME, __version__, winutil
@@ -15,7 +15,7 @@ from altyazitr.display import SubtitleDisplay
 from altyazitr.hotkeys import HotkeyManager
 from altyazitr.logutil import guard_stdio, setup_logging
 from altyazitr.overlay import ScreenOverlay
-from altyazitr.paths import ensure_dirs, migrate_legacy_dirs
+from altyazitr.paths import ensure_dirs
 from altyazitr.pipeline import Pipeline
 from altyazitr.server import AsyncBridge, OverlayServer
 
@@ -24,7 +24,6 @@ log = logging.getLogger("altyazitr")
 
 class AppContext(QObject):
     obs_clients = Signal(int)
-    hotkeys_changed = Signal(list)
     needs_region = Signal()
 
     def __init__(self, settings: Settings):
@@ -111,7 +110,6 @@ class AppContext(QObject):
                 err = self.hotkeys.register(name, seq)
                 if err:
                     errors.append(err)
-        self.hotkeys_changed.emit(errors)
         return errors
 
     def _on_hotkey(self, name: str) -> None:
@@ -238,13 +236,10 @@ def main() -> int:
     _install_translations(app)
     apply_theme(app)
 
-    # Mutex adı eski sürümle aynı kalır: eski ve yeni sürüm aynı anda çalışıp port/kısayol çakışmasın.
-    if not winutil.acquire_single_instance("Local\\AltyaziTR_TekOrnek"):
+    # Mutex adı kurulum programındaki AppMutex ile aynı olmalı (installer/RobzVision.iss).
+    if not winutil.acquire_single_instance("Local\\RobzVision_TekOrnek"):
         QMessageBox.information(None, APP_NAME, f"{APP_NAME} zaten çalışıyor. Sistem tepsisindeki simgeye bakın.")
         return 0
-
-    # Eski "AltyaziTR" klasörlerindeki ayarlar ve indirilmiş model yeni klasöre taşınır (bir kez).
-    migrate_legacy_dirs()
 
     if not _require_translation_model():
         return 0

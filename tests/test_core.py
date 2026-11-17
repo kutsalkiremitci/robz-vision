@@ -81,17 +81,16 @@ def test_split_sentences():
 # --- sözlük / önbellek / LLM çıktısı -----------------------------------------------
 def test_glossary_protect_restore():
     g = Glossary([["Vice City", ""], ["cop", "polis"], ["", "x"]])
-    prot, mapping = g.protect("The cop drove to vice city.", keep_only=False)
-    assert "cop" not in prot.lower() and "vice city" not in prot.lower()
-    restored = Glossary.restore(prot, mapping)
-    assert restored == "The polis drove to Vice City."
-    # varsayılan: yalnızca çevrilmeyecek adlar korunur, 'cop' NMT'ye olduğu gibi gider
-    prot2, mapping2 = g.protect("The cop drove to vice city.")
-    assert "cop" in prot2 and list(mapping2.values()) == ["Vice City"]
+    # yalnızca çevrilmeyecek adlar korunur, 'cop' NMT'ye olduğu gibi gider
+    prot, mapping = g.protect("The cop drove to vice city.")
+    assert "cop" in prot and "vice city" not in prot.lower() and list(mapping.values()) == ["Vice City"]
+    assert Glossary.restore(prot, mapping) == "The cop drove to Vice City."
     # model boşluk ekleyip küçük harf yapsa da geri yüklenmeli
-    tok = next(k for k, v in mapping.items() if v == "Vice City")
+    tok = next(iter(mapping))
     assert Glossary.restore(f"{tok.lower()[:2]} {tok[2:]}'e gittik", {tok: "Vice City"}) == "Vice City'e gittik"
+    # LLM'lere sözlük talimat olarak gider
     assert "Vice City = Vice City (do not translate)" in g.prompt_lines()
+    assert "cop = polis" in g.prompt_lines()
 
 
 def test_cache_exact_and_fuzzy():
@@ -211,6 +210,15 @@ def test_gate_triggers_once_then_gone():
 
 
 # --- ayarlar / kısayol / stil --------------------------------------------------------
+def test_app_names():
+    # ayar ve model klasörleri APP_ID'den türetilir: değişirse kayıtlı ayarlar ve indirilmiş model kaybolur
+    from altyazitr import APP_ID, APP_NAME
+    from altyazitr.paths import CONFIG_DIR, DATA_DIR
+
+    assert APP_NAME == "Robz Vision" and APP_ID == "RobzVision"
+    assert CONFIG_DIR.name == DATA_DIR.name == APP_ID
+
+
 def test_settings_from_dict_tolerant():
     s = _from_dict(Settings, {"capture": {"fps": "15", "bilinmeyen": 1}, "ocr": {"engine": "rapidocr"},
                               "style": {"font_size": 50.0}, "first_run": 0})

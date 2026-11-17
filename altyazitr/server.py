@@ -106,7 +106,6 @@ class OverlayServer:
 
         app.router.add_get("/", index)
         app.router.add_get("/ws", self._ws)
-        app.router.add_static("/static", web_dir)
         self._runner = web.AppRunner(app, access_log=None)
         await self._runner.setup()
         site = web.TCPSite(self._runner, self.host, self.port)
