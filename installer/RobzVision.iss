@@ -1,7 +1,7 @@
 ; Robz Vision — Windows kurulum sihirbazı (Inno Setup 6)
 ;
 ; Önce uygulama derlenmelidir:  python -m PyInstaller RobzVision.spec   (çıktı: dist\RobzVision\)
-; Sonra:                        ISCC installer\RobzVision.iss            (çıktı: dist\RobzVision-Kurulum-<sürüm>-x64.exe)
+; Sonra:                        ISCC installer\RobzVision.iss            (çıktı: dist\RobzVision-Setup-<sürüm>-x64.exe)
 ; Tek adımda:                   kurulum_paketi.bat
 ;
 ; Not: Ücretsiz çeviri modeli (~400 MB) kurulum dosyasına eklenmez; program ilk açılışta bir kez indirir.
@@ -36,7 +36,7 @@ WizardImageFile=wizard-164.bmp,wizard-246.bmp,wizard-328.bmp
 WizardSmallImageFile=small-55.bmp,small-83.bmp,small-110.bmp
 WizardImageStretch=no
 OutputDir=..\dist
-OutputBaseFilename=RobzVision-Kurulum-{#AppVersion}-x64
+OutputBaseFilename=RobzVision-Setup-{#AppVersion}-x64
 Compression=lzma2/max
 SolidCompression=yes
 ; x64compatible: x64 Windows ve x64 programları öykünmeyle çalıştırabilen ARM'li Windows 11.

@@ -17,9 +17,9 @@ REHBER = """\
 
 | Dosya | Ne için |
 |---|---|
-| **`RobzVision-Kurulum-{v}-x64.exe`** | Çoğu kullanıcı için bu. Çalıştırıp sihirbazda **İleri**'ye basın. Yönetici izni istemez, Başlat menüsüne eklenir, *Ayarlar → Uygulamalar*'dan kaldırılır. |
-| `RobzVision-Tasinabilir-{v}-x64.zip` | Kurulum yapmadan kullanmak için. Kısa bir klasöre (ör. `C:\\RobzVision`) çıkarıp `RobzVision.exe`'yi açın. |
-| `RobzVision-Tasinabilir-{v}-x64.7z` | Taşınabilir sürümün daha küçük arşivi. Windows 11 ya da 7-Zip ile açılır. |
+| **`RobzVision-Setup-{v}-x64.exe`** | Çoğu kullanıcı için bu. Çalıştırıp sihirbazda **İleri**'ye basın. Yönetici izni istemez, Başlat menüsüne eklenir, *Ayarlar → Uygulamalar*'dan kaldırılır. |
+| `RobzVision-Portable-{v}-x64.zip` | Kurulum yapmadan kullanmak için. Kısa bir klasöre (ör. `C:\\RobzVision`) çıkarıp `RobzVision.exe`'yi açın. |
+| `RobzVision-Portable-{v}-x64.7z` | Taşınabilir sürümün daha küçük arşivi. Windows 11 ya da 7-Zip ile açılır. |
 | `SHA256SUMS.txt` | İndirdiğiniz dosyanın bozulmadığını doğrulamak için özetler. |
 
 **Sistem.** Windows 10 (2004 ve sonrası) ya da Windows 11, 64 bit. Windows'un İngilizce OCR dil paketi gerekir
@@ -30,7 +30,7 @@ ve birkaç kütüphanenin ARM64 Windows paketi bulunmuyor. Windows 11 x64 progra
 için kurulum dosyası ARM'li Windows 11'e de kurulur. ARM cihazlarda henüz denenmedi; sorun yaşarsanız bildirin.
 
 **Güvenlik uyarısı.** Dosyalar dijital olarak imzalı değil. SmartScreen uyarısında *Ek bilgi → Yine de çalıştır*'ı
-seçebilirsiniz. Doğrulamak için PowerShell'de `Get-FileHash .\\RobzVision-Kurulum-{v}-x64.exe` çıktısını
+seçebilirsiniz. Doğrulamak için PowerShell'de `Get-FileHash .\\RobzVision-Setup-{v}-x64.exe` çıktısını
 `SHA256SUMS.txt` ile karşılaştırın.
 """
 

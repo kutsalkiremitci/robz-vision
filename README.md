@@ -124,12 +124,12 @@ bir pencerede açabilirsiniz. Ayrıntılar ve OBS kurulumu için [kullanım kıl
 ## Kurulum
 
 **Kurulum dosyası (önerilen).** [Releases](https://github.com/kutsalkiremitci/robz-vision/releases/latest)
-sayfasından `RobzVision-Kurulum-<sürüm>-x64.exe` dosyasını indirip çalıştırın ve sihirbazda **İleri**'ye
+sayfasından `RobzVision-Setup-<sürüm>-x64.exe` dosyasını indirip çalıştırın ve sihirbazda **İleri**'ye
 basarak kurun. Yönetici izni istemez; program kendi kullanıcı klasörünüze kurulur, Başlat menüsüne eklenir ve
 *Ayarlar → Uygulamalar*'dan kaldırılabilir. İlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez
 indirilir; indirme bitince program açılır.
 
-**Taşınabilir sürüm.** `RobzVision-Tasinabilir-<sürüm>-x64.zip` (ya da daha küçük `.7z`) dosyasını kısa bir
+**Taşınabilir sürüm.** `RobzVision-Portable-<sürüm>-x64.zip` (ya da daha küçük `.7z`) dosyasını kısa bir
 klasöre (ör. `C:\RobzVision`) çıkarıp `RobzVision.exe`'yi çalıştırın. İndirilen dosyayı doğrulamak için
 sürüm sayfasında `SHA256SUMS.txt` vardır.
 

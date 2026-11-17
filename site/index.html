@@ -765,14 +765,14 @@ code.inline {
           <ul class="files">
             <li>
               <div class="file-kind">Kurulum dosyası (önerilen)</div>
-              <div class="file-links"><a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="exe">RobzVision-Kurulum-&lt;sürüm&gt;-x64.exe</a></div>
+              <div class="file-links"><a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="exe">RobzVision-Setup-&lt;sürüm&gt;-x64.exe</a></div>
               <p>Yönetici izni istemez. Kendi kullanıcı klasörünüze kurulur, Başlat menüsüne eklenir, <em>Ayarlar → Uygulamalar</em>’dan kaldırılır.</p>
             </li>
             <li>
               <div class="file-kind">Taşınabilir sürüm</div>
               <div class="file-links">
-                <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="zip">RobzVision-Tasinabilir-&lt;sürüm&gt;-x64.zip</a>
-                <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="7z">RobzVision-Tasinabilir-&lt;sürüm&gt;-x64.7z</a>
+                <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="zip">RobzVision-Portable-&lt;sürüm&gt;-x64.zip</a>
+                <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="7z">RobzVision-Portable-&lt;sürüm&gt;-x64.7z</a>
               </div>
               <p>Kısa bir klasöre (ör. <code class="inline">C:\RobzVision</code>) çıkarıp <code class="inline">RobzVision.exe</code>’yi çalıştırın. 7z dosyası daha küçüktür.</p>
             </li>
@@ -981,10 +981,10 @@ code.inline {
         for (var i = 0; i < assets.length; i++) if (re.test(assets[i].name) && safe(assets[i].browser_download_url)) return assets[i];
         return null;
       }
-      var exe = find(/Kurulum.*\.exe$/i);
+      var exe = find(/Setup.*\.exe$/i);
       if (!exe) return;
       var ver = String(rel.tag_name || "").replace(/^v/i, "");
-      var found = { exe: exe, zip: find(/Tasinabilir.*\.zip$/i), "7z": find(/Tasinabilir.*\.7z$/i), sums: find(/SHA256SUMS\.txt$/i) };
+      var found = { exe: exe, zip: find(/Portable.*\.zip$/i), "7z": find(/Portable.*\.7z$/i), sums: find(/SHA256SUMS\.txt$/i) };
 
       document.querySelectorAll('[data-dl="exe"]').forEach(function (a) { a.href = exe.browser_download_url; });
       document.querySelectorAll("[data-asset]").forEach(function (a) {

@@ -57,9 +57,9 @@ jobs:
           $v = "${{ steps.surum.outputs.ver }}"
           Copy-Item README.md, LICENSE, THIRD_PARTY_NOTICES.md dist/RobzVision/
           New-Item -ItemType Directory -Force cikti | Out-Null
-          7z a -tzip -mx=7 "cikti/RobzVision-Tasinabilir-$v-x64.zip" ./dist/RobzVision | Out-Null
+          7z a -tzip -mx=7 "cikti/RobzVision-Portable-$v-x64.zip" ./dist/RobzVision | Out-Null
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          7z a -t7z -mx=9 "cikti/RobzVision-Tasinabilir-$v-x64.7z" ./dist/RobzVision | Out-Null
+          7z a -t7z -mx=9 "cikti/RobzVision-Portable-$v-x64.7z" ./dist/RobzVision | Out-Null
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Kurulum sihirbazı (Inno Setup)
