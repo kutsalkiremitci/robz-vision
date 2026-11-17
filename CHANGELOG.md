@@ -6,6 +6,13 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+### Eklendi
+
+- Görünüm sayfasında **Ekranımda | Yayınımda** seçici: oyunun üstündeki kutu ile OBS'teki altyazı ayrı ayarlanır
+  (yazı tipi, boyut, renk, kenar, arka plan…). Örneğin ekranda küçük yazı, yayında kutulu ve büyük. Hazır
+  stiller ve "Varsayılana dön" yalnızca seçili tarafı değiştirir; diğer taraftaki görünüm tek tıkla kopyalanabilir.
+  Eski ayarlarda iki taraf da mevcut görünümle başlar.
+
 ### Düzeltildi
 
 - Yazı artık rengine bakılmadan algılanıyor ve okunuyor. Önceden yalnızca beyaz ve sarı yazı tanınıyordu:

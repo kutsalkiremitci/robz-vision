@@ -184,8 +184,8 @@ STEPS: tuple[Step, ...] = (
          "Nasıl ekleneceğini yandaki yardım düğmesi gösterir.",
          (_home_section("url"), _home("url")), page="home"),
     Step("style", "Görünüm",
-         "Altyazının yazı tipini, boyutunu, rengini ve arka planını buradan ayarlarsınız. "
-         "Değişiklikler ekrana ve yayına hemen yansır.",
+         "Ekranınızdaki kutu ile yayındaki altyazı ayrı ayarlanır. Üstten Ekranımda ya da Yayınımda'yı "
+         "seçip yazı tipini, boyutu ve rengi değiştirin.",
          (_nav_item("Görünüm", 1), lambda w: w.nav), page="style", prefer=NAV_PREFER, pad=0),
     Step("engine", "Çeviri motoru",
          "Varsayılan motor ücretsizdir ve tamamen bilgisayarınızda çalışır. Daha doğal çeviri için "

@@ -91,8 +91,8 @@ Konum ipuçları:
 - En rahat yer, oyunun İngilizce altyazısının hemen üstüdür; gözünüz iki satır arasında gidip gelmez.
 - Kutu, okunan bölgenin üstüne gelse bile sorun olmaz. Kutu ekran yakalamaya girmez, bu yüzden Robz Vision
   kendi Türkçe yazısını okumaz.
-- **Sıfırla** kutuyu varsayılan konumuna döndürür. Yazı boyutunu yalnız ekranınız için büyütüp küçültmek
-  isterseniz *Görünüm → Konum ve ölçek → Ekranımda ölçek*'i kullanın.
+- **Sıfırla** kutuyu varsayılan konumuna döndürür. Kutudaki yazının görünümünü (boyut, renk, arka plan)
+  *Görünüm* sayfasında **Ekranımda** seçiliyken ayarlarsınız; yayındaki altyazı bundan etkilenmez.
 - Kutu oyunun üstünde görünmüyorsa oyunu *Pencereli tam ekran* (kenarlıksız) modunda çalıştırın.
 
 **Yayında da görünsün** seçeneği kutuyu ekran yakalamaya açar. Yalnızca OBS'te *Ekran Yakalama* ile yayın
@@ -127,19 +127,26 @@ Bilmeniz gerekenler:
 
 - Adres yalnızca aynı bilgisayarda çalışır. İki bilgisayarlı yayın düzeninde Robz Vision'ı OBS'in çalıştığı
   bilgisayara kurun.
-- OBS'teki altyazının yeri ve genişliği ekrandaki kutudan bağımsızdır: *Görünüm → Konum ve ölçek →
-  OBS'te alttan* ve *OBS'te genişlik*.
-- İzleyiciler İngilizce ve Türkçe altyazıyı üst üste görmesin istiyorsanız *Görünüm → Gelişmiş ayarlar →
-  OBS'te orijinali kapat*'ı açın. Robz Vision, seçtiğiniz bölgenin üstüne yalnızca OBS'te bir kutu koyar.
-  Oyun görüntüsü OBS tuvalini tam kaplıyorsa kutu birebir oturur.
+- OBS'teki altyazının görünümü, yeri ve genişliği ekrandaki kutudan bağımsızdır: *Görünüm → Yayınımda →
+  Konum ve genişlik → OBS'te alttan* ve *OBS'te genişlik*.
+- İzleyiciler İngilizce ve Türkçe altyazıyı üst üste görmesin istiyorsanız *Görünüm → Yayınımda → Gelişmiş
+  ayarlar → OBS'te orijinali kapat*'ı açın. Robz Vision, seçtiğiniz bölgenin üstüne yalnızca OBS'te bir kutu
+  koyar. Oyun görüntüsü OBS tuvalini tam kaplıyorsa kutu birebir oturur.
 - Port başka bir programla çakışırsa *Ayarlar → OBS → Port*'tan değiştirip uygulamayı yeniden başlatın,
   OBS'teki adresi de güncelleyin.
 
 ## 6. Görünümü ayarlayın
 
-**Görünüm** sayfasındaki her değişiklik hem ekrandaki kutuya hem OBS'e anında yansır. Üstteki önizleme 1080p
-bir yayının oranındadır; *Aydınlık* ve *Karanlık* arka planlarla yazının iki durumda da okunduğunu kontrol
-edin.
+Ekranınızdaki kutu ile yayındaki altyazı ayrı ayarlanır. Örneğin kendi ekranınızda küçük yazı, yayında
+arka planlı büyük yazı kullanabilirsiniz. **Görünüm** sayfasının en üstünde hangisini düzenlediğinizi seçin:
+
+- **Ekranımda:** oyunun üstünde sizin gördüğünüz kutu.
+- **Yayınımda:** izleyicilerin OBS'te gördüğü altyazı.
+
+Değişiklik seçili tarafa anında yansır. Önizleme seçili tarafı gösterir: *Yayınımda*'da 1080p bir yayının
+oranındadır, *Ekranımda*'da kutunuzun ekrandaki boyutundadır. *Aydınlık* ve *Karanlık* arka planlarla
+yazının iki durumda da okunduğunu kontrol edin. **Test et** örnek altyazıyı iki tarafta da kendi
+görünümüyle gösterir.
 
 ![Görünüm sayfası: önizleme, hazır stiller ve yazı ayarları](gorseller/gorunum.png)
 
@@ -147,10 +154,15 @@ edin.
 - **Yazı:** yazı tipi, kalınlık, boyut, renk.
 - **Kenar ve gölge:** açık renkli sahnelerde kenarı kalınlaştırmak okumayı kolaylaştırır.
 - **Arka plan:** *Yok*, *Yarı saydam* ya da *Opak* kutu.
+- **Ölçek** (yalnız *Ekranımda*): kutudaki yazıyı kenarı ve arka planıyla birlikte büyütür ya da küçültür.
+  Kutunun yerini Ana sayfadaki **Konumu ayarla** belirler.
+- **Konum ve genişlik** (yalnız *Yayınımda*): OBS'teki altyazının alt kenara uzaklığı ve en fazla genişliği.
 - **Gelişmiş ayarlar:** konuşmacı adının rengi, belirme süresi, İngilizce orijinali çevirinin altında küçük
-  gösterme ve OBS'te orijinali kapatma.
+  gösterme. *Yayınımda*'da ayrıca OBS'te orijinali kapatma.
 
-**Varsayılana dön** tüm görünüm ayarlarını ilk hâline getirir.
+Seçimin yanındaki **Yayınımdakini buraya kopyala** (ya da **Ekranımdakini buraya kopyala**) öbür taraftaki
+yazı, renk, kenar ve arka plan ayarlarını seçili tarafa aktarır; OBS'teki konum ve maske değişmez. İki taraf
+zaten aynıysa düğme soluk görünür. **Varsayılana dön** yalnız seçili tarafı ilk hâline getirir.
 
 ## 7. Çeviriyi iyileştirin
 
@@ -203,7 +215,8 @@ vardır.
 2. Robz Vision'da **Uygulama penceresi** ile bu projektör penceresini seçin ve altyazı alanını işaretleyin.
    Projektör penceresi başka pencerelerin arkasında kalabilir, ama simge durumuna küçültülmemeli.
 3. Ana sayfadaki adresi OBS'e **Tarayıcı** kaynağı olarak ekleyin ve capture kartı kaynağının üstüne taşıyın.
-4. İsterseniz *Görünüm → Gelişmiş ayarlar → OBS'te orijinali kapat* ile İngilizce altyazıyı yayında gizleyin.
+4. İsterseniz *Görünüm → Yayınımda → Gelişmiş ayarlar → OBS'te orijinali kapat* ile İngilizce altyazıyı
+   yayında gizleyin.
 
 Kendiniz oyunu televizyondan ya da kartın düşük gecikmeli çıkışından oynuyorsanız ekrandaki kutuyu
 kapatabilirsiniz (**Ekranımda → Kapalı**); çeviriyi OBS önizlemesinde görürsünüz.

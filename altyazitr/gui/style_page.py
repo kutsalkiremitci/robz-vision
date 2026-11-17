@@ -1,6 +1,11 @@
-"""Görünüm sayfası: canlı önizleme ve hazır stiller en üstte; altında sade bölümler (yazı, kenar ve gölge,
-arka plan, konum ve ölçek, gelişmiş). Geniş pencerede önizleme sağ sütunda sabit kalır, ayarlar solda kayar;
-böylece aşağıdaki bir ayarı değiştirirken sonucu hep görürsünüz."""
+"""Görünüm sayfası: üstte sabit bantta "Ekranımda | Yayınımda" seçimi (sayfanın hangi görünümü düzenlediği);
+altında canlı önizleme, hazır stiller ve sade bölümler (yazı, kenar ve gölge, arka plan, konum/ölçek,
+gelişmiş). Geniş pencerede önizleme sağ sütunda sabit kalır, ayarlar solda kayar; böylece aşağıdaki bir ayarı
+değiştirirken sonucu hep görürsünüz.
+
+İki görünüm birbirinden bağımsızdır: Ekranımda = Settings.screen_style (oyunun üstündeki kutu),
+Yayınımda = Settings.style (OBS tarayıcı kaynağı ve OBS maskesi). Sayfadaki her denetim seçili olanı okur
+ve yazar; seçim değişince denetimler sinyal göndermeden yeniden doldurulur, hiçbir şey kaydedilmez."""
 
 from __future__ import annotations
 
@@ -8,6 +13,7 @@ import dataclasses
 import math
 
 from PySide6.QtCore import QEvent, QSize, Qt
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy,
                                QVBoxLayout, QWidget)
 
@@ -15,7 +21,39 @@ from altyazitr.config import StyleCfg
 from altyazitr.gui import icons
 from altyazitr.gui.controls import Collapsible, FontPicker, PresetCard, Segmented, SliderRow, SubtitlePreview, SwatchRow
 from altyazitr.gui.tokens import C, ICON, RADIUS, SPACE
-from altyazitr.gui.widgets import Card, page, row
+from altyazitr.gui.widgets import Card, button_icon, label, page, row
+
+# --- iki görünüm ---------------------------------------------------------------------
+SCREEN, STREAM = "screen", "stream"
+# Yalnız yayında işe yarayan alanlar. Ekrandaki kutu bunları kullanmaz: render.paint_subtitle(in_box=True)
+# konumu ve genişliği kutudan alır; maske yalnız OBS'te çizilir. Kopyalama bunlara dokunmaz.
+STREAM_ONLY = frozenset({"bottom_percent", "max_width_percent", "mask_original", "mask_color", "mask_opacity",
+                         "mask_pad_percent"})
+LOOK_FIELDS = tuple(f.name for f in dataclasses.fields(StyleCfg) if f.name not in STREAM_ONLY)
+DEFAULT_BOX = (0.66, 0.17)  # ekrandaki kutunun ekrana oranı bilinmiyorsa (overlay.default_box ile aynı)
+
+SIDE_TEXT = {
+    SCREEN: dict(
+        hint="Oyunun üstünde yalnız sizin gördüğünüz kutu. Yayındaki altyazı ayrı ayarlanır.",
+        copy="Yayınımdakini buraya kopyala",
+        copy_tip="Yayındaki yazı tipini, boyutu, renkleri, kenarı ve arka planı ekranınızdaki kutuya da uygular",
+        copied="Yayındaki görünüm ekranınızdaki kutuya kopyalandı",
+        reset_tip="Ekranınızdaki kutunun görünümünü ilk hâline döndürür; yayın değişmez",
+        size_tip="1080p ekrana göre piksel cinsinden yazı boyutu; ekranınız büyükse oranla büyür",
+        pos_title="Ölçek",
+    ),
+    STREAM: dict(
+        hint="İzleyicilerin OBS'te gördüğü altyazı. Ekranınızdaki kutu ayrı ayarlanır.",
+        copy="Ekranımdakini buraya kopyala",
+        copy_tip="Ekranınızdaki kutunun yazı tipini, boyutunu, renklerini, kenarını ve arka planını yayına da "
+                 "uygular. OBS'teki konum, genişlik ve maske değişmez.",
+        copied="Ekranınızdaki görünüm yayına kopyalandı",
+        reset_tip="Yayındaki altyazının görünümünü ilk hâline döndürür; ekranınızdaki kutu değişmez",
+        size_tip="1080p yayına göre piksel cinsinden yazı boyutu",
+        pos_title="Konum ve genişlik",
+    ),
+}
+SAME_TIP = "İki görünüm şu an aynı"
 
 PRESETS: list[tuple[str, dict]] = [
     ("Klasik", dict(text_color="#FFFFFF", outline_color="#000000", outline_width=3.0, shadow=True,
@@ -71,11 +109,16 @@ class _Field(QWidget):
         target = getattr(control, "slider", control)
         if not target.accessibleName():
             target.setAccessibleName(text)
+        self.control = control
         tip = tip or control.toolTip()
         if tip:
             self.label.setToolTip(tip)
             if not control.toolTip():
                 control.setToolTip(tip)
+
+    def set_tip(self, tip: str) -> None:
+        self.label.setToolTip(tip)
+        self.control.setToolTip(tip)
 
 
 class _PresetGrid(QWidget):
@@ -120,16 +163,31 @@ class _PresetGrid(QWidget):
 class StylePage(QWidget):
     def __init__(self, win):
         super().__init__()
+        self.win = win
         self.ctx = win.ctx
-        self.st: StyleCfg = self.ctx.s.style
         ov = self.ctx.s.overlay
-        sa, lay = page("Görünüm")
+        # Varsayılan: Ekranımda. Herkes kendi ekranındaki kutuyu görür, değişikliğin sonucu hemen önündedir;
+        # yalnız OBS kullanan (kutuyu kapatmış) yayıncı için düzenlenecek tek görünüm yayındakidir.
+        self._prof = SCREEN if getattr(ov, "enabled", True) else STREAM
+        self.st: StyleCfg = self._style(self._prof)
+        self._loading = False  # sync() denetimleri doldururken gelen değişiklikler ayara yazılmaz
+        sa, lay = page(None)
         self._sa, self._lay = sa, lay
-        self._stage_index = lay.count()  # dar düzende önizleme başlığın hemen altına girer
+        # Başlık ve görünüm seçimi kaydırılmayan üst bantta: aşağıdaki bir ayarı değiştirirken de hangi
+        # görünümün düzenlendiği görünür. Bant + içerik boşluğu, diğer sayfalardaki başlık boşluğuyla aynı.
+        m = lay.contentsMargins()
+        head_gap = SPACE["l"]
+        lay.setContentsMargins(m.left(), lay.spacing() - head_gap, m.right(), m.bottom())
+        self._header = self._build_header(m.left(), m.top(), m.right(), head_gap)
+        self._stage_index = lay.count()  # dar düzende önizleme en üste girer
         outer = row(sa)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
-        self.setLayout(outer)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.addWidget(self._header)
+        root.addLayout(outer, 1)
         self._fields: list[_Field] = []
         self._wide = False
         self._compact: bool | None = None
@@ -210,7 +268,8 @@ class StylePage(QWidget):
         self.font.setToolTip("Listede olmayan bir yazı tipi için listenin en altındaki seçeneği kullanın")
         tc.add(self._field("Yazı tipi", self.font))
         tc.add(self._field("Kalınlık", self.weight))
-        tc.add(self._field("Boyut", self.size, stretch=True, tip="1080p yayına göre piksel cinsinden yazı boyutu"))
+        self._size_row = self._field("Boyut", self.size, stretch=True, tip=SIDE_TEXT[STREAM]["size_tip"])
+        tc.add(self._size_row)
         tc.add(self._field("Renk", self.color))
         lay.addWidget(tc)
 
@@ -247,8 +306,9 @@ class StylePage(QWidget):
         bc.add(self.bg_details)
         lay.addWidget(bc)
 
-        # --- konum ve ölçek ----------------------------------------------------------------------
-        pos = Card("Konum ve ölçek")
+        # --- konum ve genişlik (Yayınımda) / ölçek (Ekranımda) -----------------------------------
+        pos = Card(SIDE_TEXT[STREAM]["pos_title"])
+        self._pos_title: QLabel = pos.lay.itemAt(0).widget()
         self.bottom = SliderRow(0, 45, 0.5, "%{:.0f}")
         self.bottom.changed.connect(lambda v: self._set("bottom_percent", round(v, 1)))
         self.bottom.setToolTip("OBS'teki altyazının alt kenara uzaklığı (önizlemedeki konum)")
@@ -257,12 +317,16 @@ class StylePage(QWidget):
         self.maxw.setToolTip("OBS'teki altyazının en fazla genişliği; daha uzun satırlar alta kayar")
         self.ov_scale = SliderRow(0.5, 2.0, 0.1, "{:.1f}x", scale=10, minus="−", plus="+")
         self.ov_scale.setValue(ov.scale)
-        self.ov_scale.changed.connect(lambda v: (setattr(ov, "scale", round(v, 1)), self._overlay_changed()))
-        self.ov_scale.setToolTip("Kendi ekranınızdaki altyazının boyutu; OBS'i etkilemez. Yerini Ana sayfadaki "
-                                 "'Konumu ayarla' ile değiştirin.")
-        pos.add(self._field("OBS'te alttan", self.bottom, stretch=True))
-        pos.add(self._field("OBS'te genişlik", self.maxw, stretch=True))
-        pos.add(self._field("Ekranımda ölçek", self.ov_scale, stretch=True))
+        self.ov_scale.changed.connect(self._set_scale)
+        self.ov_scale.setToolTip("Kutudaki altyazıyı yazı, kenar ve arka planıyla birlikte büyütür ya da "
+                                 "küçültür; yayını etkilemez. Kutunun yerini Ana sayfadaki 'Konumu ayarla' ile "
+                                 "değiştirin.")
+        self._bottom_row = self._field("OBS'te alttan", self.bottom, stretch=True)
+        self._maxw_row = self._field("OBS'te genişlik", self.maxw, stretch=True)
+        self._scale_row = self._field("Yazı ölçeği", self.ov_scale, stretch=True)
+        pos.add(self._bottom_row)
+        pos.add(self._maxw_row)
+        pos.add(self._scale_row)
         lay.addWidget(pos)
 
         # --- gelişmiş ------------------------------------------------------------------------------
@@ -294,7 +358,8 @@ class StylePage(QWidget):
         self._orig_row = self._field("Orijinal boyutu", self.orig_size, stretch=True,
                                      tip="İngilizce metnin, çeviriye göre boyutu", indent=ind)
         adv.add(self._orig_row)
-        adv.add(self._field("OBS'te orijinali kapat", self.mask, indent=ind))
+        self._mask_row = self._field("OBS'te orijinali kapat", self.mask, indent=ind)
+        adv.add(self._mask_row)
         self._mask_rows = QWidget()
         mr = QVBoxLayout(self._mask_rows)
         mr.setContentsMargins(0, 0, 0, 0)
@@ -324,10 +389,52 @@ class StylePage(QWidget):
         self._side.hide()
         outer.addWidget(self._side, 1)
 
+        sig = getattr(getattr(self.ctx, "overlay", None), "geometry_saved", None)
+        if sig is not None:  # kutu Ana sayfada taşınıp boyutlandırılınca ekran önizlemesi de uysun
+            sig.connect(self._refresh_preview)
         self._equalize_labels()
-        self.sync()
+        self._load_side()
 
     # --- yapı yardımcıları --------------------------------------------------------------------
+    def _build_header(self, left: int, top: int, right: int, bottom: int) -> QWidget:
+        """Sabit üst bant: sayfa başlığı, Ekranımda | Yayınımda seçimi, kopyalama eylemi, tek satır açıklama."""
+        head = QWidget()
+        hl = QVBoxLayout(head)
+        hl.setContentsMargins(left, top, right, bottom)
+        hl.setSpacing(0)
+        hl.addWidget(label("Görünüm", "pageTitle"))
+        hl.addSpacing(SPACE["m"])
+
+        self.side = Segmented([("Ekranımda", SCREEN), ("Yayınımda", STREAM)], icons=["monitor", "broadcast"])
+        b0, b1 = self.side.group.button(0), self.side.group.button(1)
+        b0.setToolTip("Oyunun üstünde sizin gördüğünüz kutunun görünümünü düzenleyin")
+        b1.setToolTip("İzleyicilerin OBS'te gördüğü altyazının görünümünü düzenleyin")
+        b0.setAccessibleName("Ekranımdaki görünüm")
+        b1.setAccessibleName("Yayınımdaki görünüm")
+        self.side.setAccessibleName("Düzenlenen görünüm")
+        self.side.setValue(self._prof)
+        self.side.changed.connect(self.set_side)
+
+        self._copy_btn = QPushButton()
+        self._copy_btn.setObjectName("ghost")
+        ic, sz = button_icon("copy", C.TEXT_2, ICON["s"])
+        self._copy_btn.setIcon(ic)
+        self._copy_btn.setIconSize(sz)
+        self._copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._copy_btn.clicked.connect(self._copy_other)
+
+        r = QHBoxLayout()
+        r.setContentsMargins(0, 0, 0, 0)
+        r.setSpacing(SPACE["m"])
+        r.addWidget(self.side)
+        r.addWidget(self._copy_btn)
+        r.addStretch(1)
+        hl.addLayout(r)
+        hl.addSpacing(SPACE["s"])
+        self._side_hint = label("", "muted")
+        hl.addWidget(self._side_hint)
+        return head
+
     def _field(self, text: str, control: QWidget, stretch: bool = False, tip: str = "",
                indent: int = 0) -> _Field:
         if isinstance(control, SliderRow):
@@ -411,28 +518,96 @@ class StylePage(QWidget):
                 self.preview.setFixedHeight(target)
         return super().eventFilter(obj, ev)
 
+    # --- hangi görünüm düzenleniyor ---------------------------------------------------------
+    def _style(self, side: str) -> StyleCfg:
+        return self.ctx.s.screen_style if side == SCREEN else self.ctx.s.style
+
+    @property
+    def side_key(self) -> str:
+        return self._prof
+
+    def set_side(self, side: str) -> None:
+        """Sayfanın düzenlediği görünümü değiştirir. Hiçbir ayarı değiştirmez, kaydetmez."""
+        self.side.setValue(side)
+        if side == self._prof or side not in (SCREEN, STREAM):
+            return
+        self._prof = side
+        self._load_side()
+
+    def _load_side(self) -> None:
+        self.st = self._style(self._prof)
+        for c in self.cards:
+            c.base = self.st
+        t = SIDE_TEXT[self._prof]
+        screen = self._prof == SCREEN
+        self._side_hint.setText(t["hint"])
+        self._copy_btn.setText(t["copy"])
+        self._copy_btn.setAccessibleName(t["copy"])
+        self._reset_btn.setToolTip(t["reset_tip"])
+        self._size_row.set_tip(t["size_tip"])
+        self._pos_title.setText(t["pos_title"])
+        # yalnız bir tarafta işe yarayan satırlar (bkz. STREAM_ONLY); ölçek yalnız ekrandaki kutuyu büyütür
+        self._bottom_row.setVisible(not screen)
+        self._maxw_row.setVisible(not screen)
+        self._scale_row.setVisible(screen)
+        self.sync()
+
+    def _screen_box(self) -> tuple[float, float]:
+        """Ekrandaki kutunun, bulunduğu ekrana oranı (genişlik, yükseklik); bilinmiyorsa varsayılan kutu."""
+        ov = getattr(self.ctx, "overlay", None)
+        try:
+            g = ov.geometry()
+            scr = ov.screen() or QGuiApplication.primaryScreen()
+            sg = scr.geometry()
+            if g.width() > 0 and g.height() > 0 and sg.width() > 0 and sg.height() > 0:
+                return min(1.0, g.width() / sg.width()), min(1.0, g.height() / sg.height())
+        except Exception:
+            pass
+        return DEFAULT_BOX
+
+    def _refresh_preview(self) -> None:
+        if self._prof == SCREEN:
+            self.preview.set_profile(self.st, self._screen_box(), float(self.ctx.s.overlay.scale))
+        else:
+            self.preview.set_profile(self.st)
+        for c in self.cards:
+            c.update()
+        same = all(getattr(self.ctx.s.style, n) == getattr(self.ctx.s.screen_style, n) for n in LOOK_FIELDS)
+        self._copy_btn.setEnabled(not same)
+        self._copy_btn.setToolTip(SAME_TIP if same else SIDE_TEXT[self._prof]["copy_tip"])
+
+    def showEvent(self, e) -> None:  # noqa: N802
+        super().showEvent(e)
+        self._refresh_preview()  # kutu Ana sayfada değişmiş ya da görünüm başka yerden değişmiş olabilir
+
     # --- ayar ↔ kontrol --------------------------------------------------------------------
     def sync(self) -> None:
-        """Tüm kontrolleri mevcut ayarlardan doldurur (sinyal göndermeden)."""
+        """Tüm kontrolleri seçili görünümden doldurur (sinyal göndermeden, hiçbir şey kaydetmeden)."""
         st = self.st
-        self.font.setFamily(st.font_family)
-        self.weight.setNearest(st.font_weight)
-        self.size.setValue(st.font_size)
-        self.color.setColor(st.text_color)
-        self.outline.setNearest(st.outline_width)
-        self.outline_color.setColor(st.outline_color)
-        self.shadow.setValue(bool(st.shadow))
-        self._sync_bg()
-        self.bg_color.setColor(st.bg_color)
-        self.bottom.setValue(st.bottom_percent)
-        self.maxw.setValue(st.max_width_percent)
-        self.speaker.setColor(st.speaker_color)
-        self.fade.setValue(st.fade_ms)
-        self.show_orig.setValue(bool(st.show_original))
-        self.orig_size.setValue(st.original_size_percent)
-        self.mask.setValue(bool(st.mask_original))
-        self.mask_color.setColor(st.mask_color)
-        self.mask_alpha.setValue(st.mask_opacity)
+        self._loading = True
+        try:
+            self.font.setFamily(st.font_family)
+            self.weight.setNearest(st.font_weight)
+            self.size.setValue(st.font_size)
+            self.color.setColor(st.text_color)
+            self.outline.setNearest(st.outline_width)
+            self.outline_color.setColor(st.outline_color)
+            self.shadow.setValue(bool(st.shadow))
+            self._sync_bg()
+            self.bg_color.setColor(st.bg_color)
+            self.bottom.setValue(st.bottom_percent)
+            self.maxw.setValue(st.max_width_percent)
+            self.ov_scale.setValue(self.ctx.s.overlay.scale)
+            self.speaker.setColor(st.speaker_color)
+            self.fade.setValue(st.fade_ms)
+            self.show_orig.setValue(bool(st.show_original))
+            self.orig_size.setValue(st.original_size_percent)
+            self.mask.setValue(bool(st.mask_original))
+            self.mask_color.setColor(st.mask_color)
+            self.mask_alpha.setValue(st.mask_opacity)
+        finally:
+            self._loading = False
+        self._refresh_preview()
 
     def _sync_bg(self) -> None:
         """Arka plan seçimini eşitler ve yalnızca işe yarayan ayrıntı satırlarını gösterir."""
@@ -447,9 +622,13 @@ class StylePage(QWidget):
         self.bg_details.setVisible(op > 0.001)
         self.outline_color_row.setVisible(self.st.outline_width > 0)
         self._orig_row.setVisible(bool(self.st.show_original))
-        self._mask_rows.setVisible(bool(self.st.mask_original))
+        stream = self._prof == STREAM  # OBS maskesi yalnız yayında
+        self._mask_row.setVisible(stream)
+        self._mask_rows.setVisible(stream and bool(self.st.mask_original))
 
     def _set(self, attr: str, value) -> None:
+        if self._loading:
+            return
         setattr(self.st, attr, value)
         if attr in ("bg_opacity", "outline_width", "show_original", "mask_original"):
             self._sync_bg()
@@ -462,18 +641,36 @@ class StylePage(QWidget):
         self._changed()
 
     def _reset(self) -> None:
+        """Yalnız seçili görünümü ilk hâline döndürür."""
         d = StyleCfg()
         for f in dataclasses.fields(StyleCfg):
             setattr(self.st, f.name, getattr(d, f.name))
         self.sync()
         self._changed()
 
+    def _copy_other(self) -> None:
+        """Öbür görünümün yazı/renk/kenar/arka plan ayarlarını seçili görünüme kopyalar (yerinde; başka
+        bileşenler bu nesneleri tutar). Yalnız yayına ait konum, genişlik ve maske kopyalanmaz."""
+        src = self._style(STREAM if self._prof == SCREEN else SCREEN)
+        for name in LOOK_FIELDS:
+            setattr(self.st, name, getattr(src, name))
+        self.sync()
+        self._changed()
+        toast = getattr(self.win, "toast", None)
+        if toast is not None:
+            toast(SIDE_TEXT[self._prof]["copied"], "success")
+
     def _changed(self) -> None:
         self.ctx.save_later()
         self.ctx.display.push_style()
-        self.preview.update()
-        for c in self.cards:
-            c.update()
+        self._refresh_preview()
+
+    def _set_scale(self, v: float) -> None:
+        if self._loading:
+            return
+        self.ctx.s.overlay.scale = round(v, 1)
+        self._overlay_changed()
+        self._refresh_preview()
 
     def _overlay_changed(self) -> None:
         self.ctx.save_later()

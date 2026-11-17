@@ -92,7 +92,8 @@ PC oyunları, PS Remote Play ve Xbox uygulaması gibi uzaktan oynatma pencereler
   gelirse çeviriyi düzeltir. Konuşmacı adları (`LUCIA: …`) çevrilmez, ayrı renkte gösterilir.
 - **Sözlük.** Karakter ve yer adlarını olduğu gibi bırakır ya da sizin verdiğiniz karşılığı kullanır.
 - **Görünüm.** Hazır stiller (Klasik, Sinema, Kutulu, Sarı, Minimal), yazı tipi, boyut, renk, kenar, gölge ve
-  arka plan. Canlı önizleme vardır; değişiklik ekrana ve OBS'e anında yansır.
+  arka plan. Ekranınızdaki kutu ile yayındaki altyazı ayrı ayarlanır: örneğin ekranda küçük yazı, yayında arka
+  planlı büyük yazı. Canlı önizleme vardır; değişiklik anında yansır.
 - **İsteğe bağlı motorlar.** Ollama ile yerel bir dil modeli, kendi anahtarınızla Google Gemini ya da DeepL.
   Önce yerel çeviri görünür, daha iyi sonuç gelince yerine geçer. Hata olursa yerel çeviriyle devam eder.
 - Global kısayollar, sistem tepsisi, çeviri önbelleği ve baştan sona Türkçe arayüz.

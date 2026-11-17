@@ -473,15 +473,25 @@ def _fit_16_9(w: float, h: float) -> QRectF:
     return QRectF((w - pw) / 2, (h - ph) / 2, pw, ph)
 
 
+STREAM_CAPTION = "1080p yayın oranında önizleme"
+SCREEN_CAPTION = "Ekranınızdaki kutu"
+BOX_BOTTOM = 0.05  # ekrandaki kutunun varsayılan alt boşluğu (overlay.default_box ile aynı)
+
+
 class SubtitlePreview(QWidget):
-    """Yayın karesinin (16:9, 1080p'ye göre ölçekli) alt kısmı: yazı/arka plan ayarlarının yayında
-    nasıl görüneceği. Kare genişliğe sığdırılır ve üstten kırpılır; böylece yazı okunacak kadar büyük
-    kalır ama ekrana oranı gerçektekiyle aynıdır."""
+    """16:9 karenin alt kısmı: yazı/arka plan ayarlarının nasıl görüneceği. Kare genişliğe sığdırılır ve
+    üstten kırpılır; böylece yazı okunacak kadar büyük kalır ama ekrana oranı gerçektekiyle aynıdır.
+
+    * Yayın (box None): OBS'teki 1080p kare; konum ve genişlik görünümün kendi ayarlarından.
+    * Ekran (box = kutunun ekrana oranı): altyazı, ekrandaki kutuyla aynı kuralla kutunun içine çizilir
+      (render.paint_subtitle(in_box=True)); kutu ortada ve alta yakın durur, yeri Ana sayfadan ayarlanır."""
 
     def __init__(self, style: StyleCfg, parent: QWidget | None = None):
         super().__init__(parent)
         self.st = style
         self.dark = False
+        self.box: tuple[float, float] | None = None
+        self.scale = 1.0
         self.setMinimumHeight(300)
         self.setMaximumHeight(300)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -489,6 +499,14 @@ class SubtitlePreview(QWidget):
     def set_dark(self, on: bool) -> None:
         self.dark = on
         self.update()
+
+    def set_profile(self, style: StyleCfg, box: tuple[float, float] | None = None, scale: float = 1.0) -> None:
+        """Önizlenen görünüm. box verilirse ekrandaki kutu (genişlik, yükseklik; ekrana oranla) çizilir."""
+        self.st, self.box, self.scale = style, box, scale
+        self.update()
+
+    def caption(self) -> str:
+        return STREAM_CAPTION if self.box is None else SCREEN_CAPTION
 
     def paintEvent(self, _e) -> None:  # noqa: N802
         p = QPainter(self)
@@ -504,7 +522,13 @@ class SubtitlePreview(QWidget):
         p.setClipPath(clip)
         paint_scene(p, frame, self.dark)
         p.translate(frame.topLeft())
-        paint_subtitle(p, frame.width(), frame.height(), self.st, SAMPLE_TEXT, SAMPLE_SPEAKER, SAMPLE_ORIGINAL)
+        if self.box is None:
+            paint_subtitle(p, frame.width(), frame.height(), self.st, SAMPLE_TEXT, SAMPLE_SPEAKER, SAMPLE_ORIGINAL)
+        else:
+            bw, bh = frame.width() * self.box[0], frame.height() * self.box[1]
+            p.translate((frame.width() - bw) / 2, frame.height() * (1 - BOX_BOTTOM) - bh)
+            paint_subtitle(p, bw, bh, self.st, SAMPLE_TEXT, SAMPLE_SPEAKER, SAMPLE_ORIGINAL, self.scale,
+                           ref_height=frame.height(), in_box=True)
         p.resetTransform()
         p.setClipping(False)
         vis = view.intersected(frame)
@@ -516,7 +540,7 @@ class SubtitlePreview(QWidget):
         f = QFont(F.DISPLAY)
         f.setPixelSize(F.SMALL)
         p.setFont(f)
-        text = "1080p yayın oranında önizleme"
+        text = self.caption()
         fm = QFontMetricsF(f)
         tw, th = fm.horizontalAdvance(text) + 16, fm.height() + 6
         tag = QRectF(vis.right() - tw - 10, vis.top() + 10, tw, th)

@@ -48,19 +48,21 @@ class Card(QFrame):
             self.lay.addLayout(layout)
 
 
-def page(title: str) -> tuple[QScrollArea, QVBoxLayout]:
-    """Kaydırılabilir sayfa iskeleti: 32 px kenar boşluğu, bölümler arası 24 px."""
+def page(title: str | None) -> tuple[QScrollArea, QVBoxLayout]:
+    """Kaydırılabilir sayfa iskeleti: 32 px kenar boşluğu, bölümler arası 24 px.
+    title None: başlık kaydırılan alana konmaz (sayfa onu kendi sabit üst bandına yerleştirir)."""
     inner = QWidget()
     inner.setObjectName("page")
     lay = QVBoxLayout(inner)
     m = SPACE["xxl"]
     lay.setContentsMargins(m, m - 6, m, m)
     lay.setSpacing(SPACE["xl"])
-    head = QVBoxLayout()
-    head.setContentsMargins(0, 0, 0, 0)
-    head.setSpacing(SPACE["xs"])
-    head.addWidget(label(title, "pageTitle"))
-    lay.addLayout(head)
+    if title:
+        head = QVBoxLayout()
+        head.setContentsMargins(0, 0, 0, 0)
+        head.setSpacing(SPACE["xs"])
+        head.addWidget(label(title, "pageTitle"))
+        lay.addLayout(head)
     sa = QScrollArea()
     sa.setWidgetResizable(True)
     sa.setFrameShape(QFrame.Shape.NoFrame)

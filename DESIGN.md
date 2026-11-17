@@ -89,7 +89,11 @@ Kurallar:
 
 - İçerik **sola hizalı**; bölümler kart ızgarası değil, üstte 1 px ayırıcı + başlık + boşlukla ayrılan
   bantlardır. Yalnızca canlı başlık bandı ve önizleme bir yüzeye oturur.
-- `widgets.page(title, subtitle)`: sayfa kenar boşluğu 32 px, bölümler arası 24 px, başlık `#pageTitle`.
+- `widgets.page(title)`: sayfa kenar boşluğu 32 px, bölümler arası 24 px, başlık `#pageTitle`.
+- **Sayfa düzeyinde seçim** (Görünüm'deki *Ekranımda | Yayınımda*): sayfanın tüm denetimlerinin neyi
+  düzenlediğini belirleyen seçim, başlığın altında **kaydırılmayan** üst bantta durur (`page(None)` + kendi
+  bandı; başlığın yeri diğer sayfalarla aynı). Yanında yalnız ona bağlı ikincil eylem (`#ghost`), altında tek
+  satır `#muted` açıklama; bant ile içerik arası yine 24 px. Önizleme, neyi gösterdiğini köşe etiketinde söyler.
   `widgets.Card(title)`: sade bölüm (`QFrame#card`), ayırıcıdan sonra 20 px, öğeler arası 12 px.
 - Boşluk ölçeği: 4 / 8 / 12 / 16 / 24 / 32 px (`SPACE`).
 - Köşe: girişler ve düğmeler 6 px, segment içi 5 px, açılır yüzeyler/bant/önizleme/hazır stil kartı
