@@ -313,6 +313,9 @@ Python paket adı tarihsel nedenlerle `altyazitr` olarak kaldı.
 Hata bildirimi, oyuna özel ayar önerisi ve kod katkısı için [CONTRIBUTING.md](CONTRIBUTING.md)'ye bakın.
 Değişiklik geçmişi [CHANGELOG.md](CHANGELOG.md)'de.
 
+Robz Vision işinize yaradıysa [GitHub Sponsors](https://github.com/sponsors/kutsalkiremitci) üzerinden destek
+olabilirsiniz. Zorunlu değil; program her durumda ücretsiz ve açık kaynak kalır.
+
 ## Lisans
 
 Kaynak kod [MIT](LICENSE) lisanslıdır. Kullanılan bileşenlerin ve çeviri modelinin lisansları
