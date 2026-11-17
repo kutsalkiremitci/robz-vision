@@ -6,6 +6,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.0.4] - 2026-11-17
+
 ### Eklendi
 
 - **Altyazı akışı:** son çeviriler alt alta kalır (en yenisi altta, öncekiler yukarıda soluk), her satır oyun
@@ -113,7 +115,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.0.3...HEAD
+[Yayımlanmadı]: ../../compare/v1.0.4...HEAD
+[1.0.4]: ../../releases/tag/v1.0.4
 [1.0.3]: ../../releases/tag/v1.0.3
 [1.0.2]: ../../releases/tag/v1.0.2
 [1.0.1]: ../../releases/tag/v1.0.1
