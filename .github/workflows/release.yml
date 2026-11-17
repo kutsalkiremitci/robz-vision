@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+env:
+  # Windows makinelerinin konsolu cp1252; Python çıktısı Türkçe harflerde hata vermesin
+  PYTHONUTF8: "1"
+
 jobs:
   test:
     runs-on: windows-latest

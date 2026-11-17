@@ -50,6 +50,8 @@ def changelog_section(version: str, text: str) -> str:
 
 
 def main() -> None:
+    # GitHub'ın Windows makinesinde konsol cp1252: Türkçe harfler print'te hata vermesin
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
     if len(sys.argv) != 3:
         raise SystemExit(__doc__)
     version, out = sys.argv[1], Path(sys.argv[2])
