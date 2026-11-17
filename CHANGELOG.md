@@ -6,6 +6,24 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.0.1] - 2026-11-17
+
+### Düzeltildi
+
+- Kumlu ya da hareketli arka planda (asfalt, çimen, sarı yol çizgisi) altyazı yanlış okunuyor, kelimeler
+  kayboluyor ve çeviri bozuluyordu. Yeni "kenarlı yazıyı ayır" ön işlemesi, koyu kenarlı ya da gölgeli
+  altyazıyı arka plandaki parlak tanelerden ayırır. "Otomatik" mod bu yöntemi ve parlak metin ayırmayı birlikte
+  dener, daha çok anlamlı İngilizce kelime okuyanı seçer.
+
+### Eklendi
+
+- Ayarlar → Metin okuma → Gelişmiş → Ön işleme listesine "Kenarlı yazıyı ayır" seçeneği.
+
+### Değişti
+
+- Sürüm dosyalarının adları: `RobzVision-Setup-<sürüm>-x64.exe`, `RobzVision-Portable-<sürüm>-x64.zip`
+  ve `.7z`.
+
 ## [1.0.0] - 2026-11-16
 
 İlk genel sürüm.
@@ -36,5 +54,6 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.0.0...HEAD
+[Yayımlanmadı]: ../../compare/v1.0.1...HEAD
+[1.0.1]: ../../releases/tag/v1.0.1
 [1.0.0]: ../../releases/tag/v1.0.0

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robz-vision"
-version = "1.0.0"
+version = "1.0.1"
 description = "Oyunlardaki İngilizce altyazıları yerel ve ücretsiz olarak Türkçeye çevirip OBS'e ve ekrana aktaran araç"
 readme = "README.md"
 license = "MIT"
