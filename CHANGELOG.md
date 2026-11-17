@@ -6,6 +6,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.0.3] - 2026-11-17
+
 ### Değişti
 
 - Varsayılan OCR motoru artık RapidOCR (PP-OCRv6). Kareyi hem ham hâliyle hem asfalt/kum ayıklanmış hâliyle
@@ -90,7 +92,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.0.2...HEAD
+[Yayımlanmadı]: ../../compare/v1.0.3...HEAD
+[1.0.3]: ../../releases/tag/v1.0.3
 [1.0.2]: ../../releases/tag/v1.0.2
 [1.0.1]: ../../releases/tag/v1.0.1
 [1.0.0]: ../../releases/tag/v1.0.0
