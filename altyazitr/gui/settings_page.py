@@ -55,8 +55,9 @@ class SettingsPage(QWidget):
         add_row(f, "Ön işleme", _tip(bind_combo(s.ocr, "preprocess", [
             ("Otomatik (önerilen)", "auto"), ("Kenarlı yazıyı ayır", "outline"), ("Parlak metni ayır", "bright"),
             ("Yok", "none")], restart),
-            "Otomatik: kenarlı yazıyı ve parlak metni ayrı ayrı okur, daha çok anlamlı kelime çıkanı seçer. "
-            "Kenarlı yazıyı ayır: asfalt, çimen gibi kumlu arka planda koyu kenarlı altyazılar için."))
+            "Otomatik: yazıyı birkaç yolla ayırıp okur, daha çok anlamlı kelime çıkanı seçer. "
+            "Kenarlı yazıyı ayır: rengi ne olursa olsun koyu kenarlı ya da koyu zemindeki yazı; asfalt, çimen gibi "
+            "kumlu arka planda da çalışır."))
         add_row(f, "Algılama", _tip(bind_combo(s.ocr, "detect_mode", [
             ("Akıllı (önerilen)", "smart"), ("Sabit aralık", "interval")], restart),
             "Akıllı: yalnızca altyazı değişince okur. Renkli veya koyu altyazılarda 'Sabit aralık'ı deneyin."))

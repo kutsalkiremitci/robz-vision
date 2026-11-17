@@ -1,9 +1,10 @@
-"""Ucuz altyazı değişim algılama: OCR'ı yalnızca gerektiğinde çalıştırmak için.
+"""Altyazının var olup olmadığını ve değişip değişmediğini ucuzca bulur: OCR yalnızca gerektiğinde çalışır.
 
-Yöntem (LunaTranslator / Translumo / owocr'dan derlenen yaklaşım):
-* Bölge gri tona çevrilip ~480 px genişliğe küçültülür.
-* "Beyaz top-hat" + parlaklık eşiği ile *metin maskesi* çıkarılır (geniş parlak
-  alanlar — gökyüzü, ışık — elenir, ince parlak harf çizgileri kalır).
+Yöntem:
+* Bölge ~640 px genişliğe küçültülür.
+* *Metin maskesi*: rengi ne olursa olsun, çevresinden belirgin koyu bir kenarla (dış çizgi, gölge ya da koyu
+  zemin) ayrılan parlak parçalar (bkz. outlined_text_mask). Asfalt kumlanması, yol çizgisi, gökyüzü, far gibi
+  çevresi orta tonlu ya da büyük parlak şeyler elenir; beyaz, sarı, mavi, kırmızı… her renk yazı kalır.
 * Maske doluluk oranı ile metnin var/yok olduğu (histerezisli) belirlenir.
 * Maske, en son OCR yapılan maskeden belirgin farklıysa ve birkaç kare boyunca
   sabit kaldıysa OCR tetiklenir (daktilo efekti / yavaş beliren yazılar için).
@@ -17,20 +18,81 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-# Eliptik çekirdek: büyük parlak alanların (gökyüzü, far, güneş) kavisli kenarlarında
-# dikdörtgen çekirdeğin bıraktığı "kıymıkları" bırakmaz (testte boş karede %0 yanlış piksel).
-_KT = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+_RINGS = {1: np.ones((3, 3), np.uint8), 2: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))}
 _K3 = np.ones((3, 3), np.uint8)
 
 
-def text_mask(bgr: np.ndarray, bright: int = 160, width: int = 480) -> np.ndarray:
-    g = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-    h, w = g.shape[:2]
+def outlined_text_mask(bgr: np.ndarray, contrast: int = 80, ratio: float = 0.4, min_area: int = 3,
+                       min_v: int = 150, min_height: int = 0, local: int = 25, solid: float = 0.12,
+                       ring_px: int = 2) -> np.ndarray:
+    """Rengi ne olursa olsun, çevresinden belirgin koyu bir kenarla ayrılan parlak yazıyı bulur. 255 = yazı.
+
+    Parlaklık en parlak renk kanalıdır (HSV'deki V): mavi, kırmızı, yeşil yazı da beyaz kadar "parlak" sayılır.
+    Aday piksel hem `min_v`'den parlak hem de çevresinin ortalamasından `local` birim parlak olmalı (orta tonlu
+    asfalt gibi düz dokular harflere yapışmasın). Her aday parçanın çevresindeki `ring_px` (1-2) piksellik halkaya bakılır:
+    halkanın en az `ratio` kadarı parçadan `contrast` birim daha koyuysa (yazının dış çizgisi, gölgesi ya da
+    koyu zemin) parça yazıdır. Asfalt kumlanması, yol çizgisi, far gibi parlak şeylerin çevresi orta tonlu
+    olduğu için elenir. Yazı ince çizgilerden oluşur: ortalama kalınlığı boyunun `solid` katından fazla olan
+    dolu parçalar (lamba, tabela, ışık lekesi) ve ekranın yarısından uzun parçalar atılır. `min_height`ten kısa
+    parçalar atılır (algılamada tek tük taneler için). Binlerce parçada da hızlı olsun diye döngüsüz hesaplanır."""
+    v = bgr.max(axis=2)  # = HSV V, dönüşümden hızlı
+    bright = ((v >= min_v) * 255).astype(np.uint8)
+    # Dolu parlak lekeler (lamba, tabela, ışık): ortalama kalınlık boyunun `solid` katından fazla. Çevre farkı
+    # koşulu lekenin içini boşaltıp kenarını ince bir çizgiye çevireceği için bu, o koşuldan ÖNCE elenir.
+    nb, labb, statsb, _ = cv2.connectedComponentsWithStats(bright, connectivity=8)
+    hb = statsb[:, cv2.CC_STAT_HEIGHT]
+    dtb = cv2.distanceTransform(bright, cv2.DIST_L2, 3)
+    thickb = np.bincount(labb.ravel(), weights=dtb.ravel().astype(np.float64), minlength=nb) / np.maximum(
+        statsb[:, cv2.CC_STAT_AREA], 1)
+    solid_b = (hb >= 8) & (thickb > solid * hb)
+    solid_b[0] = False
+    k = int(np.clip(bgr.shape[0] * 0.25, 9, 61)) | 1
+    around = cv2.blur(v, (k, k)).astype(np.int16)
+    cand = (((bright > 0) & ~solid_b[labb] & (v.astype(np.int16) >= around + local)) * 255).astype(np.uint8)
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(cand, connectivity=8)
+    if n <= 1:
+        return np.zeros_like(cand)
+    area = stats[:, cv2.CC_STAT_AREA]
+    vmean = np.bincount(lab.ravel(), weights=v.ravel().astype(np.float64), minlength=n) / np.maximum(area, 1)
+    # halka pikseli: parçaya ait değil ama 2 px içinde bir parça var (komşu parçanın etiketi alınır)
+    near = cv2.dilate(lab.astype(np.float32), _RINGS[ring_px]).astype(np.int32)
+    ring = (cand == 0) & (near > 0)
+    rl = near[ring]
+    dark = v[ring].astype(np.float64) < vmean[rl] - contrast
+    frac = np.bincount(rl, weights=dark, minlength=n) / np.maximum(np.bincount(rl, minlength=n), 1)
+    height = stats[:, cv2.CC_STAT_HEIGHT]
+    # ortalama kalınlık: parçanın içindeki piksellerin kenara ortalama uzaklığı (harfte ~çizgi/4, dolu lekede ~boy/6)
+    dt = cv2.distanceTransform(cand, cv2.DIST_L2, 3)
+    thick = np.bincount(lab.ravel(), weights=dt.ravel().astype(np.float64), minlength=n) / np.maximum(area, 1)
+    blob = (height >= 8) & (thick > solid * height)
+    keep = ((frac >= ratio) & (area >= min_area) & (height <= bgr.shape[0] * 0.6) & (height >= min_height)
+            & ~blob)
+    keep[0] = False
+    if keep.any():
+        # Harf boyunu alana göre ağırlıklı medyanla bul (tek tek taneler sayıca çok, alanca az). Küçük parçalar
+        # (i noktası, virgül, nokta) yalnızca harflere yakınsa kalır; yazıdan uzak tek tük taneler gider.
+        hs, ws = height[keep], area[keep]
+        order = np.argsort(hs)
+        cum = np.cumsum(ws[order])
+        h_text = float(hs[order][np.searchsorted(cum, cum[-1] / 2)])
+        big = keep & (height >= 0.4 * h_text)
+        r = int(max(2, 0.8 * h_text))
+        zone = cv2.dilate(big[lab].astype(np.uint8), np.ones((2 * r + 1, 2 * r + 1), np.uint8))  # dikdörtgen: hızlı
+        near = np.bincount(lab.ravel(), weights=zone.ravel(), minlength=n) > 0
+        keep &= big | near
+    return (keep[lab] * 255).astype(np.uint8)
+
+
+def text_mask(bgr: np.ndarray, bright: int = 150, width: int = 640) -> np.ndarray:
+    """Algılama maskesi (True = yazı): rengi ne olursa olsun koyu kenarlı parlak yazı; önizlemedeki yeşil alan."""
+    h, w = bgr.shape[:2]
     if w > width:
-        g = cv2.resize(g, (width, max(1, h * width // w)), interpolation=cv2.INTER_AREA)
-    th = cv2.morphologyEx(g, cv2.MORPH_TOPHAT, _KT)
-    m = ((th > 50) & (g > bright)).astype(np.uint8)
-    return cv2.dilate(m, _K3).astype(bool)
+        bgr = cv2.resize(bgr, (width, max(1, h * width // w)), interpolation=cv2.INTER_AREA)
+    # Küçültülmüş karede dış çizgi incelir: 1 px'lik halkaya bakılır (2 px'lik halka çizginin dışına, zemine
+    # taşar ve beyazdan sönük renkler kenarsız sayılır). 4 px'ten kısa parçalar harf değil: asfalt/kum taneleri
+    # "yazı var" sanılmasın. Çevre farkı koşulu (OCR'da harflere doku yapışmasın diye) algılamada gerekmez.
+    m = outlined_text_mask(bgr, min_v=bright, min_height=4, local=0, ring_px=1)
+    return cv2.dilate(m, _K3) > 0
 
 
 def jaccard_distance(a: np.ndarray, b: np.ndarray) -> float:

@@ -174,17 +174,9 @@ def test_english_mass_prefers_complete_reading():
 
 def _outlined_subtitle_on_gravel(seed: int = 3) -> tuple[np.ndarray, tuple[int, int, int, int]]:
     """Kumlu gri zemin (parlak taneler + sarı çizgi) üzerinde siyah kenarlı beyaz altyazı."""
-    rng = np.random.default_rng(seed)
-    g = np.clip(rng.normal(130, 20, (120, 900)), 0, 255).astype(np.uint8)
-    specks = rng.random(g.shape) < 0.04
-    g[specks] = rng.integers(190, 240, specks.sum()).astype(np.uint8)
-    img = cv2.cvtColor(g, cv2.COLOR_GRAY2BGR)
-    cv2.line(img, (40, 119), (140, 0), (60, 200, 225), 12)  # sarı yol çizgisi
-    org, font, scale = (200, 75), cv2.FONT_HERSHEY_DUPLEX, 1.4
-    cv2.putText(img, "Get in the car", org, font, scale, (0, 0, 0), 7, cv2.LINE_AA)  # koyu kenar
-    cv2.putText(img, "Get in the car", org, font, scale, (255, 255, 255), 2, cv2.LINE_AA)
-    (w, h), base = cv2.getTextSize("Get in the car", font, scale, 7)
-    return img, (org[0] - 6, org[1] - h - 6, org[0] + w + 6, org[1] + base + 6)
+    img = _write(_gravel(seed), "Get in the car", (255, 255, 255), org=(200, 75))
+    (w, h), base = cv2.getTextSize("Get in the car", cv2.FONT_HERSHEY_DUPLEX, 1.4, 2)
+    return img, (200 - 8, 75 - h - 8, 200 + w + 8, 75 + base + 8)
 
 
 def test_outlined_text_mask_drops_gravel_keeps_text():
@@ -203,6 +195,65 @@ def test_outlined_text_mask_drops_gravel_keeps_text():
 
 def test_outlined_text_mask_empty_frame():
     assert not outlined_text_mask(np.full((60, 200, 3), 90, np.uint8)).any()
+
+
+def _gravel(seed: int, h: int = 120, w: int = 900) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    g = np.clip(rng.normal(130, 20, (h, w)), 0, 255).astype(np.uint8)
+    specks = rng.random(g.shape) < 0.04
+    g[specks] = rng.integers(190, 240, specks.sum()).astype(np.uint8)
+    img = cv2.cvtColor(g, cv2.COLOR_GRAY2BGR)
+    cv2.line(img, (40, h - 1), (140, 0), (60, 200, 225), 12)  # sarı yol çizgisi
+    return img
+
+
+def _write(img: np.ndarray, text: str, bgr: tuple[int, int, int], org=(160, 75)) -> np.ndarray:
+    """Oyun altyazısı gibi: renkli harf + ~2 px koyu dış çizgi. (İki kez putText ile çizmek dış çizgiyi
+    vermiyor: ince renkli çizgi alttaki kalın siyahın tamamını örtüyor.)"""
+    m = np.zeros(img.shape[:2], np.uint8)
+    cv2.putText(m, text, org, cv2.FONT_HERSHEY_DUPLEX, 1.4, 255, 2, cv2.LINE_AA)
+    letters = m > 127
+    img[cv2.dilate(letters.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0] = (0, 0, 0)
+    img[letters] = bgr
+    return img
+
+
+# Yazının varlığı renge bağlı değil: kırmızı, mavi, mor, yeşil, beyaz hepsi "yazı var"
+@pytest.mark.parametrize("bgr", [(50, 50, 224), (229, 182, 93), (230, 110, 155), (114, 204, 114), (255, 255, 255)])
+def test_text_mask_detects_any_color(bgr):
+    p = GateParams()
+    on_dark = _write(np.full((120, 900, 3), 35, np.uint8), "Follow the Tennis Coach", bgr)
+    on_gravel = _write(_gravel(5), "Follow the Tennis Coach", bgr)
+    assert text_mask(on_dark, p.bright).mean() >= p.appear
+    assert text_mask(on_gravel, p.bright).mean() >= p.appear
+
+
+def test_text_mask_ignores_gravel_and_lights():
+    """Yazısız kumlu asfalt / yol çizgisi ve koyu zeminde dolu parlak lekeler (lamba, far) yazı sayılmaz."""
+    p = GateParams()
+    for seed in range(4):
+        assert text_mask(_gravel(seed), p.bright).mean() < p.vanish
+    lights = np.full((120, 900, 3), 30, np.uint8)
+    for x, col in ((150, (255, 255, 255)), (450, (60, 200, 255)), (750, (255, 120, 80))):
+        cv2.ellipse(lights, (x, 60), (60, 35), 0, 0, 360, col, -1)
+    assert text_mask(lights, p.bright).mean() < p.vanish
+
+
+def test_text_mask_stable_on_moving_gravel():
+    """Aynı yazı, akan asfalt: maske değişmemeli (yoksa yazı hiç 'sabit' sayılmaz, okuma gecikir)."""
+    from altyazitr.detect import jaccard_distance
+    a = text_mask(_write(_gravel(1), "We need to move, now!", (255, 255, 255)))
+    b = text_mask(_write(_gravel(2), "We need to move, now!", (255, 255, 255)))
+    assert jaccard_distance(a, b) < GateParams().still
+
+
+def test_outline_preprocess_keeps_colored_words():
+    from altyazitr.ocr import preprocess
+    img = _write(np.full((120, 900, 3), 35, np.uint8), "Follow the", (255, 255, 255), org=(60, 75))
+    img = _write(img, "Tennis Coach", (229, 182, 93), org=(330, 75))  # mavi vurgu
+    page, _ = preprocess(img, "1", "outline")
+    ink = page[12:-12, 12:-12, 0] < 128
+    assert ink[:, 330:].sum() > 0.5 * ink[:, :330].sum()  # renkli kelimeler de sayfada
 
 
 def test_fix_ocr_noise_chars():

@@ -6,6 +6,15 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+### Düzeltildi
+
+- Yazı artık rengine bakılmadan algılanıyor ve okunuyor. Önceden yalnızca beyaz ve sarı yazı tanınıyordu:
+  "Follow the **Tennis Coach**" gibi mavi, yeşil, kırmızı, mor vurgulu kelimeler düşüyor, tamamı renkli
+  satırlar hiç fark edilmiyordu.
+- Altyazı algılama koyu kenarlı/koyu zemindeki yazıya bakıyor: araba giderken akan asfalt, yol çizgisi ve
+  lambalar artık "yazı var" ya da "yazı değişti" sayılmıyor. Böylece yazı belirince beklemeden okunuyor ve
+  kaybolunca ekrandan siliniyor. Önizlemedeki yeşil alan da yalnızca yazıyı gösteriyor.
+
 ## [1.0.1] - 2026-11-17
 
 ### Düzeltildi
