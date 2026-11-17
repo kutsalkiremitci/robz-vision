@@ -29,6 +29,29 @@ def qapp():
     return app
 
 
+# Testlerin açtığı sayfalar her testten sonra kapatılıp Qt tarafında silinir. Açık kalırlarsa Python onları
+# süreç kapanırken QApplication'dan sonra yok eder ve süreç (testler geçmiş olsa da) çöker: pytest'in çıkış
+# kodu 0 yerine 139 olur ve GitHub'daki sürüm derlemesi durur.
+_PAGES: list = []
+
+
+@pytest.fixture(autouse=True)
+def _close_pages():
+    yield
+    if not _PAGES:
+        return
+    import gc
+
+    from PySide6.QtCore import QCoreApplication, QEvent
+
+    for pg in _PAGES:
+        pg.close()
+        pg.deleteLater()
+    _PAGES.clear()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    gc.collect()
+
+
 def _two_looks() -> Settings:
     """Ekranda küçük sarı yazı, yayında varsayılan; ikisinin yalnız-yayın alanları da farklı."""
     s = Settings()
@@ -56,6 +79,7 @@ def _page(qapp, s: Settings | None = None):
     )
     win = SimpleNamespace(ctx=ctx, toast=lambda msg, kind="info": calls["toast"].append((msg, kind)))
     pg = StylePage(win)
+    _PAGES.append(pg)
     return pg, s, calls
 
 
