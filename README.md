@@ -4,8 +4,8 @@
 </p>
 
 <p align="center">
-  Oyunlardaki İngilizce altyazıları ekrandan okuyup bilgisayarınızda Türkçeye çeviren,<br>
-  ücretsiz ve açık kaynak bir Windows uygulaması.
+  Bilgisayarda ya da <b>PS Remote Play</b> ile oynadığınız oyunların İngilizce altyazılarını ekrandan okuyup<br>
+  Türkçeye çeviren, <b>Kick ve OBS</b> yayınlarına da ekleyen ücretsiz ve açık kaynak bir Windows uygulaması.
 </p>
 
 <p align="center">
@@ -30,6 +30,22 @@ Görüntü, depodaki test sahnesinden (<code>tools/test_penceresi.py</code>) al�
 <p align="center"><sub>Windows 10 / 11, 64 bit (ARM'li Windows 11 dahil). Kurulum dosyası ya da taşınabilir zip/7z; yönetici izni istemez.<br>
 Adım adım anlatım için <a href="docs/KULLANIM.md">kullanım kılavuzu</a>, tanıtım sitesi:
 <a href="https://kutsalkiremitci.github.io/robz-vision/">kutsalkiremitci.github.io/robz-vision</a></sub></p>
+
+## Kimin için?
+
+Robz Vision **bilgisayar ekranındaki** altyazıyı okur. Üç kullanım için yapıldı:
+
+- **Bilgisayarda oynayanlar:** PC'de oynadığınız İngilizce altyazılı oyunlar. Altyazının çıktığı alanı bir kez
+  seçersiniz, Türkçe çeviri oyunun üstünde belirir.
+- **PS5'i PS Remote Play ile oynayanlar:** konsoldaki oyunu PS Remote Play ile bilgisayarda açıp oynarken
+  altyazılar Türkçeye çevrilir. GTA VI gibi konsol oyunları için yol bu.
+- **Kick ve OBS yayıncıları:** çeviri OBS'e Tarayıcı Kaynağı olarak eklenir, izleyiciler yayında Türkçe
+  altyazıyı görür. Ekranınızdaki kutu varsayılan olarak yayına girmez.
+
+> [!IMPORTANT]
+> **Televizyonda çalışmaz.** Konsolu doğrudan televizyona bağlayıp oynuyorsanız Robz Vision görüntüyü göremez.
+> Oyunun görüntüsü bilgisayar ekranında olmalı: PS Remote Play, Xbox uygulaması ya da bir capture kartının
+> önizleme penceresi.
 
 <p align="center"><img src="docs/gorseller/ayirici.png" width="100%" alt=""></p>
 
@@ -115,9 +131,9 @@ flowchart LR
 | **Yayıncı** (Kick, Twitch, YouTube) | Kendi ekranındaki kutuya; izleyiciler OBS'teki altyazıyı görür. | Ana sayfadaki adresi OBS'e Tarayıcı Kaynağı olarak ekler. İsterse OBS'te İngilizce altyazının üstünü kapatır. |
 | **İzleyici** | Yayına. | Hiçbir şey kurmaz. Altyazının görünümünü yayıncı Görünüm sayfasından ayarlar. |
 
-**Konsolda oynuyorsanız:** Robz Vision Windows'ta çalışır, bu yüzden oyun görüntüsünün bilgisayar ekranında
-olması gerekir. PS Remote Play ya da Xbox uygulamasıyla uzaktan oynatabilir veya capture kartının görüntüsünü
-bir pencerede açabilirsiniz. Ayrıntılar ve OBS kurulumu için [kullanım kılavuzu](docs/KULLANIM.md).
+**Konsolda oynuyorsanız:** Robz Vision Windows'ta çalışır ve yalnızca bilgisayar ekranını okur; televizyondaki
+görüntüyü göremez. PS5'i PS Remote Play ile, Xbox'ı Xbox uygulamasıyla bilgisayardan oynatabilir ya da capture
+kartının görüntüsünü bir pencerede açabilirsiniz. Ayrıntılar ve OBS kurulumu için [kullanım kılavuzu](docs/KULLANIM.md).
 
 <p align="center"><img src="docs/gorseller/ayirici.png" width="100%" alt=""></p>
 

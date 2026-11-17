@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Robz Vision: İngilizce oyun altyazılarını Türkçeye çevirir</title>
-<meta name="description" content="Oyunlardaki İngilizce altyazıları ekrandan okuyup bilgisayarınızda Türkçeye çeviren ücretsiz, açık kaynak Windows uygulaması. Çeviri ekranınızda ve OBS’te görünür.">
+<meta name="description" content="Bilgisayarda ya da PS Remote Play ile oynanan oyunların İngilizce altyazılarını ekrandan okuyup Türkçeye çeviren ücretsiz, açık kaynak Windows uygulaması. Çeviri ekranınızda ve Kick/OBS yayınınızda görünür. Televizyonda çalışmaz.">
 <meta name="theme-color" content="#0C0B1D">
 <meta name="color-scheme" content="dark">
 <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
@@ -16,19 +16,19 @@
 <meta property="og:locale" content="tr_TR">
 <meta property="og:site_name" content="Robz Vision">
 <meta property="og:title" content="Robz Vision: İngilizce oyun altyazılarını Türkçeye çevirir">
-<meta property="og:description" content="Ekrandaki İngilizce altyazıyı okur, bilgisayarınızda Türkçeye çevirir, ekranınızda ve OBS’te gösterir. Ücretsiz ve açık kaynak.">
+<meta property="og:description" content="PC’de ya da PS Remote Play ile bilgisayarda oynanan oyunların İngilizce altyazısını Türkçeye çevirir; Kick ve OBS yayınlarına da ekler. Ücretsiz ve açık kaynak.">
 <meta property="og:image" content="https://kutsalkiremitci.github.io/robz-vision/img/og.jpg">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="Robz Vision logosu; gün batımı, deniz ve palmiye siluetleri. İngilizce oyun altyazılarını Türkçeye çevirir.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Robz Vision: İngilizce oyun altyazılarını Türkçeye çevirir">
-<meta name="twitter:description" content="Ekrandaki İngilizce altyazıyı okur, bilgisayarınızda Türkçeye çevirir, ekranınızda ve OBS’te gösterir. Ücretsiz ve açık kaynak.">
+<meta name="twitter:description" content="PC’de ya da PS Remote Play ile bilgisayarda oynanan oyunların İngilizce altyazısını Türkçeye çevirir; Kick ve OBS yayınlarına da ekler. Ücretsiz ve açık kaynak.">
 <meta name="twitter:image" content="https://kutsalkiremitci.github.io/robz-vision/img/og.jpg">
 <link rel="preload" href="fonts/barlow-semicondensed-bold.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/barlow-semicondensed-semibold.woff2" as="font" type="font/woff2" crossorigin>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Robz Vision","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11","inLanguage":"tr","license":"https://opensource.org/licenses/MIT","downloadUrl":"https://github.com/kutsalkiremitci/robz-vision/releases/latest","offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"},"description":"Oyunlardaki İngilizce altyazıları ekrandan okuyup bilgisayarınızda Türkçeye çeviren ücretsiz, açık kaynak Windows uygulaması."}
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Robz Vision","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11","inLanguage":"tr","license":"https://opensource.org/licenses/MIT","downloadUrl":"https://github.com/kutsalkiremitci/robz-vision/releases/latest","offers":{"@type":"Offer","price":"0","priceCurrency":"TRY"},"description":"Bilgisayarda ya da PS Remote Play ile oynanan oyunların İngilizce altyazılarını ekrandan okuyup Türkçeye çeviren ücretsiz, açık kaynak Windows uygulaması."}
 </script>
 <style>
 @font-face {
@@ -308,6 +308,23 @@ h3 { font-size: 1.375rem; }
 .langs-voice { margin-top: 14px; font-size: .9375rem; }
 .langs figcaption { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: .8125rem; color: var(--text-3); }
 
+/* kimin için */
+.who { display: grid; gap: 28px; margin: 0; padding: 0; list-style: none; }
+.who li { padding-top: 16px; border-top: 2px solid var(--who, var(--cyan)); }
+.who h3 { font-size: 1.375rem; margin-bottom: 8px; }
+.who p { max-width: 32em; }
+.who .who-pc { --who: var(--cyan); }
+.who .who-rp { --who: var(--turq); }
+.who .who-live { --who: var(--orange); }
+.no-tv {
+  display: flex; gap: 14px; align-items: flex-start;
+  margin-top: clamp(28px, 4vw, 40px); padding: 16px 18px;
+  border: 1.5px dashed var(--orange); border-radius: 8px;
+}
+.no-tv svg { flex: none; width: 28px; height: 28px; margin-top: 1px; color: var(--orange); }
+.no-tv p { margin: 0; max-width: 52em; }
+.no-tv strong { display: block; margin-bottom: 4px; font: 600 1.1875rem/1.3 var(--display); color: var(--text); }
+
 /* nasıl çalışır */
 .steps { display: grid; gap: 36px; margin: 0; padding: 0; list-style: none; }
 .steps li { position: relative; }
@@ -476,6 +493,7 @@ code.inline {
   .feats div:nth-child(2) { padding-top: 0; border-top: 0; }
 }
 @media (min-width: 820px) {
+  .who { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
   .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
   .steps li:not(:last-child)::after {
     content: ""; position: absolute; top: 20px; left: 56px; right: -24px;
@@ -530,6 +548,7 @@ code.inline {
     </a>
     <nav class="nav" aria-label="Sayfa içi">
       <ul>
+        <li><a href="#kimin-icin">Kimin için</a></li>
         <li><a href="#nasil">Nasıl çalışır</a></li>
         <li><a href="#yayin">Yayıncılar</a></li>
         <li><a href="#indir">İndir</a></li>
@@ -541,7 +560,7 @@ code.inline {
   <div class="wrap">
     <div class="hero-copy">
       <h1>Oyundaki İngilizce altyazı, ekranınızda Türkçe.</h1>
-      <p class="lead">Robz Vision altyazıyı ekrandan okur, bilgisayarınızda Türkçeye çevirir ve oyunun üstünde gösterir. Yayın yapıyorsanız OBS’e de gönderir. Ücretsiz ve açık kaynak.</p>
+      <p class="lead">Bilgisayarda ya da PS Remote Play ile oynadığınız oyunların İngilizce altyazısını ekrandan okur, Türkçeye çevirir ve oyunun üstünde gösterir. Kick’te yayın yapıyorsanız OBS ile yayına da ekler. Ücretsiz ve açık kaynak.</p>
       <div class="cta">
         <a class="btn btn-primary" data-dl="exe" href="https://github.com/kutsalkiremitci/robz-vision/releases/latest">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>
@@ -580,6 +599,33 @@ code.inline {
 </header>
 
 <main id="icerik">
+
+  <section class="section" id="kimin-icin" aria-labelledby="kimin-baslik">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="kimin-baslik">Kimin için</h2>
+        <p class="section-intro">Robz Vision bilgisayar ekranındaki altyazıyı okur. Oyunun görüntüsü bilgisayarınızda olduğu sürece çalışır.</p>
+      </div>
+      <ul class="who">
+        <li class="who-pc">
+          <h3>Bilgisayarda oynayanlar</h3>
+          <p>PC’de oynadığınız İngilizce altyazılı oyunlar. Altyazının çıktığı alanı bir kez seçersiniz, Türkçe çeviri oyunun üstünde belirir.</p>
+        </li>
+        <li class="who-rp">
+          <h3>PS5’i PS Remote Play ile oynayanlar</h3>
+          <p>Konsoldaki oyunu PS Remote Play ile bilgisayarda açıp oynarken altyazılar Türkçeye çevrilir. GTA VI gibi konsol oyunları için yol bu.</p>
+        </li>
+        <li class="who-live">
+          <h3>Kick ve OBS yayıncıları</h3>
+          <p>Çeviri OBS’e Tarayıcı Kaynağı olarak eklenir, izleyiciler yayında Türkçe altyazıyı görür. Ekranınızdaki kutu varsayılan olarak yayına girmez.</p>
+        </li>
+      </ul>
+      <div class="no-tv" role="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4M3.5 3.5l17 17"/></svg>
+        <p><strong>Televizyonda çalışmaz</strong>Konsolu doğrudan televizyona bağlayıp oynuyorsanız Robz Vision görüntüyü göremez. Oyunun görüntüsü bilgisayar ekranında olmalı: PS Remote Play, Xbox uygulaması ya da bir capture kartının önizleme penceresi.</p>
+      </div>
+    </div>
+  </section>
 
   <section class="section" id="neden" aria-labelledby="neden-baslik">
     <div class="wrap">
@@ -834,9 +880,9 @@ code.inline {
           </div>
         </details>
         <details>
-          <summary>Konsolda çalışır mı?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+          <summary>Konsolda ya da televizyonda çalışır mı?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
           <div class="answer">
-            <p>Robz Vision Windows’ta çalışır, bu yüzden oyun görüntüsünün bilgisayar ekranında olması gerekir. PS Remote Play ya da Xbox uygulamasıyla konsolu bilgisayardan oynatabilir veya capture kartının görüntüsünü bir pencerede açabilirsiniz: kartın kendi uygulaması ya da OBS’in <em>Pencereli Projektör (Kaynak)</em> penceresi.</p>
+            <p>Konsolu bilgisayardan oynuyorsanız evet, televizyonda oynuyorsanız hayır. Robz Vision Windows’ta çalışır ve yalnızca bilgisayar ekranındakini okur. PS5 için PS Remote Play, Xbox için Xbox uygulamasıyla konsolu bilgisayardan oynatabilir veya capture kartının görüntüsünü bir pencerede açabilirsiniz: kartın kendi uygulaması ya da OBS’in <em>Pencereli Projektör (Kaynak)</em> penceresi.</p>
             <p>Uzaktan oynatma görüntüsü sıkıştırıldığı için altyazı bulanık olabilir. Okumalar bozuksa görüntü kalitesini yükseltin ya da oyunda altyazı boyutunu büyütün.</p>
           </div>
         </details>
