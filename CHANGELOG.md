@@ -6,8 +6,21 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+### Eklendi
+
+- **Altyazı akışı:** son çeviriler alt alta kalır (en yenisi altta, öncekiler yukarıda soluk), her satır oyun
+  sonrakine geçse de en az 3 saniye ekranda durur. Ekranda ve OBS'te aynı çalışır; *Ayarlar → Altyazı akışı*'ndan
+  satır sayısı (2–4), en az gösterim süresi ya da eski "Tek satır" seçilebilir.
+- **Son çeviriler:** Ana sayfada oturumdaki çevirilerin saatli listesi (Türkçe + İngilizce); tek satır ya da
+  tümü kopyalanabilir. Yalnızca bellekte tutulur, diske yazılmaz.
+
 ### Düzeltildi
 
+- Hızlı konuşmada altyazı satırları kayboluyordu: OCR ya da çeviri meşgulken gelen yeni satır, bekleyenin
+  üzerine yazılıyordu. Aşamalar arası artık sıralı kuyruk var; her satır okunup çevriliyor. Hibrit modda yavaş
+  motor (Ollama/Gemini) yeni satırların hızlı çevirisini bekletmiyor. Benzetimde kaybolan satır: yavaş motorla
+  8 → 0, art arda 7 kısa satırda 3 → 0.
+- Ekrandaki kutunun varsayılan yüksekliği, akıştaki üç satır sığacak şekilde büyütüldü.
 - Açık zemindeki beyaz altyazılar (GTA V'te kaldırım, beton, gökyüzü üstündeki gölgeli ya da gölgesiz yazı)
   "Metin yok" sayılıyor ve hiç okunmuyordu. Algılamaya yapay zekâ metin bulucu (PP-OCRv6, programla
   birlikte gelir) eklendi ve varsayılan olarak açık: renk ve kenar kuralına bakmadan harf şeklini tanır,

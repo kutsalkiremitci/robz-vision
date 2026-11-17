@@ -88,6 +88,8 @@ PC oyunları, PS Remote Play ve Xbox uygulaması gibi uzaktan oynatma pencereler
   için de bir OBS Tarayıcı Kaynağı. İkisinin konumu birbirinden bağımsızdır.
 - **Bölge ya da pencere.** Altyazının çıktığı alanı fareyle seçersiniz. İsterseniz belirli bir uygulama
   penceresinden okursunuz; pencere başka pencerelerin arkasında kalsa da çalışır.
+- **Satır kaçmaz.** Hızlı konuşmada son çeviriler ekranda ve OBS'te alt alta kalır. Ana sayfadaki
+  *Son çeviriler* listesinden kaçırdığınız satırı yeniden okuyup kopyalayabilirsiniz.
 - **Gereksiz iş yapmaz.** Altyazı değişmedikçe OCR çalışmaz. Titreyen okumaları ayıklar, daha temiz bir okuma
   gelirse çeviriyi düzeltir. Konuşmacı adları (`LUCIA: …`) çevrilmez, ayrı renkte gösterilir.
 - **Sözlük.** Karakter ve yer adlarını olduğu gibi bırakır ya da sizin verdiğiniz karşılığı kullanır.
@@ -222,6 +224,7 @@ için kullanılmadı.
 
 - Varsayılan ayarlarla ekran görüntüsü, OCR ve çeviri bilgisayarınızda kalır. Görüntüler diske kaydedilmez,
   uygulama kullanım verisi toplamaz.
+- Ana sayfadaki *Son çeviriler* listesi yalnız bellekte tutulur, diske yazılmaz; uygulama kapanınca silinir.
 - İnternet bağlantısı yalnızca ilk açılışta çeviri modelini Hugging Face'ten indirmek için kullanılır.
   OCR modelleri programla birlikte gelir.
 - OBS sunucusu yalnızca `127.0.0.1` adresini dinler; ağdaki başka cihazlar erişemez.

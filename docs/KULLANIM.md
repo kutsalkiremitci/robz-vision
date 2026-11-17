@@ -67,13 +67,24 @@ yeşile boyanır; altyazı geldiğinde yeşil alan görünmüyorsa bölge ya da 
 ## 3. Başlatın
 
 **Başlat**'a basın. Üstteki bant *Çalışıyor* olur. Oyunda altyazı belirince Türkçesi ekrandaki kutuda ve
-OBS'te görünür. **Son çeviri** bölümü okunan İngilizce metni, çeviriyi ve OCR ile çeviri sürelerini gösterir.
+OBS'te görünür.
 
 ![Ana sayfa: Başlat düğmesi, bölge önizlemesi, son çeviri, Ekranımda ve OBS bölümleri](gorseller/ana_pencere.png)
 
 - **Test** düğmesi ekranınızda ve OBS'te 5 saniyelik örnek bir altyazı gösterir. Oyun açmadan görünümü
   denemek için kullanın.
 - **Gizle** çeviriyi geçici olarak gizler; program okumaya devam eder.
+- **Altyazı akışı** (*Ayarlar → Altyazı akışı*): *Akış*'ta son çeviriler ekranda ve OBS'te alt alta kalır,
+  hızlı konuşmada satır kaybolmaz. Ekranda en fazla kaç satır duracağını (2–4) ve her satırın en az kaç saniye
+  kalacağını buradan seçersiniz. Yalnız son çeviriyi görmek isterseniz *Tek satır*'ı seçin.
+
+**Son çeviriler** listesi bu oturumda okunan satırları Türkçesi ve İngilizcesiyle gösterir, en yenisi üstte.
+Başlığın yanında en son satırın OCR ve çeviri süreleri durur. Kaçırdığınız bir satırı buradan okuyabilirsiniz:
+
+- Satırın üzerine gelip sağdaki kopyala simgesine basın, Türkçesi kopyalanır. Sağ tıklayıp
+  *İngilizce + Türkçe kopyala*'yı da seçebilirsiniz.
+- **Tümünü kopyala** listedeki satırları eskiden yeniye, saatiyle kopyalar. **Temizle** listeyi boşaltır.
+- Liste yalnız bellekte tutulur (son 200 satır), diske yazılmaz. Uygulamayı kapatınca silinir.
 
 ## 4. Türkçe kutuyu ekranınıza yerleştirin
 
