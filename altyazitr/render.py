@@ -1,5 +1,6 @@
 """Altyazı çizimi (QPainter). Ekran altyazısı ve arayüzdeki canlı önizleme aynı kodu kullanır;
-böylece önizlemede ne görüyorsanız ekranda da o çıkar. OBS sayfası aynı ayarları CSS ile uygular."""
+böylece önizlemede ne görüyorsanız ekranda da o çıkar. Hangi görünümün çizileceğini çağıran seçer:
+ekrandaki kutu Settings.screen_style ile çizilir; OBS sayfası Settings.style'ı CSS ile uygular."""
 
 from __future__ import annotations
 

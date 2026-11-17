@@ -142,10 +142,11 @@ def demo_kare(W: int, H: int, idx: int, ingilizce: bool, ceviri: tuple[str | Non
     """Tek demo karesi: sahte oyun sahnesi + (isteğe bağlı) Robz Vision'ın Türkçe çeviri kutusu.
 
     Çeviri, uygulamadaki ekran altyazısı kutusuyla aynı kodla (render.paint_subtitle, in_box=True) ve
-    varsayılan görünümle (config.StyleCfg()) çizilir; kutu oyunun altyazısının hemen üstüne konur."""
+    varsayılan ekran görünümüyle (Settings().screen_style) çizilir; kutu oyunun altyazısının hemen
+    üstüne konur."""
     from PySide6.QtGui import QImage, QPainter
 
-    from altyazitr.config import StyleCfg
+    from altyazitr.config import Settings
     from altyazitr.render import paint_subtitle
 
     img = QImage(W, H, QImage.Format.Format_RGB32)
@@ -157,7 +158,7 @@ def demo_kare(W: int, H: int, idx: int, ingilizce: bool, ceviri: tuple[str | Non
         bw, bh = W * 0.8, H * 0.3
         p.save()
         p.translate((W - bw) / 2, bottom - bh)
-        paint_subtitle(p, bw, bh, StyleCfg(), text, speaker, in_box=True, ref_height=H)
+        paint_subtitle(p, bw, bh, Settings().screen_style, text, speaker, in_box=True, ref_height=H)
         p.restore()
     p.end()
     return img
@@ -178,9 +179,9 @@ def demo() -> None:
     # kareler yalnızca altyazı bölgesinde farklıdır ve GIF bu farkı küçük bir dikdörtgen olarak kodlar.
     # Palet kaynağına konuşmacı adı ve yazı renginin geçiş şeritleri eklenir; yoksa birkaç piksellik sarı
     # konuşmacı adı paletten pay alamaz ve kumlu görünür.
-    from altyazitr.config import StyleCfg
+    from altyazitr.config import Settings
 
-    st = StyleCfg()
+    st = Settings().screen_style  # demo karelerindeki kutu ekran görünümüyle çizilir
     ramps = Image.new("RGB", (DEMO_W, 32))
     for row, color in enumerate((st.speaker_color, st.text_color)):
         c = tuple(int(color.lstrip("#")[k:k + 2], 16) for k in (0, 2, 4))

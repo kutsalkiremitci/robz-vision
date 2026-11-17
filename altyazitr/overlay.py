@@ -1,7 +1,10 @@
 """Yayıncının kendi ekranında görünen altyazı kutusu.
 
 * Ekranın istediğiniz yerine taşınıp boyutlandırılabilir ("Konumu ayarla" modu); konumu OBS'teki
-  altyazıdan bağımsızdır. Ayar modunda gerçek stiliyle örnek yazı gösterir (canlı önizleme).
+  altyazıdan bağımsızdır. Ayar modunda gerçek görünümüyle örnek yazı gösterir (canlı önizleme).
+* Görünümü "Ekranımda" ayarlarıdır (Settings.screen_style); OBS sayfası ve maskesi "Yayınımda"
+  ayarlarını (Settings.style) kullanır. Görünüm her çizimde ve her geçişte yeniden okunur: ayar
+  değişince update() yeterlidir (bunu SubtitleDisplay.push_style yapar).
 * Normalde çerçevesiz, her zaman üstte, odak çalmaz ve fareyi geçirir.
 * Varsayılan olarak SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE) ile ekran yakalamaya girmez:
   hem izleyiciler iki kez görmez hem de OCR kendi Türkçe yazımızı okumaz. İstenirse "yayında da
@@ -19,7 +22,7 @@ from PySide6.QtGui import QColor, QCursor, QGuiApplication, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 from altyazitr import APP_NAME
-from altyazitr.config import Settings
+from altyazitr.config import Settings, StyleCfg
 from altyazitr.gui import icons
 from altyazitr.gui.dialogs import body_font
 from altyazitr.gui.tokens import ICON, RADIUS, SPACE, C, F
@@ -75,6 +78,11 @@ class ScreenOverlay(QWidget):
         self._anim.finished.connect(self._on_anim_done)
         self._top_timer = QTimer(self, interval=2000, timeout=self._raise_topmost)
         self._restore_geometry()
+
+    @property
+    def look(self) -> StyleCfg:
+        """Kutunun görünümü: her zaman güncel "Ekranımda" ayarları (yayınınki değil)."""
+        return self.s.screen_style
 
     # --- konum ---------------------------------------------------------------
     @staticmethod
@@ -181,7 +189,7 @@ class ScreenOverlay(QWidget):
                 self._update_visibility()
             return
         self._anim.stop()
-        self._anim.setDuration(max(1, int(self.s.style.fade_ms)))
+        self._anim.setDuration(max(1, int(self.look.fade_ms)))  # her geçişte okunur: ayar değişince uyar
         self._anim.setStartValue(self._opacity)
         self._anim.setEndValue(target)
         self._anim.start()
@@ -257,7 +265,7 @@ class ScreenOverlay(QWidget):
 
     # --- çizim -------------------------------------------------------------------------------
     def paintEvent(self, _e) -> None:  # noqa: N802
-        st, o = self.s.style, self.s.overlay
+        st, o = self.look, self.s.overlay
         p = QPainter(self)
         W, H = self.width(), self.height()
         ref_h = (self.screen() or QGuiApplication.primaryScreen()).geometry().height()

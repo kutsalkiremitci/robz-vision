@@ -1,5 +1,9 @@
 """Altyazının ne zaman gösterilip gizleneceğini yönetir ve OBS sayfasına + ekran
-overlay'ine iletir (tek yerde zamanlama → iki çıktı her zaman senkron)."""
+overlay'ine iletir (tek yerde zamanlama → iki çıktı her zaman senkron).
+
+İki çıktının görünümü ayrıdır: OBS sayfası ve OBS maskesi "Yayınımda" ayarlarını (Settings.style),
+ekrandaki kutu "Ekranımda" ayarlarını (Settings.screen_style) kullanır. Arayüz, iki görünümden
+herhangi biri değişince yalnızca push_style() çağırır."""
 
 from __future__ import annotations
 
@@ -71,6 +75,8 @@ class SubtitleDisplay(QObject):
         return self.visible
 
     def show_test(self) -> None:
+        """Örnek altyazıyı 5 sn iki çıktıda birden gösterir; her biri kendi görünümüyle çizilir
+        (OBS sayfası yayın görünümüyle, ekrandaki kutu ekran görünümüyle)."""
         self._test_active = True
         self._hide.stop()
         self.current = {"text": "Bu bir test altyazısıdır — ğüşıöç ĞÜŞİÖÇ. Ayarları buradan kontrol edin!",
@@ -80,6 +86,10 @@ class SubtitleDisplay(QObject):
         self._hide.start(5000)
 
     def push_style(self) -> None:
+        """Görünüm ayarlarından biri değişince çağrılır (hangisi olduğu fark etmez):
+        * yayın görünümü (s.style) → OBS sayfasına CSS değişkenleri; maske de yeniden hesaplanır,
+        * ekran görünümü (s.screen_style) → kutu yeniden çizilir. Kutu görünümü (geçiş süresi dahil)
+          her çizimde/geçişte ayarlardan okur; önbellekte bir şey tutmaz."""
         self.bridge.submit(self.server.set_style(style_vars(self.s.style)))
         self.overlay.update()
         self._push()
@@ -87,7 +97,8 @@ class SubtitleDisplay(QObject):
     # --- iç ------------------------------------------------------------------
     def _mask_rect(self) -> list[float] | None:
         """OBS'teki maske: bölgenin yayın karesindeki oransal konumu. Ekran modunda bölgenin
-        bulunduğu monitöre, pencere modunda pencerenin istemci alanına göre hesaplanır."""
+        bulunduğu monitöre, pencere modunda pencerenin istemci alanına göre hesaplanır.
+        Maske yalnızca OBS'te olduğu için yayın görünümünü (s.style) kullanır."""
         st = self.s.style
         c = self.s.capture
         if c.mode == "window":
@@ -112,7 +123,7 @@ class SubtitleDisplay(QObject):
         else:
             text, speaker, original = "", None, ""
         self.bridge.submit(self.server.set_subtitle(text, speaker, original))
-        mask = self._mask_rect() if (cur and self.s.style.mask_original) else None
+        mask = self._mask_rect() if (cur and self.s.style.mask_original) else None  # yayın görünümü
         self.bridge.submit(self.server.set_mask(mask))
         if text:
             self.overlay.set_subtitle(text, speaker, original)
