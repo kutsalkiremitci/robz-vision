@@ -72,9 +72,11 @@ jobs:
       - name: SHA256 özetleri ve sürüm notları
         shell: pwsh
         run: |
-          Get-ChildItem cikti -File | Sort-Object Name | ForEach-Object {
+          $satirlar = Get-ChildItem cikti -File | Sort-Object Name | ForEach-Object {
             "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
-          } | Set-Content cikti/SHA256SUMS.txt -Encoding ascii
+          }
+          # LF satır sonu: Linux/macOS'taki `sha256sum -c` de okuyabilsin (Set-Content CRLF yazar)
+          [IO.File]::WriteAllText("$PWD/cikti/SHA256SUMS.txt", ($satirlar -join "`n") + "`n")
           Get-Content cikti/SHA256SUMS.txt
           python tools/surum_notlari.py "${{ steps.surum.outputs.ver }}" surum_notlari.md
 
