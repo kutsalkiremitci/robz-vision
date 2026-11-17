@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from dataclasses import asdict, dataclass, field, fields, is_dataclass
+from dataclasses import asdict, dataclass, field, fields, is_dataclass, replace
 from typing import Any
 
 from altyazitr.paths import SETTINGS_FILE
@@ -114,7 +114,11 @@ class Settings:
     capture: CaptureCfg = field(default_factory=CaptureCfg)
     ocr: OcrCfg = field(default_factory=OcrCfg)
     translate: TranslateCfg = field(default_factory=TranslateCfg)
-    style: StyleCfg = field(default_factory=StyleCfg)
+    # İki ayrı görünüm: "Yayınımda" (OBS tarayıcı kaynağı + OBS maskesi) ve "Ekranımda" (oyunun üstündeki
+    # kutu). Ayar dosyasındaki eski tek "style" anahtarı yayın görünümü olarak kalır; ekran görünümü eski
+    # dosyalarda yoksa yayınınkinin kopyasıyla başlar (bkz. load_settings).
+    style: StyleCfg = field(default_factory=StyleCfg)  # yayınımda
+    screen_style: StyleCfg = field(default_factory=StyleCfg)  # ekranımda
     overlay: OverlayCfg = field(default_factory=OverlayCfg)
     server: ServerCfg = field(default_factory=ServerCfg)
     hotkeys: HotkeyCfg = field(default_factory=HotkeyCfg)
@@ -158,6 +162,9 @@ def load_settings() -> Settings:
         with open(SETTINGS_FILE, encoding="utf-8") as fp:
             data = json.load(fp)
         s = _from_dict(Settings, data)
+        if isinstance(data, dict) and "screen_style" not in data:
+            # tek görünümlü eski sürüm: ekrandaki kutu bugüne kadar yayınla aynı görünüyordu
+            s.screen_style = replace(s.style)
         log.info("Ayarlar yüklendi: %s", SETTINGS_FILE)
         return s
     except FileNotFoundError:

@@ -319,6 +319,25 @@ def test_settings_from_dict_tolerant():
     assert s.first_run is False and s.translate.engine == "quickmt"
 
 
+def test_screen_and_stream_styles(tmp_path, monkeypatch):
+    """Ekranımda / Yayınımda iki ayrı görünüm; eski tek görünümlü dosya ikisine de aynı başlar."""
+    import json
+
+    from altyazitr import config as cfg
+
+    path = tmp_path / "ayarlar.json"
+    monkeypatch.setattr(cfg, "SETTINGS_FILE", path)
+    path.write_text(json.dumps({"style": {"font_size": 50, "text_color": "#FFD54A"}}), encoding="utf-8")
+    s = cfg.load_settings()
+    assert s.style.font_size == s.screen_style.font_size == 50
+    assert s.screen_style.text_color == "#FFD54A"
+    s.screen_style.font_size = 30  # ekrandakini değiştirmek yayını etkilemez (kopya, aynı nesne değil)
+    assert s.style.font_size == 50
+    cfg.save_settings(s)
+    s2 = cfg.load_settings()
+    assert (s2.style.font_size, s2.screen_style.font_size) == (50, 30)
+
+
 def test_parse_hotkey():
     assert parse_hotkey("Ctrl+Alt+T") == (0x2 | 0x1, 0x54)
     assert parse_hotkey("Shift+F9") == (0x4, 0x78)
