@@ -75,6 +75,10 @@ class SettingsPage(QWidget):
         add_row(f, "Gizleme gecikmesi", _tip(bind_spin(s.ocr, "hide_delay_ms", 0, 5000, self.ctx.save_later,
                                                        step=100, suffix=" ms"),
                                              "Altyazı oyundan kaybolduktan sonra çevirinin ekranda kalma süresi"))
+        add_row(f, "", bind_check("Yapay zekâ metin bulucu", s.ocr, "text_detector", restart,
+                                  "Açık zemindeki beyaz yazı, gölgesiz yazı gibi zor altyazıları da bulur; hiçbir "
+                                  "altyazı kaçmasın diye açık önerilir. Saniyede 5 kez çalışır, işlemciyi biraz "
+                                  "daha kullanır."))
         add_row(f, "", bind_check("Yalnızca en alttaki satırları oku", s.ocr, "keep_lowest_block", restart,
                                   tip="Bölgedeki üst satırları (HUD, görev yazısı) yok sayar"))
         add_row(f, "", bind_check("Konuşmacı adını ayır", s.ocr, "detect_speaker", restart,

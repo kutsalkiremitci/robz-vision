@@ -43,6 +43,8 @@ class OcrCfg:
     preprocess: str = "auto"
     min_letters: int = 3
     keep_lowest_block: bool = True
+    # Yapay zekâ metin bulucu (PP-OCRv6 det): açık zeminde beyaz, kenarsız altyazıları da bulur; saniyede 5 kez
+    text_detector: bool = True
     detect_speaker: bool = True
     hide_delay_ms: int = 700  # altyazı kaybolduktan sonra çeviriyi gizlemeden önce bekleme
 

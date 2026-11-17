@@ -21,7 +21,7 @@ from rapidfuzz import fuzz
 from altyazitr import winutil
 from altyazitr.capture import CaptureError, RegionCapturer, WindowCapturer
 from altyazitr.config import Settings
-from altyazitr.detect import ChangeGate, GateParams, text_mask
+from altyazitr.detect import ChangeGate, GateParams, TextDetector, text_mask
 from altyazitr.english import english_score
 from altyazitr.ocr import OcrUnavailable, create_engine
 from altyazitr.textproc import assemble, is_valid, norm_key
@@ -226,7 +226,13 @@ class Pipeline(QObject):
 
     def _capture_loop(self) -> None:
         c, o = self.s.capture, self.s.ocr
-        gate = ChangeGate(GateParams(stable_frames=o.stable_frames, bright=o.bright_threshold))
+        detector = None
+        if o.detect_mode != "interval" and o.text_detector:
+            try:  # açık zeminde beyaz/kenarsız altyazıları da bulan yapay zekâ katmanı
+                detector = TextDetector()
+            except Exception:
+                log.warning("Yapay zekâ metin bulucu açılamadı; yalnız hızlı algılama kullanılacak", exc_info=True)
+        gate = ChangeGate(GateParams(stable_frames=o.stable_frames, bright=o.bright_threshold), detector)
         period = 1.0 / max(1, c.fps)
         last_find = -10.0
         last_preview = 0.0

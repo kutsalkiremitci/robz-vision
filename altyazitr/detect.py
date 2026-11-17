@@ -12,11 +12,14 @@ Yöntem:
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass
 
 import cv2
 import numpy as np
+
+log = logging.getLogger(__name__)
 
 _RINGS = {1: np.ones((3, 3), np.uint8), 2: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))}
 _K3 = np.ones((3, 3), np.uint8)
@@ -83,16 +86,69 @@ def outlined_text_mask(bgr: np.ndarray, contrast: int = 80, ratio: float = 0.4, 
     return (keep[lab] * 255).astype(np.uint8)
 
 
-def text_mask(bgr: np.ndarray, bright: int = 150, width: int = 640) -> np.ndarray:
-    """Algılama maskesi (True = yazı): rengi ne olursa olsun koyu kenarlı parlak yazı; önizlemedeki yeşil alan."""
+def shrink(bgr: np.ndarray, width: int = 640) -> np.ndarray:
+    """Algılamanın çalıştığı boyut: en fazla `width` piksel genişlik."""
     h, w = bgr.shape[:2]
     if w > width:
-        bgr = cv2.resize(bgr, (width, max(1, h * width // w)), interpolation=cv2.INTER_AREA)
+        return cv2.resize(bgr, (width, max(1, h * width // w)), interpolation=cv2.INTER_AREA)
+    return bgr
+
+
+def text_mask(bgr: np.ndarray, bright: int = 150, width: int = 640) -> np.ndarray:
+    """Hızlı algılama maskesi (True = yazı): rengi ne olursa olsun koyu kenarlı parlak yazı."""
+    bgr = shrink(bgr, width)
     # Küçültülmüş karede dış çizgi incelir: 1 px'lik halkaya bakılır (2 px'lik halka çizginin dışına, zemine
     # taşar ve beyazdan sönük renkler kenarsız sayılır). 4 px'ten kısa parçalar harf değil: asfalt/kum taneleri
     # "yazı var" sanılmasın. Çevre farkı koşulu (OCR'da harflere doku yapışmasın diye) algılamada gerekmez.
     m = outlined_text_mask(bgr, min_v=bright, min_height=4, local=0, ring_px=1)
     return cv2.dilate(m, _K3) > 0
+
+
+class TextDetector:
+    """Yapay zekâ metin bulucu: PP-OCRv6 "det" modeli (RapidOCR ile programla birlikte gelir).
+
+    Kuralla değil, harf şeklini tanıyarak yazının yerini bulur: açık zeminde beyaz yazı, gölgesiz yazı, her
+    renk. Yalnızca kutuları döndürür, okumaz. Tek bir iş parçacığında (yakalama) oluşturulup kullanılmalıdır."""
+
+    def __init__(self, limit: int = 640):
+        from rapidocr import ModelType, OCRVersion, RapidOCR
+
+        from altyazitr.ocr import _rapidocr_model_dir
+
+        self._det = RapidOCR(params={
+            "Global.log_level": "error",
+            "Global.model_root_dir": str(_rapidocr_model_dir()),
+            "Det.ocr_version": OCRVersion.PPOCRV6, "Det.model_type": ModelType.SMALL,
+            "Rec.ocr_version": OCRVersion.PPOCRV6, "Rec.model_type": ModelType.SMALL,
+            "Det.limit_type": "max", "Det.limit_side_len": limit,
+        })
+
+    def boxes(self, bgr: np.ndarray) -> list[np.ndarray]:
+        r = self._det(bgr, use_det=True, use_cls=False, use_rec=False)
+        if r is None or getattr(r, "boxes", None) is None:
+            return []
+        return [np.asarray(b, np.float32) for b in r.boxes]
+
+
+def boxed_text_mask(small: np.ndarray, boxes: list[np.ndarray], delta: int = 25) -> np.ndarray:
+    """Metin bulucunun kutuları içindeki harf pikselleri (True): çevresinden belirgin parlak ya da koyu olanlar.
+
+    Kutu dışındaki her şey (akan asfalt, gökyüzü, araba) yok sayılır; kutu içinde harfler değişince maske de
+    değişir, böylece aynı satır yeni bir altyazıyla değiştiğinde OCR yeniden tetiklenir."""
+    h, w = small.shape[:2]
+    if not boxes:
+        return np.zeros((h, w), bool)
+    inside = np.zeros((h, w), np.uint8)
+    cv2.fillPoly(inside, [np.round(b).astype(np.int32) for b in boxes], 1)
+    v = small.max(axis=2)
+    k = int(np.clip(h * 0.25, 9, 61)) | 1
+    diff = np.abs(v.astype(np.int16) - cv2.blur(v, (k, k)).astype(np.int16))
+    strokes = ((diff >= delta) & (inside > 0)).astype(np.uint8)
+    if strokes.sum() < 0.03 * inside.sum():
+        # Harfler zeminden ayrılamayacak kadar sönük (çok açık zeminde gölgesiz beyaz yazı): bulucu "burada yazı
+        # var" dediyse kutuların kendisi yazı sayılır. Değişim, kutuların yeri/boyu değişince anlaşılır.
+        return inside > 0
+    return cv2.dilate(strokes, _K3) > 0
 
 
 def jaccard_distance(a: np.ndarray, b: np.ndarray) -> float:
@@ -115,13 +171,19 @@ class GateParams:
     refresh: float = 2.5  # metin dururken sigorta amaçlı yeniden okuma aralığı
     gone_frames: int = 3
     bright: int = 160
+    det_interval: float = 0.2  # yapay zekâ metin bulucu en fazla bu aralıkla çalışır (saniyede 5 kez)
 
 
 class ChangeGate:
-    """Her kare için update() çağrılır; 'ocr', 'gone' veya None döner."""
+    """Her kare için update() çağrılır; 'ocr', 'gone' veya None döner.
 
-    def __init__(self, params: GateParams | None = None):
+    Maske iki katmandır: hızlı kenar maskesi (her kare) + varsa yapay zekâ metin bulucunun kutularındaki harf
+    pikselleri (bulucu `det_interval` aralıkla çalışır, aradaki karelerde son kutular kullanılır). Biri yazı
+    görürse yazı vardır: kenarı olmayan, açık zemindeki beyaz altyazılar da kaçmaz."""
+
+    def __init__(self, params: GateParams | None = None, detector: TextDetector | None = None):
         self.p = params or GateParams()
+        self.detector = detector
         self.reset()
 
     def reset(self) -> None:
@@ -134,11 +196,24 @@ class ChangeGate:
         self.t_sent = 0.0
         self.ink = 0.0
         self.announced_gone = True
+        self.boxes: list[np.ndarray] = []
+        self._t_det = float("-inf")
 
     def update(self, bgr: np.ndarray, now: float | None = None) -> str | None:
         p = self.p
         now = time.monotonic() if now is None else now
-        m = text_mask(bgr, p.bright)
+        small = shrink(bgr)
+        m = text_mask(small, p.bright)
+        if self.detector is not None:
+            if now - self._t_det >= p.det_interval:
+                self._t_det = now
+                try:
+                    self.boxes = self.detector.boxes(small)
+                except Exception:
+                    log.warning("Metin bulucu çalışmadı, yalnız hızlı algılamayla devam", exc_info=True)
+                    self.detector, self.boxes = None, []
+            if self.boxes:
+                m = m | boxed_text_mask(small, self.boxes)
         self.ink = float(m.mean())
         self.present = self.ink >= (p.vanish if self.present else p.appear)
         action: str | None = None

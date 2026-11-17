@@ -6,6 +6,14 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+### Düzeltildi
+
+- Açık zemindeki beyaz altyazılar (GTA V'te kaldırım, beton, gökyüzü üstündeki gölgeli ya da gölgesiz yazı)
+  "Metin yok" sayılıyor ve hiç okunmuyordu. Algılamaya yapay zekâ metin bulucu (PP-OCRv6, programla
+  birlikte gelir) eklendi ve varsayılan olarak açık: renk ve kenar kuralına bakmadan harf şeklini tanır,
+  saniyede 5 kez çalışır. Ölçümde açık zeminde kaçırılan altyazı 16/16 → 0/16; boş karede yanlış alarm yok.
+  Yaklaşık %10 ek işlemci kullanır; *Ayarlar → Metin okuma → Gelişmiş*'ten kapatılabilir.
+
 ## [1.0.3] - 2026-11-17
 
 ### Değişti
