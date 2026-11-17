@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/Python-3.12-3FD8EE?style=flat-square&labelColor=0C0B1D" alt="Python 3.12">
   <img src="https://img.shields.io/badge/aray%C3%BCz-T%C3%BCrk%C3%A7e-2BC4AE?style=flat-square&labelColor=0C0B1D" alt="Arayüz: Türkçe">
   <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-MIT-2BC4AE?style=flat-square&labelColor=0C0B1D" alt="Lisans: MIT"></a>
+  <a href="https://kutsalkiremitci.github.io/robz-vision/"><img src="https://img.shields.io/badge/web%20sitesi-robz--vision-FF8A5B?style=flat-square&labelColor=0C0B1D" alt="Web sitesi"></a>
 </p>
 
 <p align="center">
@@ -27,7 +28,8 @@ Görüntü, depodaki test sahnesinden (<code>tools/test_penceresi.py</code>) al�
   <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="docs/gorseller/indir.png" width="186" alt="Hemen indir"></a>
 </p>
 <p align="center"><sub>Windows 10 / 11, 64 bit (ARM'li Windows 11 dahil). Kurulum dosyası ya da taşınabilir zip/7z; yönetici izni istemez.<br>
-Adım adım anlatım için <a href="docs/KULLANIM.md">kullanım kılavuzu</a>.</sub></p>
+Adım adım anlatım için <a href="docs/KULLANIM.md">kullanım kılavuzu</a>, tanıtım sitesi:
+<a href="https://kutsalkiremitci.github.io/robz-vision/">kutsalkiremitci.github.io/robz-vision</a></sub></p>
 
 <p align="center"><img src="docs/gorseller/ayirici.png" width="100%" alt=""></p>
 
@@ -286,6 +288,7 @@ python -m venv .venv
 | `tools/kurulum_gorselleri.py`, `tools/logo_hazirla.py` | Kurulum sihirbazı görselleri, logo ve simge |
 | `tools/kelime_listesi_olustur.py` | OCR kalite puanındaki İngilizce kelime listesini (`altyazitr/data/en_words.txt`) üretir |
 | `tools/surum_notlari.py` | GitHub sürüm sayfasının metnini (indirme rehberi + CHANGELOG) üretir |
+| `site/` | Tanıtım sitesi (tek sayfa, derleme adımı yok); `main`'e gönderilince GitHub Pages'e yayımlanır (`.github/workflows/pages.yml`) |
 | `derle.bat`, `kurulum_paketi.bat` | Taşınabilir sürüm (PyInstaller) ve kurulum dosyası (Inno Setup 6) |
 
 `v*` biçiminde bir etiket gönderildiğinde GitHub Actions testleri çalıştırır; kurulum dosyasını, taşınabilir
