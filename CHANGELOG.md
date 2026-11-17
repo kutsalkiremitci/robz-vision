@@ -6,6 +6,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.0.2] - 2026-11-17
+
 ### Eklendi
 
 - Görünüm sayfasında **Ekranımda | Yayınımda** seçici: oyunun üstündeki kutu ile OBS'teki altyazı ayrı ayarlanır
@@ -75,6 +77,7 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.0.1...HEAD
+[Yayımlanmadı]: ../../compare/v1.0.2...HEAD
+[1.0.2]: ../../releases/tag/v1.0.2
 [1.0.1]: ../../releases/tag/v1.0.1
 [1.0.0]: ../../releases/tag/v1.0.0
