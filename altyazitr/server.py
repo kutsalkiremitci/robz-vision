@@ -1,6 +1,7 @@
 """OBS Tarayıcı Kaynağı için yerel sunucu.
 
 http://127.0.0.1:<port>/  → altyazı sayfası (şeffaf, 1920x1080 tuval için)
+http://127.0.0.1:<port>/sw.js → OBS uygulamadan önce açılırsa sayfanın saklanan kopyasını açar
 ws://127.0.0.1:<port>/ws  → canlı altyazı/stil/maske güncellemeleri
 
 aiohttp ayrı bir iş parçacığındaki asyncio döngüsünde çalışır; Qt tarafı AsyncBridge.submit
@@ -85,6 +86,9 @@ class OverlayServer:
         self.host = host
         self.port = port
         self.clients: set[web.WebSocketResponse] = set()
+        # Yalnızca OBS'ten gelenler (tarayıcı kaynağının kimliğinde "OBS/<sürüm>" yazar). Durum rozeti
+        # bunu sayar: test için açılan bir tarayıcı sekmesi "OBS bağlı" gösterip sorunu gizlemesin.
+        self.obs_clients: set[web.WebSocketResponse] = set()
         self._runner: web.AppRunner | None = None
         self.on_clients_changed: Callable[[int], None] | None = None
         self.state: dict[str, dict] = {
@@ -104,7 +108,12 @@ class OverlayServer:
         async def index(_req):
             return web.FileResponse(web_dir / "overlay.html", headers={"Cache-Control": "no-store"})
 
+        async def sw(_req):
+            return web.FileResponse(web_dir / "sw.js", headers={
+                "Cache-Control": "no-store", "Content-Type": "text/javascript; charset=utf-8"})
+
         app.router.add_get("/", index)
+        app.router.add_get("/sw.js", sw)
         app.router.add_get("/ws", self._ws)
         self._runner = web.AppRunner(app, access_log=None)
         await self._runner.setup()
@@ -121,7 +130,7 @@ class OverlayServer:
     def _notify(self) -> None:
         if self.on_clients_changed:
             try:
-                self.on_clients_changed(len(self.clients))
+                self.on_clients_changed(len(self.obs_clients))
             except Exception:
                 log.debug("istemci sayısı bildirilemedi", exc_info=True)
 
@@ -129,6 +138,8 @@ class OverlayServer:
         ws = web.WebSocketResponse(heartbeat=15)
         await ws.prepare(req)
         self.clients.add(ws)
+        if "OBS/" in req.headers.get("User-Agent", ""):
+            self.obs_clients.add(ws)
         self._notify()
         try:
             for m in self.state.values():  # OBS yeniden başlasa da son durumu gönder
@@ -138,6 +149,7 @@ class OverlayServer:
                     break
         finally:
             self.clients.discard(ws)
+            self.obs_clients.discard(ws)
             self._notify()
         return ws
 
@@ -151,6 +163,7 @@ class OverlayServer:
                 dead.append(c)
         for c in dead:
             self.clients.discard(c)
+            self.obs_clients.discard(c)
 
     # --- Qt tarafından AsyncBridge.submit ile çağrılır ----------------
     async def set_subtitle(self, text: str, speaker: str | None = None, original: str = "") -> None:

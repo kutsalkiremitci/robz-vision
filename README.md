@@ -254,8 +254,11 @@ pencereleri üstte göstermez. *Ekranımda*'nın *Açık* olduğunu da kontrol e
 <details>
 <summary><b>OBS'te altyazı yok</b></summary>
 
-Ana sayfada OBS durumu *Bağlı* olmalı. Tarayıcı kaynağında *Yerel dosya* işaretsiz olmalı ve kaynak, oyun
-görüntüsünün üstünde durmalı. Görünüm sayfasındaki **Test et** düğmesi örnek bir altyazı gönderir.
+Ana sayfada OBS durumu *Bağlı* olmalı; yalnızca OBS'teki kaynak sayılır. *Bağlı değil* yazıyorsa ve OBS
+açıksa, OBS'te kaynağı seçip önizlemenin altındaki **Yenile**'ye basın: OBS, Robz Vision'dan önce açıldıysa
+sayfayı yükleyemez ve kendiliğinden yeniden denemez. Tarayıcı kaynağında *Yerel dosya* işaretsiz, genişlik
+ve yükseklik tuvalle aynı (ör. 1920 × 1080) olmalı ve kaynak oyun görüntüsünün üstünde durmalı. Görünüm
+sayfasındaki **Test et** düğmesi örnek bir altyazı gönderir.
 </details>
 
 <details>

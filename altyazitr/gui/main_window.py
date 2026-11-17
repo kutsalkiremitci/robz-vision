@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 
 from altyazitr import APP_NAME, __version__, winutil
 from altyazitr.capture import snapshot_window
+from altyazitr.gui.dialogs import OBS_NOT_CONNECTED_TIP
 from altyazitr.gui.home_page import HomePage
 from altyazitr.gui.icons import icon, pixmap
 from altyazitr.gui.region_dialog import RegionDialog
@@ -360,7 +361,7 @@ class MainWindow(QMainWindow):
         ctx.obs_clients.connect(self._set_obs)
         ctx.needs_region.connect(self.select_region)
         self._set_live(bool(getattr(ctx.pipeline, "running", False)))
-        self._set_obs(len(getattr(getattr(ctx, "server", None), "clients", ()) or ()))
+        self._set_obs(len(getattr(getattr(ctx, "server", None), "obs_clients", ()) or ()))
         self._apply_compact(self.width() < COMPACT_BELOW)
         self._build_tray()
         if ctx.server_error:
@@ -424,7 +425,7 @@ class MainWindow(QMainWindow):
             tip = "OBS'te tarayıcı kaynağı bağlı" if n == 1 else f"OBS'te {n} tarayıcı kaynağı bağlı"
             self._obs.set_state(True, "OBS bağlı", tip)
         else:
-            self._obs.set_state(False, "OBS bağlı değil", "OBS'e bağlı tarayıcı kaynağı yok")
+            self._obs.set_state(False, "OBS bağlı değil", OBS_NOT_CONNECTED_TIP)
 
     # --- bildirim --------------------------------------------------------------------
     def toast(self, msg: str, kind: str = "info") -> None:

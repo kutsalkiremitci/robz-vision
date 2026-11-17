@@ -19,7 +19,7 @@ from altyazitr.capture import WindowCapturer, grab_screen_rect
 from altyazitr.gui import icons
 from altyazitr.gui.common import _repolish, _tip
 from altyazitr.gui.controls import Segmented
-from altyazitr.gui.dialogs import show_obs_help
+from altyazitr.gui.dialogs import OBS_NOT_CONNECTED_TIP, show_obs_help
 from altyazitr.gui.region_dialog import bgr_to_pixmap
 from altyazitr.gui.region_picker import logical_to_physical
 from altyazitr.gui.tokens import ICON, RADIUS, SPACE, SUNSET_STOPS, C, F, motion_ms
@@ -428,6 +428,7 @@ class HomePage(QWidget):
     def _build_obs(self) -> Card:
         ctx = self.ctx
         self.obs_state = _pill(label("Bağlı değil", "pill"))
+        self.obs_state.setToolTip(OBS_NOT_CONNECTED_TIP)
         obs = _section("OBS", self.obs_state)
         self.url = QLineEdit(ctx.server.url)
         self.url.setReadOnly(True)
@@ -614,6 +615,7 @@ class HomePage(QWidget):
 
     def _on_obs(self, n: int) -> None:
         self.obs_state.setText("Bağlı" if n else "Bağlı değil")
+        self.obs_state.setToolTip("OBS'te tarayıcı kaynağı bağlı" if n else OBS_NOT_CONNECTED_TIP)
         _repolish(self.obs_state, "pillOn" if n else "pill")
 
     def _copy_url(self) -> None:

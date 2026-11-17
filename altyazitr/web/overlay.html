@@ -134,6 +134,11 @@
   if (params.has('ornek')) {
     showSub({text: 'Şimdi İstanbul\'a dönüyoruz — ğüşıöç ĞÜŞİÖÇ', speaker: 'LUCIA', original: 'We are heading back now.'});
   }
+  // OBS, sayfa yüklenemezse yeniden denemez. Sayfanın kopyası saklanır; OBS uygulamadan önce açılırsa
+  // o kopya yüklenir ve connect() uygulama açılana kadar dener (bkz. sw.js).
+  if (window.obsstudio && location.protocol === 'http:' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
   connect();
 })();
 </script>

@@ -90,10 +90,14 @@ _NUM = f"<span style=\"font-family:'{F.DISPLAY}'\">{{}}</span>"  # metin içinde
 _STEPS = (
     "OBS'te <b>Kaynaklar</b> altındaki <b>+</b> düğmesine basıp <b>Tarayıcı</b>'yı seçin.",
     "<b>Yerel dosya</b> kutusunu boş bırakın, <b>URL</b> alanına bu adresi yapıştırın:",
-    f"Genişlik ve yüksekliği tuvalle aynı yapın, örneğin {_NUM.format('1920 × 1080')}.",
+    f"Genişlik ve yüksekliği tuvalle aynı yapın, örneğin {_NUM.format('1920 × 1080')}. "
+    f"{_NUM.format('800 × 600')} bırakırsanız altyazı küçük ve sol üstte kalır.",
     "Kaynağı listede oyun görüntüsünün üstüne taşıyın.",
 )
 _HELP_W = 540
+# OBS, sayfayı Robz Vision kapalıyken yüklemeye çalışırsa kendiliğinden yeniden denemez.
+OBS_NOT_CONNECTED_TIP = ("OBS'e bağlı tarayıcı kaynağı yok. OBS açıksa kaynağı seçip önizlemenin altındaki "
+                         "Yenile'ye basın.")
 
 
 def _step_number(n: int) -> QLabel:
@@ -177,7 +181,9 @@ def build_obs_help(parent: QWidget | None, url: str) -> QDialog:
         grid.addLayout(cell, i, 1)
     lay.addLayout(grid)
     lay.addSpacing(SPACE["m"])
-    lay.addWidget(_body("Görünüm değişiklikleri OBS'e anında yansır.", C.TEXT_2))
+    lay.addWidget(_body("Görünüm değişiklikleri OBS'e anında yansır. Altyazı OBS'te çıkmıyorsa (örneğin OBS'i "
+                        "Robz Vision'dan önce açtıysanız) kaynağı seçip önizlemenin altındaki <b>Yenile</b>'ye "
+                        "basın.", C.TEXT_2))
 
     lay.addSpacing(SPACE["l"])
     rule = QFrame()

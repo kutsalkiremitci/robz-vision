@@ -14,6 +14,11 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 - Altyazı algılama koyu kenarlı/koyu zemindeki yazıya bakıyor: araba giderken akan asfalt, yol çizgisi ve
   lambalar artık "yazı var" ya da "yazı değişti" sayılmıyor. Böylece yazı belirince beklemeden okunuyor ve
   kaybolunca ekrandan siliniyor. Önizlemedeki yeşil alan da yalnızca yazıyı gösteriyor.
+- OBS, Robz Vision'dan önce açılınca tarayıcı kaynağı boş kalıyor ve altyazı (Test dahil) OBS'te hiç
+  çıkmıyordu; OBS yüklenemeyen sayfayı yeniden denemiyor. OBS artık sayfanın kopyasını saklıyor ve uygulama
+  açılınca kendiliğinden bağlanıyor (kaynağın bir kez yenilenmesi gerekir).
+- "OBS bağlı" durumu, adres bir web tarayıcısında açıkken de "bağlı" gösteriyordu. Artık yalnızca OBS'teki
+  kaynak sayılıyor; bağlı değilken ipucu kaynağın nasıl yenileneceğini söylüyor.
 
 ## [1.0.1] - 2026-11-17
 

@@ -109,11 +109,19 @@ Adresin yanındaki soru işareti düğmesi aynı adımları uygulama içinde gö
 1. OBS'te **Kaynaklar** altındaki **+** düğmesine basıp **Tarayıcı**'yı seçin.
 2. **Yerel dosya** kutusunu boş bırakın, **URL** alanına Ana sayfadaki adresi yapıştırın
    (varsayılan: `http://127.0.0.1:8765/`).
-3. Genişlik ve yüksekliği tuvalle aynı yapın, örneğin 1920 × 1080.
+3. Genişlik ve yüksekliği tuvalle aynı yapın, örneğin 1920 × 1080. Varsayılan 800 × 600'de bırakırsanız
+   altyazı küçük ve tuvalin sol üstünde kalır.
 4. Kaynağı listede oyun görüntüsünün üstüne taşıyın.
 
-Bağlantı kurulunca Ana sayfada ve kenar çubuğunda *OBS bağlı* yazar. Görünüm değişiklikleri OBS'e anında
-yansır; kaynağı yeniden yüklemeniz gerekmez.
+Bağlantı kurulunca Ana sayfada ve kenar çubuğunda *OBS bağlı* yazar. Yalnızca OBS'teki kaynak sayılır; adresi
+bir web tarayıcısında açmak bu yazıyı değiştirmez. Görünüm değişiklikleri OBS'e anında yansır; kaynağı
+yeniden yüklemeniz gerekmez.
+
+**OBS'te altyazı çıkmıyor, tarayıcıda çıkıyorsa:** OBS'i Robz Vision'dan önce açtıysanız tarayıcı kaynağı
+sayfayı yükleyemez ve OBS bunu kendiliğinden yeniden denemez; kaynak boş kalır. OBS'te kaynağı seçip
+önizlemenin altındaki **Yenile**'ye basın (ya da kaynağa çift tıklayıp *Geçerli sayfanın önbelleğini
+yenile*'ye basın). Kaynak bir kez yüklendikten sonra OBS sayfanın kopyasını saklar; sonraki açılışlarda
+hangisini önce açtığınız fark etmez, Robz Vision açılınca altyazı kendiliğinden gelir.
 
 Bilmeniz gerekenler:
 
