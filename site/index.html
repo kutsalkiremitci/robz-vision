@@ -308,14 +308,14 @@ h3 { font-size: 1.375rem; }
 .langs-voice { margin-top: 14px; font-size: .9375rem; }
 .langs figcaption { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: .8125rem; color: var(--text-3); }
 
-/* kimin için */
-.who { display: grid; gap: 28px; margin: 0; padding: 0; list-style: none; }
-.who li { padding-top: 16px; border-top: 2px solid var(--who, var(--cyan)); }
-.who h3 { font-size: 1.375rem; margin-bottom: 8px; }
-.who p { max-width: 32em; }
-.who .who-pc { --who: var(--cyan); }
-.who .who-rp { --who: var(--turq); }
-.who .who-live { --who: var(--orange); }
+/* kimin için (.who adı aşağıdaki "Kim, nereye bakar" tablosunda kullanılıyor) */
+.audience { display: grid; gap: 28px; margin: 0; padding: 0; list-style: none; }
+.audience li { padding-top: 16px; border-top: 2px solid var(--aud, var(--cyan)); }
+.audience h3 { font-size: 1.375rem; margin-bottom: 8px; }
+.audience p { max-width: 32em; }
+.audience .aud-pc { --aud: var(--cyan); }
+.audience .aud-rp { --aud: var(--turq); }
+.audience .aud-live { --aud: var(--orange); }
 .no-tv {
   display: flex; gap: 14px; align-items: flex-start;
   margin-top: clamp(28px, 4vw, 40px); padding: 16px 18px;
@@ -509,7 +509,7 @@ code.inline {
   .feats div:nth-child(2) { padding-top: 0; border-top: 0; }
 }
 @media (min-width: 820px) {
-  .who { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
+  .audience { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
   .tv-ways { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
   .steps li:not(:last-child)::after {
@@ -623,16 +623,16 @@ code.inline {
         <h2 id="kimin-baslik">Kimin için</h2>
         <p class="section-intro">Robz Vision bilgisayar ekranındaki altyazıyı okur. Oyunun görüntüsü bilgisayarınızda olduğu sürece çalışır.</p>
       </div>
-      <ul class="who">
-        <li class="who-pc">
+      <ul class="audience">
+        <li class="aud-pc">
           <h3>Bilgisayarda oynayanlar</h3>
           <p>PC’de oynadığınız İngilizce altyazılı oyunlar. Altyazının çıktığı alanı bir kez seçersiniz, Türkçe çeviri oyunun üstünde belirir.</p>
         </li>
-        <li class="who-rp">
+        <li class="aud-rp">
           <h3>PS5’i PS Remote Play ile oynayanlar</h3>
           <p>Konsoldaki oyunu PS Remote Play ile bilgisayarda açıp oynarken altyazılar Türkçeye çevrilir. GTA VI gibi konsol oyunları için yol bu.</p>
         </li>
-        <li class="who-live">
+        <li class="aud-live">
           <h3>Kick ve OBS yayıncıları</h3>
           <p>Çeviri OBS’e Tarayıcı Kaynağı olarak eklenir, izleyiciler yayında Türkçe altyazıyı görür. Ekranınızdaki kutu varsayılan olarak yayına girmez.</p>
         </li>
