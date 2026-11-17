@@ -31,13 +31,18 @@
     transition: opacity var(--fade) ease; opacity: 0;
   }
   #mask.on { opacity: 1; }
-  #wrap {
+  /* Akış: son satırlar alt alta, en yenisi altta. Yığın alta yaslı; eskiler yukarı kayar. */
+  #stack {
     position: absolute; left: 0; right: 0; bottom: var(--bottom);
-    display: flex; justify-content: center; pointer-events: none;
-  }
-  #box {
+    display: flex; flex-direction: column; align-items: center; pointer-events: none;
     font-size: var(--size);
+  }
+  .ln {
     max-width: var(--maxw);
+    transition: transform var(--fade) ease;  /* konum değişince kayarak (FLIP) */
+  }
+  .ln + .ln { margin-top: .22em; }
+  .box {
     padding: .18em .6em .22em;
     border-radius: .35em;
     background: var(--bg);
@@ -46,8 +51,13 @@
     transform: translateY(.25em);
     transition: opacity var(--fade) ease, transform var(--fade) ease;
   }
-  #box.on { opacity: 1; transform: none; }
-  #text {
+  /* Var olan satırların altına eklenen satır alttan gelir; eskiler aynı anda yukarı kayar (üst üste binmez) */
+  .ln.push .box { transform: translateY(calc(100% + .22em)); }
+  /* --dim: en yeni 1, üsttekiler giderek soluk (render.STACK_ALPHA ile aynı) */
+  .ln.on .box { opacity: var(--dim, 1); transform: none; }
+  .ln.off .box { opacity: 0; }
+  .ln.off.up .box { transform: translateY(-.2em); }
+  .tx {
     font-family: var(--font);
     font-size: 1em;
     font-weight: var(--weight);
@@ -60,8 +70,8 @@
     overflow-wrap: break-word;
     text-wrap: balance;
   }
-  #speaker { color: var(--speaker); }
-  #orig {
+  .sp { color: var(--speaker); }
+  .og {
     display: var(--orig-display);
     font-family: var(--font);
     font-size: var(--orig-size);
@@ -70,6 +80,11 @@
     -webkit-text-stroke: calc(var(--stroke) * .6) var(--stroke-color);
     paint-order: stroke fill;
     margin-top: .15em;
+  }
+  /* Hareket azaltılmışsa (Windows "Animasyon efektleri" kapalı): kayma/yükselme yok, yalnız solma kalır */
+  @media (prefers-reduced-motion: reduce) {
+    .ln { transition: none !important; }
+    .box { transform: none !important; transition: opacity var(--fade) ease !important; }
   }
   #status {
     position: absolute; top: 1vh; left: 1vh; font: 600 1.6vh 'Segoe UI', Arial, sans-serif;
@@ -80,26 +95,112 @@
 </head>
 <body>
 <div id="mask"></div>
-<div id="wrap"><div id="box"><div id="text"><span id="speaker"></span><span id="line"></span></div><div id="orig"></div></div></div>
+<div id="stack"></div>
 <div id="status">Robz Vision bağlantısı yok</div>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const box = $('box'), line = $('line'), speaker = $('speaker'), orig = $('orig');
-  const mask = $('mask'), status = $('status'), css = document.documentElement.style;
+  const stack = $('stack'), mask = $('mask'), status = $('status');
+  const root = document.documentElement, css = root.style;
   const params = new URLSearchParams(location.search);
   const host = location.protocol === 'http:' ? location.host : '127.0.0.1:8765';
   const WS = `ws://${host}/ws`;
+  const DIM = [1, .65, .45, .32];  // alttan yukarı: en yeni tam, eskiler soluk
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
+  const live = new Map();  // satır kimliği → öğe (çıkmakta olanlar hariç), eskiden yeniye
   let delay = 300, everConnected = false;
 
-  function showSub(m) {
-    if (m.text) {
-      speaker.textContent = m.speaker ? m.speaker + ': ' : '';
-      line.textContent = m.text;
-      orig.textContent = m.original || '';
-      box.classList.add('on');
-    } else {
-      box.classList.remove('on');
+  const fadeMs = () => parseFloat(getComputedStyle(root).getPropertyValue('--fade')) || 0;
+
+  function fill(el, l) {
+    el.querySelector('.sp').textContent = l.speaker ? l.speaker + ': ' : '';
+    el.querySelector('.t').textContent = l.text || '';
+    el.querySelector('.og').textContent = l.original || '';
+  }
+
+  function make(l) {
+    const el = document.createElement('div');
+    el.className = 'ln';
+    el.innerHTML = '<div class="box"><div class="tx"><span class="sp"></span><span class="t"></span></div>'
+                 + '<div class="og"></div></div>';
+    fill(el, l);
+    return el;
+  }
+
+  // FLIP: değişiklikten önceki ekran konumları → değişiklikten sonra öğeleri eski yerlerinden kaydır
+  function positions() {
+    const m = new Map();
+    for (const el of stack.children) m.set(el, el.getBoundingClientRect().top);
+    return m;
+  }
+  function slide(before) {
+    if (still.matches || !fadeMs()) return;
+    for (const el of stack.children) {
+      const was = before.get(el);
+      if (was === undefined) continue;
+      const shift = new DOMMatrixReadOnly(getComputedStyle(el).transform).m42;  // süren kaymanın payı
+      const dy = was - (el.getBoundingClientRect().top - shift);
+      if (Math.abs(dy) < 0.5) continue;
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${dy}px)`;
+      el.getBoundingClientRect();  // yeni başlangıcı uygula
+      el.style.transition = '';
+      el.style.transform = '';
+    }
+  }
+
+  function leave(el, older) {
+    el.classList.remove('on', 'push');
+    el.classList.add('off');
+    if (older) el.classList.add('up');
+    setTimeout(() => {
+      const before = positions();
+      el.remove();
+      slide(before);
+    }, fadeMs() + 40);
+  }
+
+  // Satırlar eskiden yeniye gelir; boş liste = altyazı yok
+  function showLines(lines) {
+    lines = (lines || []).filter((l) => l && l.text);
+    const before = positions();
+    const ids = lines.map((l) => String(l.line));
+    // Tek satır yerine tek satır geldiyse yazı yerinde değişir (akıştan önceki gibi, geçiş yok)
+    if (lines.length === 1 && live.size === 1 && !live.has(ids[0])) {
+      const [[oldId, el]] = live;
+      live.delete(oldId);
+      live.set(ids[0], el);
+    }
+    const want = new Set(ids);
+    const order = [...live.keys()];
+    for (const [id, el] of live) {
+      if (!want.has(id)) { live.delete(id); leave(el, id !== order[order.length - 1]); }
+    }
+    const fresh = [];
+    const pushing = live.size > 0;  // ekranda satır varken eklenen satır alttan gelir
+    let prev = null;
+    lines.forEach((l, i) => {
+      let el = live.get(ids[i]);
+      if (el) fill(el, l);
+      else {
+        el = make(l);
+        if (pushing) el.classList.add('push');
+        stack.appendChild(el);  // yeni satır en alta
+        live.set(ids[i], el);
+        fresh.push(el);
+      }
+      // ekran sırası = gelen sıra (eskiden yeniye)
+      if (prev && (prev.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING)) prev.after(el);
+      prev = el;
+      el.style.setProperty('--dim', DIM[Math.min(lines.length - 1 - i, DIM.length - 1)]);
+    });
+    const sorted = ids.map((id) => [id, live.get(id)]);
+    live.clear();
+    for (const [id, el] of sorted) live.set(id, el);
+    slide(before);
+    if (fresh.length) {
+      stack.getBoundingClientRect();  // başlangıç durumu (görünmez) uygulansın; sonra geçişle belirir
+      fresh.forEach((el) => el.classList.add('on'));
     }
   }
 
@@ -118,13 +219,14 @@
     ws.onopen = () => { delay = 300; everConnected = true; status.style.display = 'none'; };
     ws.onmessage = (e) => {
       let m; try { m = JSON.parse(e.data); } catch (_) { return; }
-      if (m.type === 'sub') showSub(m);
+      if (m.type === 'lines') showLines(m.lines);
       else if (m.type === 'style') { for (const [k, v] of Object.entries(m.vars || {})) css.setProperty('--' + k, v); }
       else if (m.type === 'mask') showMask(m.rect);
+      // 'sub' yalnız eski sayfa kopyaları içindir (en yeni satır); bu sayfa 'lines' ile çizer
     };
     ws.onclose = () => {
-      // Uygulama kapanırsa ekranda eski yazı kalmasın
-      box.classList.remove('on'); mask.classList.remove('on');
+      // Uygulama kapanırsa ekranda eski yazı kalmasın (hiç bağlanmadıysa ?ornek örneği kalır)
+      if (everConnected) { showLines([]); mask.classList.remove('on'); }
       if (everConnected && params.has('durum')) status.style.display = 'block';
       setTimeout(connect, delay);
       delay = Math.min(delay * 2, 4000);
@@ -132,7 +234,11 @@
   }
 
   if (params.has('ornek')) {
-    showSub({text: 'Şimdi İstanbul\'a dönüyoruz — ğüşıöç ĞÜŞİÖÇ', speaker: 'LUCIA', original: 'We are heading back now.'});
+    showLines([
+      {line: -3, text: 'Arabaya bin, Vice City\'ye gidiyoruz.', speaker: 'LUCIA', original: 'Get in the car, we\'re going to Vice City.'},
+      {line: -2, text: 'Köprüyü geçince sola dön, sonra güneye ilerle.', speaker: null, original: 'Turn left after the bridge, then head south.'},
+      {line: -1, text: 'Şimdi İstanbul\'a dönüyoruz — ğüşıöç ĞÜŞİÖÇ', speaker: 'JASON', original: 'We are heading back now.'},
+    ]);
   }
   // OBS, sayfa yüklenemezse yeniden denemez. Sayfanın kopyası saklanır; OBS uygulamadan önce açılırsa
   // o kopya yüklenir ve connect() uygulama açılana kadar dener (bkz. sw.js).

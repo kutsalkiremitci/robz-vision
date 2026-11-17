@@ -5,6 +5,8 @@
 * Görünümü "Ekranımda" ayarlarıdır (Settings.screen_style); OBS sayfası ve maskesi "Yayınımda"
   ayarlarını (Settings.style) kullanır. Görünüm her çizimde ve her geçişte yeniden okunur: ayar
   değişince update() yeterlidir (bunu SubtitleDisplay.push_style yapar).
+* Akış (Settings.flow): son çeviriler kutunun içinde alt alta durur; en yeni en altta ve tam görünür,
+  üsttekiler soluktur. Kutu kısa kalırsa yalnızca sığan en yeni satırlar çizilir (bkz. render).
 * Normalde çerçevesiz, her zaman üstte, odak çalmaz ve fareyi geçirir.
 * Varsayılan olarak SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE) ile ekran yakalamaya girmez:
   hem izleyiciler iki kez görmez hem de OCR kendi Türkçe yazımızı okumaz. İstenirse "yayında da
@@ -26,7 +28,7 @@ from altyazitr.config import Settings, StyleCfg
 from altyazitr.gui import icons
 from altyazitr.gui.dialogs import body_font
 from altyazitr.gui.tokens import ICON, RADIUS, SPACE, C, F
-from altyazitr.render import paint_subtitle
+from altyazitr.render import paint_subtitle, stack_limit
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +49,13 @@ HWND_TOPMOST = -1
 SWP_NOSIZE, SWP_NOMOVE, SWP_NOACTIVATE = 0x1, 0x2, 0x10
 
 SAMPLE = ("Altyazınız burada görünecek", APP_NAME, "Your subtitle will appear here")
+# Ayar modunda akış örneği (eskiden yeniye; en yenisi SAMPLE): ayardaki satır sayısı kadarı gösterilir
+SAMPLE_STACK = (
+    ("Hızlı konuşmada önceki satırlar da okunur", "JASON", "Earlier lines stay readable in fast dialogue"),
+    ("Daha eski satırlar yukarıda, iyice soluk", None, "Older lines stay above, faded"),
+    ("Önceki çeviri, biraz daha soluk", "LUCIA", "The previous translation, a little dimmer"),
+    SAMPLE,
+)
 EDIT_HINT = "Sürükleyerek taşıyın, kenarlardan boyutlandırın. Bitirmek için çift tıklayın."
 EDGE = 12
 MIN_W, MIN_H = 220, 70
@@ -66,6 +75,9 @@ class ScreenOverlay(QWidget):
         self.setWindowTitle(f"{APP_NAME} ekran altyazısı")
         self.setMouseTracking(True)
         self.s = settings
+        # Gösterilen satırlar, eskiden yeniye: {"line", "text", "speaker", "original"}.
+        # text/speaker/original her zaman en yeni satırınkidir (tek satırlık eski arayüz).
+        self.lines: list[dict] = []
         self.text = ""
         self.speaker: str | None = None
         self.original = ""
@@ -76,6 +88,13 @@ class ScreenOverlay(QWidget):
         self._anim.setEasingCurve(QEasingCurve.Type.OutCubic)
         self._anim.valueChanged.connect(self._on_anim)
         self._anim.finished.connect(self._on_anim_done)
+        # Yığına yeni satır eklenince: yeni satır belirir, eskiler yukarı kayar (0 → 1)
+        self._progress = 1.0
+        self._shift = QVariantAnimation(self)
+        self._shift.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._shift.setStartValue(0.0)
+        self._shift.setEndValue(1.0)
+        self._shift.valueChanged.connect(self._on_shift)
         self._top_timer = QTimer(self, interval=2000, timeout=self._raise_topmost)
         self._restore_geometry()
 
@@ -88,7 +107,9 @@ class ScreenOverlay(QWidget):
     @staticmethod
     def default_box() -> QRect:
         g = QGuiApplication.primaryScreen().availableGeometry()
-        w, h = int(g.width() * 0.66), int(g.height() * 0.17)
+        # 0.28: akışta (son 3 satır alt alta) varsayılan yazı boyunda 1080p'de üç satır sığar; kutu saydamdır,
+        # yalnızca yazı çizilir, fazladan yükseklik oyunu kapatmaz
+        w, h = int(g.width() * 0.66), int(g.height() * 0.28)
         return QRect(g.x() + (g.width() - w) // 2, g.y() + g.height() - h - int(g.height() * 0.05), w, h)
 
     def _restore_geometry(self) -> None:
@@ -116,14 +137,38 @@ class ScreenOverlay(QWidget):
         self._top_timer.stop()
         self.hide()
 
-    def set_subtitle(self, text: str, speaker: str | None, original: str) -> None:
-        if not text:
+    def set_lines(self, lines: list[dict]) -> None:
+        """Gösterilecek satırlar, eskiden yeniye (SubtitleDisplay'in OBS'e gönderdiği listeyle aynı:
+        {"line", "text", "speaker", "original"}). Boş liste kutuyu soldurur. Yığına yeni bir satır eklenince
+        o satır belirir ve eskiler yukarı kayar; tek satırda yazı eskisi gibi anında değişir."""
+        lines = [{"line": ln.get("line"), "text": ln.get("text", ""), "speaker": ln.get("speaker"),
+                  "original": ln.get("original", "") or ""} for ln in lines if ln.get("text")]
+        if not lines:
             self.clear()
             return
-        self.text, self.speaker, self.original = text, speaker, original
+        showing = self._opacity > 0.001 and bool(self.text)
+        old_ids = {ln["line"] for ln in self.lines} if showing else set()
+        self.lines = lines
+        new = lines[-1]
+        self.text, self.speaker, self.original = new["text"], new["speaker"], new["original"]
+        if len(lines) > 1 and showing and new["line"] not in old_ids:
+            self._shift.stop()
+            self._shift.setDuration(max(1, int(self.look.fade_ms)))  # her geçişte okunur
+            self._progress = 0.0
+            self._shift.start()
+        elif not showing:
+            self._shift.stop()
+            self._progress = 1.0
         self._update_visibility()
         self._fade_to(1.0)
         self.update()
+
+    def set_subtitle(self, text: str, speaker: str | None, original: str) -> None:
+        """Tek satır gösterir (akışsız)."""
+        if not text:
+            self.clear()
+            return
+        self.set_lines([{"line": None, "text": text, "speaker": speaker, "original": original}])
 
     def clear(self) -> None:
         self._fade_to(0.0)
@@ -185,7 +230,7 @@ class ScreenOverlay(QWidget):
     def _fade_to(self, target: float) -> None:
         if abs(self._opacity - target) < 1e-3:
             if target <= 0.001 and self._anim.state() != QVariantAnimation.State.Running:
-                self.text = ""
+                self._forget()
                 self._update_visibility()
             return
         self._anim.stop()
@@ -200,8 +245,19 @@ class ScreenOverlay(QWidget):
 
     def _on_anim_done(self) -> None:
         if self._opacity <= 0.001:
-            self.text = ""
+            self._forget()
             self._update_visibility()
+
+    def _on_shift(self, v) -> None:
+        self._progress = float(v)
+        self.update()
+
+    def _forget(self) -> None:
+        """Kutu tamamen kaybolunca gösterilen satırlar unutulur."""
+        self.text = ""
+        self.lines = []
+        self._shift.stop()
+        self._progress = 1.0
 
     # --- fareyle taşıma / boyutlandırma (yalnızca ayar modunda) ------------------------
     def _edges(self, pos: QPoint) -> set[str]:
@@ -264,20 +320,31 @@ class ScreenOverlay(QWidget):
             self.set_editing(False)
 
     # --- çizim -------------------------------------------------------------------------------
+    def sample_lines(self) -> list[dict]:
+        """Ayar modundaki örnek: akışta ayardaki satır sayısı kadar örnek satır, tek satır modunda SAMPLE."""
+        n = min(stack_limit(self.s.flow), len(SAMPLE_STACK))
+        return [{"line": -i, "text": t, "speaker": sp, "original": o}
+                for i, (t, sp, o) in enumerate(SAMPLE_STACK[-n:])]
+
     def paintEvent(self, _e) -> None:  # noqa: N802
-        st, o = self.look, self.s.overlay
         p = QPainter(self)
         W, H = self.width(), self.height()
-        ref_h = (self.screen() or QGuiApplication.primaryScreen()).geometry().height()
         if self.editing:
             self._paint_edit_chrome(p, W, H)
-            text, speaker, original = (self.text, self.speaker, self.original) if self.text else SAMPLE
-            paint_subtitle(p, W, H, st, text, speaker, original, o.scale, ref_height=ref_h, in_box=True)
-        elif self._opacity > 0.001 and self.text:
+            showing = bool(self.text and self.lines)
+            self._paint_lines(p, W, H, self.lines if showing else self.sample_lines(),
+                              self._progress if showing else 1.0)
+        elif self._opacity > 0.001 and self.text and self.lines:
             p.setOpacity(self._opacity)
-            paint_subtitle(p, W, H, st, self.text, self.speaker, self.original, o.scale,
-                           ref_height=ref_h, in_box=True)
+            self._paint_lines(p, W, H, self.lines, self._progress)
         p.end()
+
+    def _paint_lines(self, p: QPainter, W: int, H: int, lines: list[dict], progress: float) -> None:
+        """Satırları kutuya çizer: en yeni altta, eskiler üstte ve soluk (tek paint_subtitle çağrısı)."""
+        *older, new = lines
+        ref_h = (self.screen() or QGuiApplication.primaryScreen()).geometry().height()
+        paint_subtitle(p, W, H, self.look, new["text"], new.get("speaker"), new.get("original", ""),
+                       self.s.overlay.scale, ref_height=ref_h, in_box=True, older=older, progress=progress)
 
     @staticmethod
     def _paint_edit_chrome(p: QPainter, W: int, H: int) -> None:

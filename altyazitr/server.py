@@ -2,7 +2,7 @@
 
 http://127.0.0.1:<port>/  → altyazı sayfası (şeffaf, 1920x1080 tuval için)
 http://127.0.0.1:<port>/sw.js → OBS uygulamadan önce açılırsa sayfanın saklanan kopyasını açar
-ws://127.0.0.1:<port>/ws  → canlı altyazı/stil/maske güncellemeleri
+ws://127.0.0.1:<port>/ws  → canlı altyazı akışı ("lines")/stil/maske güncellemeleri
 
 aiohttp ayrı bir iş parçacığındaki asyncio döngüsünde çalışır; Qt tarafı AsyncBridge.submit
 ile eşyordam gönderir. Yalnızca 127.0.0.1'e bağlanır (güvenlik duvarı uyarısı çıkmaz).
@@ -91,10 +91,14 @@ class OverlayServer:
         self.obs_clients: set[web.WebSocketResponse] = set()
         self._runner: web.AppRunner | None = None
         self.on_clients_changed: Callable[[int], None] | None = None
+        # Yeni bağlanan sayfaya bu sırayla gönderilir. "lines" sayfanın çizdiği altyazı akışıdır; "sub" yalnızca
+        # en yeni satırdır ve eski sayfa kopyaları (OBS'te açık kalmış ya da service worker'ın sakladığı) için
+        # tutulur, yeni sayfa onu yok sayar.
         self.state: dict[str, dict] = {
             "style": {"type": "style", "vars": {}},
             "sub": {"type": "sub", "text": "", "speaker": None, "original": ""},
             "mask": {"type": "mask", "rect": None},
+            "lines": {"type": "lines", "lines": []},
         }
 
     @property
@@ -166,9 +170,30 @@ class OverlayServer:
             self.obs_clients.discard(c)
 
     # --- Qt tarafından AsyncBridge.submit ile çağrılır ----------------
-    async def set_subtitle(self, text: str, speaker: str | None = None, original: str = "") -> None:
-        self.state["sub"] = {"type": "sub", "text": text, "speaker": speaker, "original": original}
+    async def set_lines(self, lines: list[dict]) -> None:
+        """Ekrandaki altyazı akışı, eskiden yeniye: [{"line": int, "text", "speaker", "original"}, …];
+        boş liste = altyazı yok. Sayfaya {"type": "lines", "lines": […]} gider; eski sayfa kopyaları için
+        en yeni satır ayrıca {"type": "sub"} olarak gönderilir."""
+        clean = []
+        for ln in lines:
+            text = str(ln.get("text") or "")
+            if not text:
+                continue
+            try:
+                lid = int(ln.get("line") or 0)
+            except (TypeError, ValueError):
+                lid = 0
+            clean.append({"line": lid, "text": text, "speaker": ln.get("speaker") or None,
+                          "original": str(ln.get("original") or "")})
+        new = clean[-1] if clean else {"text": "", "speaker": None, "original": ""}
+        self.state["lines"] = {"type": "lines", "lines": clean}
+        self.state["sub"] = {"type": "sub", "text": new["text"], "speaker": new["speaker"], "original": new["original"]}
+        await self._broadcast(self.state["lines"])
         await self._broadcast(self.state["sub"])
+
+    async def set_subtitle(self, text: str, speaker: str | None = None, original: str = "") -> None:
+        """Tek satır (akışsız) gösterir; boş yazı altyazıyı kaldırır."""
+        await self.set_lines([{"line": 0, "text": text, "speaker": speaker, "original": original}] if text else [])
 
     async def set_style(self, vars_: dict[str, str]) -> None:
         self.state["style"] = {"type": "style", "vars": dict(vars_)}
