@@ -861,7 +861,7 @@ code.inline {
             <h3 id="gereksinim-baslik">Gereksinimler</h3>
             <ul>
               <li>Windows 10 (2004 ve sonrası) ya da Windows 11, 64 bit.</li>
-              <li>Windows’un İngilizce OCR dil paketi. Yoksa <em>Ayarlar → Saat ve dil → Dil ve bölge</em>’den English (United States) ekleyin ya da yönetici PowerShell’de şunu çalıştırın:
+              <li>Ek dil paketi gerekmez. Yalnızca programın ayarlarında Windows OCR’ı seçerseniz Windows’un İngilizce OCR dil paketi gerekir; yoksa <em>Ayarlar → Saat ve dil → Dil ve bölge</em>’den English (United States) ekleyin ya da yönetici PowerShell’de şunu çalıştırın:
                 <div class="cmd">
                   <pre id="ocr-cmd">Add-WindowsCapability -Online -Name "Language.OCR~~~en-US~0.0.1.0"</pre>
                   <button class="copy" type="button" data-copy="ocr-cmd" aria-label="Komutu kopyala" hidden>
@@ -902,7 +902,7 @@ code.inline {
         <details>
           <summary>İnternet bağlantısı gerekir mi?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
           <div class="answer">
-            <p>Varsayılan ayarlarla yalnızca ilk açılışta: çeviri modeli (yaklaşık 400 MB) Hugging Face’ten bir kez indirilir. RapidOCR’ı seçerseniz o da kendi modellerini ilk kullanımda indirir. Gemini ve DeepL çevrim içi hizmetlerdir.</p>
+            <p>Varsayılan ayarlarla yalnızca ilk açılışta: çeviri modeli (yaklaşık 400 MB) Hugging Face’ten bir kez indirilir. OCR modelleri programla birlikte gelir. Gemini ve DeepL çevrim içi hizmetlerdir.</p>
           </div>
         </details>
         <details>

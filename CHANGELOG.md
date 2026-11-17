@@ -6,6 +6,19 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+### Değişti
+
+- Varsayılan OCR motoru artık RapidOCR (PP-OCRv6). Kareyi hem ham hâliyle hem asfalt/kum ayıklanmış hâliyle
+  okuyup daha iyisini seçiyor; ölçümde gerçek GTA karesinde %96 → %100, süslü yazı tiplerinde ve renkli
+  vurgularda %100. Windows'un İngilizce OCR dil paketi artık gerekmiyor (yalnızca Windows OCR seçilirse).
+  Eski ayarlarda varsayılan Windows OCR bir kez RapidOCR'a çevrilir.
+- RapidOCR modelleri programla birlikte geliyor; ilk okumada internetten indirme yapılmıyor.
+
+### Düzeltildi
+
+- Okumalar arasında seçim yaparken arka plandaki plaka/tabela yazısı ("LAMARG" gibi) artık ham okumayı öne
+  geçirmiyor: yalnızca sözlükte bilinen kelimeler sayılıyor.
+
 ## [1.0.2] - 2026-11-17
 
 ### Eklendi

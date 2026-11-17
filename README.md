@@ -128,8 +128,9 @@ flowchart LR
 2. **Değişim algılama.** Görüntü küçültülür ve ince, parlak harf çizgilerinden bir "metin maskesi" çıkarılır.
    Maske belirgin biçimde değişip birkaç kare sabit kalınca OCR tetiklenir. Ekranda aynı altyazı durdukça
    işlemci boşta kalır.
-3. **OCR.** Varsayılan motor Windows'un yerleşik OCR'ıdır. Süslü yazı tiplerinde RapidOCR (PP-OCR, ONNX)
-   seçilebilir.
+3. **OCR.** Varsayılan motor RapidOCR (PP-OCRv6, ONNX). Kare hem ham hâliyle hem asfalt/kum ayıklanmış
+   hâliyle okunur, daha çok bilinen İngilizce kelime çıkan seçilir. Windows'un yerleşik OCR'ı da seçilebilir
+   (daha hızlı, Windows'un İngilizce OCR dil paketini ister).
 4. **Temizleme.** Satırlar birleştirilir, konuşmacı adı ayrılır. Okuma, İngilizce kelime listesine göre
    puanlanır; bozuk okumalar elenir. Aynı cümle ikinci kez çevrilmez, önbellekten gelir.
 5. **Çeviri.** Varsayılan model [quickmt-en-tr](https://huggingface.co/quickmt/quickmt-en-tr)'dir ve
@@ -172,9 +173,10 @@ kurulum dosyası ARM'li Windows 11'e de kurulur (henüz ARM cihazda denenmedi).
 **Kaynak koddan.** [Python 3.12](https://www.python.org/downloads/) kurun ("Add python.exe to PATH"
 işaretli). Depoyu indirip `kurulum.bat`'ı, ardından `baslat.bat`'ı çalıştırın.
 
-**Gereksinimler.** Windows 10 (2004 ve sonrası) ya da Windows 11, 64 bit. Windows'un **İngilizce OCR dil
-paketi** de gerekir. Yoksa *Ayarlar → Saat ve dil → Dil ve bölge → English (United States)* ekleyin ya da
-yönetici PowerShell'de şunu çalıştırın:
+**Gereksinimler.** Windows 10 (2004 ve sonrası) ya da Windows 11, 64 bit. Ek bir dil paketi gerekmez.
+Yalnızca *Ayarlar → Metin okuma*'da Windows OCR'ı seçerseniz Windows'un **İngilizce OCR dil paketi** gerekir.
+Yoksa *Ayarlar → Saat ve dil → Dil ve bölge → English (United States)* ekleyin ya da yönetici PowerShell'de
+şunu çalıştırın:
 
 ```powershell
 Add-WindowsCapability -Online -Name "Language.OCR~~~en-US~0.0.1.0"
@@ -221,7 +223,7 @@ için kullanılmadı.
 - Varsayılan ayarlarla ekran görüntüsü, OCR ve çeviri bilgisayarınızda kalır. Görüntüler diske kaydedilmez,
   uygulama kullanım verisi toplamaz.
 - İnternet bağlantısı yalnızca ilk açılışta çeviri modelini Hugging Face'ten indirmek için kullanılır.
-  RapidOCR'ı seçerseniz o da kendi modellerini ilk kullanımda indirir.
+  OCR modelleri programla birlikte gelir.
 - OBS sunucusu yalnızca `127.0.0.1` adresini dinler; ağdaki başka cihazlar erişemez.
 - Çeviri önbelleği (İngilizce–Türkçe metin çiftleri) ve günlük dosyaları `%LOCALAPPDATA%\RobzVision`
   altında, ayarlar ve API anahtarları `%APPDATA%\RobzVision\ayarlar.json` dosyasında tutulur.
@@ -241,8 +243,8 @@ düşürün ya da *Algılama*'yı *Sabit aralık* yapın. Harf harf beliren alty
 <details>
 <summary><b>Yanlış ya da yarım okumalar</b></summary>
 
-Bölgeyi yalnızca altyazı satırlarını kapsayacak kadar daraltın. Süslü yazı tiplerinde *Ayarlar → Metin okuma*'da
-motor olarak RapidOCR'ı deneyin.
+Bölgeyi yalnızca altyazı satırlarını kapsayacak kadar daraltın. Okuma yine bozuksa *Ayarlar → Metin okuma*'da
+diğer motoru deneyin (RapidOCR ↔ Windows OCR).
 </details>
 
 <details>
@@ -265,7 +267,8 @@ sayfasındaki **Test et** düğmesi örnek bir altyazı gönderir.
 <details>
 <summary><b>"Windows'ta İngilizce OCR dil paketi yüklü değil" hatası</b></summary>
 
-[Kurulum](#kurulum) bölümündeki komutla paketi kurun ya da *Ayarlar → Metin okuma*'da RapidOCR'a geçin.
+Bu hata yalnızca Windows OCR seçiliyken çıkar. [Kurulum](#kurulum) bölümündeki komutla paketi kurun ya da
+*Ayarlar → Metin okuma*'da önerilen motor RapidOCR'a geçin; RapidOCR dil paketi istemez.
 </details>
 
 <details>

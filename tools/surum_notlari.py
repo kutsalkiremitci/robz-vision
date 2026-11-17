@@ -22,8 +22,7 @@ REHBER = """\
 | `RobzVision-Portable-{v}-x64.7z` | Taşınabilir sürümün daha küçük arşivi. Windows 11 ya da 7-Zip ile açılır. |
 | `SHA256SUMS.txt` | İndirdiğiniz dosyanın bozulmadığını doğrulamak için özetler. |
 
-**Sistem.** Windows 10 (2004 ve sonrası) ya da Windows 11, 64 bit. Windows'un İngilizce OCR dil paketi gerekir
-(ayrıntılar README'de). İlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez indirilir.
+**Sistem.** Windows 10 (2004 ve sonrası) ya da Windows 11, 64 bit. Ek dil paketi gerekmez. İlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez indirilir.
 
 **ARM işlemcili bilgisayarlar** (ör. Snapdragon). Ayrı bir ARM64 sürümü yok: çeviri motorunun (CTranslate2)
 ve birkaç kütüphanenin ARM64 Windows paketi bulunmuyor. Windows 11 x64 programları öykünmeyle çalıştırabildiği

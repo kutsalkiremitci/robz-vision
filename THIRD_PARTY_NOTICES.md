@@ -14,7 +14,7 @@ olarak yer alır ve her biri kendi lisansına tabidir.
 | windows-capture | MIT | https://github.com/NiiightmareXD/windows-capture |
 | pywinrt (winrt-*) | MIT | https://github.com/pywinrt/pywinrt |
 | RapidOCR | Apache-2.0 | https://github.com/RapidAI/RapidOCR |
-| PaddleOCR PP-OCR modelleri | Apache-2.0 | https://github.com/PaddlePaddle/PaddleOCR (RapidOCR ilk kullanımda indirir) |
+| PaddleOCR PP-OCR modelleri | Apache-2.0 | https://github.com/PaddlePaddle/PaddleOCR (programla birlikte gelir) |
 | ONNX Runtime | MIT | https://github.com/microsoft/onnxruntime |
 | OpenCV | Apache-2.0 | https://opencv.org |
 | NumPy | BSD-3-Clause | https://numpy.org |
