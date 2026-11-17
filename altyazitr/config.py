@@ -32,7 +32,7 @@ class CaptureCfg:
 
 @dataclass
 class OcrCfg:
-    engine: str = "windows"  # "windows" | "rapidocr"
+    engine: str = "rapidocr"  # "rapidocr" (önerilen) | "windows"
     detect_mode: str = "smart"  # "smart" (değişince oku) | "interval" (sabit aralık)
     interval_ms: int = 500
     stable_frames: int = 2  # metin bu kadar kare sabit kalınca okunur
@@ -125,6 +125,8 @@ class Settings:
     first_run: bool = True
     tour_seen: bool = False  # tanıtım turu tamamlandı mı ("Daha sonra" denirse bir sonraki açılışta yine gösterilir)
     minimize_to_tray: bool = True
+    # Ayar dosyası biçimi. 2: varsayılan OCR motoru RapidOCR oldu (eski dosyalardaki "windows" bir kez taşınır).
+    settings_version: int = 2
 
 
 def _from_dict(cls, data: Any):
@@ -165,6 +167,11 @@ def load_settings() -> Settings:
         if isinstance(data, dict) and "screen_style" not in data:
             # tek görünümlü eski sürüm: ekrandaki kutu bugüne kadar yayınla aynı görünüyordu
             s.screen_style = replace(s.style)
+        if isinstance(data, dict) and int(data.get("settings_version", 1) or 1) < 2:
+            # 1.0.2 ve öncesinde Windows OCR varsayılandı (çoğu kullanıcı bilerek seçmedi): RapidOCR'a geç
+            if s.ocr.engine == "windows":
+                s.ocr.engine = "rapidocr"
+            s.settings_version = 2
         log.info("Ayarlar yüklendi: %s", SETTINGS_FILE)
         return s
     except FileNotFoundError:

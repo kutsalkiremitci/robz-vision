@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -187,8 +188,8 @@ class RapidOcrEngine(OcrEngine):
             from rapidocr import ModelType, OCRVersion, RapidOCR
         except Exception as e:  # pragma: no cover
             raise OcrUnavailable(f"RapidOCR yüklenemedi: {e}") from e
-        root = MODEL_DIR / "rapidocr"
-        root.mkdir(parents=True, exist_ok=True)
+        root = _rapidocr_model_dir()
+        log.info("RapidOCR modelleri: %s", root)
         self._ocr = RapidOCR(params={
             "Global.log_level": "error",
             "Global.model_root_dir": str(root),
@@ -201,8 +202,20 @@ class RapidOcrEngine(OcrEngine):
         self.mode = preprocess_mode
 
     def recognize(self, bgr: np.ndarray) -> list[OcrLine]:
-        # RapidOCR doğal görüntülerle eğitildiği için "otomatik" modda ham görüntü kullanılır
-        img, f = preprocess(bgr, self.upscale, "none" if self.mode == "auto" else self.mode)
+        if self.mode != "auto":
+            return self._recognize(bgr, self.mode)
+        # Otomatik: ham görüntü ve asfalt/kum ayıklanmış görüntü okunur, daha çok bilinen İngilizce kelime
+        # çıkan seçilir; eşitlikte ham okuma kalır (noktalamayı ve süslü yazı tiplerini daha iyi okur).
+        # Ayıklanmış okuma kumlu, hareketli arka planda ve tabela/plaka yazısı karıştığında öne geçer.
+        reads = []
+        for mode in ("none", "outline_bright"):
+            lines = self._recognize(bgr, mode)
+            text = " ".join(ln.text for ln in lines)
+            reads.append((english_mass(text), english_score(text), lines))
+        return max(reads, key=lambda r: r[:2])[2]
+
+    def _recognize(self, bgr: np.ndarray, mode: str) -> list[OcrLine]:
+        img, f = preprocess(bgr, self.upscale, mode)
         r = self._ocr(img, use_cls=False)
         if r is None or not getattr(r, "txts", None):
             return []
@@ -219,9 +232,22 @@ class RapidOcrEngine(OcrEngine):
         return out
 
 
+def _rapidocr_model_dir():
+    """PP-OCRv6 modelleri programla birlikte gelir (rapidocr paketi): onları kullan, ilk okumada internetten
+    indirme olmasın. Paket eksikse eski yol: kullanıcının model klasörü (RapidOCR oraya indirir)."""
+    import rapidocr
+
+    bundled = Path(rapidocr.__file__).resolve().parent / "models"
+    if all((bundled / n).is_file() for n in ("PP-OCRv6_det_small.onnx", "PP-OCRv6_rec_small.onnx")):
+        return bundled
+    root = MODEL_DIR / "rapidocr"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
 ENGINES = {
-    "windows": ("Windows OCR (hızlı, önerilen)", WindowsOcrEngine),
-    "rapidocr": ("RapidOCR PP-OCRv6 (zor fontlar için)", RapidOcrEngine),
+    "rapidocr": ("RapidOCR PP-OCRv6 (önerilen)", RapidOcrEngine),
+    "windows": ("Windows OCR (hızlı, İngilizce OCR dil paketi gerekir)", WindowsOcrEngine),
 }
 
 

@@ -71,8 +71,16 @@ def english_score(text: str) -> float:
 
 @lru_cache(maxsize=4096)
 def english_mass(text: str) -> float:
-    """İngilizce sayılan harflerin ağırlıklı toplamı: kapsam ölçüsü.
+    """Sözlükte bilinen İngilizce kelimelerin harf toplamı (+ sayılar): kapsam ölçüsü.
 
     Aynı karenin farklı okumalarını karşılaştırırken kelime düşüren okuma english_score'u düşürmez
-    ("They're need to move" hâlâ tamamen İngilizce), ama bunu düşürür; gürültüden çıkan çöp de bunu artırmaz."""
-    return sum(w * n for w, n in map(_weight, text.split()))
+    ("They're need to move" hâlâ tamamen İngilizce), ama bunu düşürür. Bilinmeyen kelimeler (büyük harfli
+    olsalar bile) sayılmaz: arka plandaki plaka ya da tabela yazısı ("LAMARG") ham okumayı öne geçirmesin."""
+    total = 0.0
+    for raw in text.split():
+        t = raw.strip(_PUNCT)
+        if _WORD.fullmatch(t) and is_known(t):
+            total += len(t)
+        elif t and re.fullmatch(r"\d+([.,:]\d+)*%?", t):
+            total += 0.6 * len(t)
+    return total

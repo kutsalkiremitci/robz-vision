@@ -338,6 +338,37 @@ def test_screen_and_stream_styles(tmp_path, monkeypatch):
     assert (s2.style.font_size, s2.screen_style.font_size) == (50, 30)
 
 
+def test_default_ocr_engine_and_migration(tmp_path, monkeypatch):
+    """Varsayılan RapidOCR; eski dosyadaki (bilerek seçilmemiş) Windows OCR bir kez taşınır, yeni dosyada seçim kalır."""
+    import json
+
+    from altyazitr import config as cfg
+
+    assert Settings().ocr.engine == "rapidocr"
+    path = tmp_path / "ayarlar.json"
+    monkeypatch.setattr(cfg, "SETTINGS_FILE", path)
+    path.write_text(json.dumps({"ocr": {"engine": "windows"}}), encoding="utf-8")  # 1.0.2 ve öncesi
+    s = cfg.load_settings()
+    assert s.ocr.engine == "rapidocr" and s.settings_version == 2
+    s.ocr.engine = "windows"  # kullanıcı sonradan bilerek seçerse korunur
+    cfg.save_settings(s)
+    assert cfg.load_settings().ocr.engine == "windows"
+
+
+def test_english_mass_ignores_background_words():
+    # arka plandaki plaka/tabela yazısı ham okumayı öne geçirmesin
+    assert english_mass("LAMARG was getting us paid.") == english_mass("was getting us paid.")
+    assert english_mass("I was getting us paid.") > english_mass("LAMARG was getting us paid.")
+
+
+def test_rapidocr_uses_bundled_models():
+    pytest.importorskip("rapidocr")
+    from altyazitr.ocr import _rapidocr_model_dir
+
+    d = _rapidocr_model_dir()
+    assert (d / "PP-OCRv6_det_small.onnx").is_file() and (d / "PP-OCRv6_rec_small.onnx").is_file()
+
+
 def test_parse_hotkey():
     assert parse_hotkey("Ctrl+Alt+T") == (0x2 | 0x1, 0x54)
     assert parse_hotkey("Shift+F9") == (0x4, 0x78)
