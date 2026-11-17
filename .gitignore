@@ -13,10 +13,11 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Derleme çıktıları (PyInstaller, Inno Setup, GitHub Actions zip'i)
+# Derleme çıktıları (PyInstaller, Inno Setup, GitHub Actions sürüm dosyaları)
 build/
 dist/
-RobzVision-*-win64.zip
+cikti/
+surum_notlari.md
 
 # Günlükler ve geçici dosyalar
 *.log

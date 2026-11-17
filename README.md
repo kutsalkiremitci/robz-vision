@@ -26,7 +26,7 @@ Görüntü, depodaki test sahnesinden (<code>tools/test_penceresi.py</code>) al�
 <p align="center">
   <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="docs/gorseller/indir.png" width="186" alt="Hemen indir"></a>
 </p>
-<p align="center"><sub>Windows 10 / 11, 64 bit. Kurulum dosyası ya da taşınabilir zip; yönetici izni istemez.<br>
+<p align="center"><sub>Windows 10 / 11, 64 bit (ARM'li Windows 11 dahil). Kurulum dosyası ya da taşınabilir zip/7z; yönetici izni istemez.<br>
 Adım adım anlatım için <a href="docs/KULLANIM.md">kullanım kılavuzu</a>.</sub></p>
 
 <p align="center"><img src="docs/gorseller/ayirici.png" width="100%" alt=""></p>
@@ -122,13 +122,18 @@ bir pencerede açabilirsiniz. Ayrıntılar ve OBS kurulumu için [kullanım kıl
 ## Kurulum
 
 **Kurulum dosyası (önerilen).** [Releases](https://github.com/kutsalkiremitci/robz-vision/releases/latest)
-sayfasından `RobzVision-Kurulum-<sürüm>.exe` dosyasını indirip çalıştırın ve sihirbazda **İleri**'ye basarak
-kurun. Yönetici izni istemez; program kendi kullanıcı klasörünüze kurulur, Başlat menüsüne eklenir ve
+sayfasından `RobzVision-Kurulum-<sürüm>-x64.exe` dosyasını indirip çalıştırın ve sihirbazda **İleri**'ye
+basarak kurun. Yönetici izni istemez; program kendi kullanıcı klasörünüze kurulur, Başlat menüsüne eklenir ve
 *Ayarlar → Uygulamalar*'dan kaldırılabilir. İlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez
 indirilir; indirme bitince program açılır.
 
-**Taşınabilir sürüm.** `RobzVision-<sürüm>-win64.zip` dosyasını kısa bir klasöre (ör. `C:\RobzVision`)
-çıkarıp `RobzVision.exe`'yi çalıştırın.
+**Taşınabilir sürüm.** `RobzVision-Tasinabilir-<sürüm>-x64.zip` (ya da daha küçük `.7z`) dosyasını kısa bir
+klasöre (ör. `C:\RobzVision`) çıkarıp `RobzVision.exe`'yi çalıştırın. İndirilen dosyayı doğrulamak için
+sürüm sayfasında `SHA256SUMS.txt` vardır.
+
+**ARM işlemcili bilgisayarlar.** Ayrı bir ARM64 sürümü yok; çeviri motorunun (CTranslate2) ve birkaç
+kütüphanenin ARM64 Windows paketi bulunmuyor. Windows 11 x64 programları öykünmeyle çalıştırabildiği için
+kurulum dosyası ARM'li Windows 11'e de kurulur (henüz ARM cihazda denenmedi).
 
 **Kaynak koddan.** [Python 3.12](https://www.python.org/downloads/) kurun ("Add python.exe to PATH"
 işaretli). Depoyu indirip `kurulum.bat`'ı, ardından `baslat.bat`'ı çalıştırın.
@@ -279,10 +284,13 @@ python -m venv .venv
 | `tools/arayuz_goruntusu.py` | Arayüzün tüm ekranlarını pencere açmadan PNG olarak kaydeder |
 | `tools/readme_gorselleri.py` | Bu sayfadaki görselleri (banner dahil) `docs/gorseller/` altında yeniden üretir |
 | `tools/kurulum_gorselleri.py`, `tools/logo_hazirla.py` | Kurulum sihirbazı görselleri, logo ve simge |
+| `tools/kelime_listesi_olustur.py` | OCR kalite puanındaki İngilizce kelime listesini (`altyazitr/data/en_words.txt`) üretir |
+| `tools/surum_notlari.py` | GitHub sürüm sayfasının metnini (indirme rehberi + CHANGELOG) üretir |
 | `derle.bat`, `kurulum_paketi.bat` | Taşınabilir sürüm (PyInstaller) ve kurulum dosyası (Inno Setup 6) |
 
-`v*` biçiminde bir etiket gönderildiğinde GitHub Actions testleri çalıştırır, taşınabilir zip'i ve kurulum
-dosyasını derleyip Releases'e ekler (`.github/workflows/release.yml`).
+`v*` biçiminde bir etiket gönderildiğinde GitHub Actions testleri çalıştırır; kurulum dosyasını, taşınabilir
+zip ve 7z arşivlerini, `SHA256SUMS.txt`'yi derleyip sürüm notlarıyla (`tools/surum_notlari.py`) Releases'e
+ekler (`.github/workflows/release.yml`). Etiket, `altyazitr/__init__.py`'deki sürümle aynı olmalıdır.
 
 | Dosya | Görev |
 |---|---|

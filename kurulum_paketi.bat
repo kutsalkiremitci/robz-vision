@@ -1,5 +1,5 @@
 @echo off
-rem Arkadaslara gonderilecek kurulum dosyasini olusturur: dist\RobzVision-Kurulum-<surum>.exe
+rem Arkadaslara gonderilecek kurulum dosyasini olusturur: dist\RobzVision-Kurulum-<surum>-x64.exe
 rem Gerekli: kurulum.bat ile hazirlanmis .venv ve Inno Setup 6 (https://jrsoftware.org/isdl.php)
 setlocal
 cd /d "%~dp0"
@@ -37,5 +37,5 @@ echo [3/3] Kurulum dosyasi olusturuluyor (Inno Setup)...
 "%ISCC%" /Qp /DAppVersion=%APPVER% installer\RobzVision.iss || (pause & exit /b 1)
 
 echo.
-echo Hazir: dist\RobzVision-Kurulum-%APPVER%.exe
+echo Hazir: dist\RobzVision-Kurulum-%APPVER%-x64.exe
 pause

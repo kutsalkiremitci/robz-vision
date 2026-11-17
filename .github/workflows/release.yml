@@ -32,27 +32,57 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install -r requirements-dev.txt
-      - run: python -m PyInstaller RobzVision.spec --noconfirm --clean
-      - run: |
-          Copy-Item README.md, LICENSE, THIRD_PARTY_NOTICES.md dist/RobzVision/
-          Compress-Archive -Path dist/RobzVision -DestinationPath "RobzVision-${{ github.ref_name }}-win64.zip"
+
+      - name: Sürüm numarası
+        id: surum
         shell: pwsh
+        run: |
+          $ver = python -c "import altyazitr; print(altyazitr.__version__)"
+          if ("${{ github.ref_type }}" -eq "tag" -and "${{ github.ref_name }}" -ne "v$ver") {
+            Write-Error "Etiket ${{ github.ref_name }} ile uygulama sürümü v$ver uyuşmuyor (altyazitr/__init__.py)."
+            exit 1
+          }
+          "ver=$ver" >> $env:GITHUB_OUTPUT
+
+      - name: Uygulamayı derle (PyInstaller)
+        run: python -m PyInstaller RobzVision.spec --noconfirm --clean
+
+      - name: Taşınabilir sürümler (zip ve 7z)
+        shell: pwsh
+        run: |
+          $v = "${{ steps.surum.outputs.ver }}"
+          Copy-Item README.md, LICENSE, THIRD_PARTY_NOTICES.md dist/RobzVision/
+          New-Item -ItemType Directory -Force cikti | Out-Null
+          7z a -tzip -mx=7 "cikti/RobzVision-Tasinabilir-$v-x64.zip" ./dist/RobzVision | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          7z a -t7z -mx=9 "cikti/RobzVision-Tasinabilir-$v-x64.7z" ./dist/RobzVision | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Kurulum sihirbazı (Inno Setup)
+        shell: pwsh
         run: |
           choco install innosetup -y --no-progress
-          $ver = python -c "import altyazitr; print(altyazitr.__version__)"
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DAppVersion=$ver" installer\RobzVision.iss
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DAppVersion=${{ steps.surum.outputs.ver }}" "/O$PWD\cikti" installer\RobzVision.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: SHA256 özetleri ve sürüm notları
         shell: pwsh
+        run: |
+          Get-ChildItem cikti -File | Sort-Object Name | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content cikti/SHA256SUMS.txt -Encoding ascii
+          Get-Content cikti/SHA256SUMS.txt
+          python tools/surum_notlari.py "${{ steps.surum.outputs.ver }}" surum_notlari.md
+
       - uses: actions/upload-artifact@v4
         with:
-          name: RobzVision-win64
-          path: |
-            RobzVision-*-win64.zip
-            dist/RobzVision-Kurulum-*.exe
+          name: RobzVision-${{ steps.surum.outputs.ver }}
+          path: cikti/*
+
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/v')
         with:
-          files: |
-            RobzVision-*-win64.zip
-            dist/RobzVision-Kurulum-*.exe
-          generate_release_notes: true
+          name: Robz Vision ${{ steps.surum.outputs.ver }}
+          body_path: surum_notlari.md
+          files: cikti/*
+          make_latest: true

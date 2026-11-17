@@ -32,7 +32,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   renk, kenar, gölge, arka plan, konuşmacı rengi ve İngilizce orijinali gösterme.
 - "Ocean Drive gecesi" tasarım sistemine dayanan PySide6 arayüzü, ilk açılış tanıtım turu, global kısayollar
   (`Ctrl+Alt+T`, `Ctrl+Alt+H`, `Ctrl+Alt+C`) ve sistem tepsisi.
-- Yönetici izni istemeyen Inno Setup kurulum sihirbazı ve taşınabilir zip. Etiket gönderildiğinde GitHub
+- Yönetici izni istemeyen Inno Setup kurulum sihirbazı, taşınabilir zip ve 7z arşivi, SHA256 özetleri.
+  Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
 [Yayımlanmadı]: ../../compare/v1.0.0...HEAD
