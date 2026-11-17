@@ -38,7 +38,8 @@ class OcrCfg:
     stable_frames: int = 2  # metin bu kadar kare sabit kalınca okunur
     bright_threshold: int = 160  # metin maskesi parlaklık eşiği (0-255)
     upscale: str = "auto"  # "auto" | "1" | "1.5" | "2"
-    preprocess: str = "auto"  # "auto" (ikisini dene, en iyisini seç) | "none" | "bright" (parlak metni ayır)
+    # "auto" (kenarlı + parlak, en çok anlamlı okuyanı seç) | "outline" (kenarlı yazı) | "bright" (parlak metin) | "none"
+    preprocess: str = "auto"
     min_letters: int = 3
     keep_lowest_block: bool = True
     detect_speaker: bool = True

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-from altyazitr.english import english_score
+from altyazitr.english import english_mass, english_score
 from altyazitr.paths import MODEL_DIR
 
 log = logging.getLogger(__name__)
@@ -53,10 +53,58 @@ def preprocess(bgr: np.ndarray, upscale: str = "auto", mode: str = "none") -> tu
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         white = cv2.inRange(hsv, (0, 0, 185), (180, 60, 255))
         yellow = cv2.inRange(hsv, (15, 80, 150), (40, 255, 255))
-        m = cv2.morphologyEx(white | yellow, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
-        inv = cv2.copyMakeBorder(255 - m, 12, 12, 12, 12, cv2.BORDER_CONSTANT, value=255)
-        img = cv2.cvtColor(inv, cv2.COLOR_GRAY2BGR)
+        img = _ink_on_paper(cv2.morphologyEx(white | yellow, cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8)))
+    elif mode == "outline":
+        img = _ink_on_paper(outlined_text_mask(img))
     return img, f
+
+
+def _ink_on_paper(mask: np.ndarray) -> np.ndarray:
+    """Metin maskesini OCR'ın sevdiği biçime çevirir: beyaz zemin, siyah yazı, kenarda boşluk."""
+    inv = cv2.copyMakeBorder(255 - mask, 12, 12, 12, 12, cv2.BORDER_CONSTANT, value=255)
+    return cv2.cvtColor(inv, cv2.COLOR_GRAY2BGR)
+
+
+_RING = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+
+
+def outlined_text_mask(bgr: np.ndarray, contrast: int = 80, ratio: float = 0.4, min_area: int = 3) -> np.ndarray:
+    """Koyu kenarlı/gölgeli parlak yazıyı (oyun altyazılarının çoğu) kumlu, hareketli arka plandan ayırır.
+
+    Beyaz/sarı her bağlı parçanın çevresindeki 2 px'lik halkaya bakılır: halkanın en az `ratio` kadarı
+    parçadan `contrast` birim daha koyuysa (yazının kenarı/gölgesi) parça yazıdır. Asfalt kumlanması, yol
+    çizgisi, far gibi parlak şeylerin çevresi orta tonlu olduğu için elenir. Binlerce parçada da hızlı
+    olsun diye döngüsüz (bincount) hesaplanır. 255 = yazı."""
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    v = hsv[:, :, 2]
+    cand = cv2.inRange(hsv, (0, 0, 200), (180, 45, 255)) | cv2.inRange(hsv, (15, 80, 170), (40, 255, 255))
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(cand, connectivity=8)
+    if n <= 1:
+        return np.zeros_like(cand)
+    area = stats[:, cv2.CC_STAT_AREA]
+    vmean = np.bincount(lab.ravel(), weights=v.ravel().astype(np.float64), minlength=n) / np.maximum(area, 1)
+    # halka pikseli: parçaya ait değil ama 2 px içinde bir parça var (komşu parçanın etiketi alınır)
+    near = cv2.dilate(lab.astype(np.float32), _RING).astype(np.int32)
+    ring = (cand == 0) & (near > 0)
+    rl = near[ring]
+    dark = v[ring].astype(np.float64) < vmean[rl] - contrast
+    frac = np.bincount(rl, weights=dark, minlength=n) / np.maximum(np.bincount(rl, minlength=n), 1)
+    height = stats[:, cv2.CC_STAT_HEIGHT]
+    keep = (frac >= ratio) & (area >= min_area) & (height <= bgr.shape[0] * 0.6)
+    keep[0] = False
+    if keep.any():
+        # Harf boyunu alana göre ağırlıklı medyanla bul (tek tek taneler sayıca çok, alanca az). Küçük parçalar
+        # (i noktası, virgül, nokta) yalnızca harflere yakınsa kalır; yazıdan uzak tek tük taneler gider.
+        hs, ws = height[keep], area[keep]
+        order = np.argsort(hs)
+        cum = np.cumsum(ws[order])
+        h_text = float(hs[order][np.searchsorted(cum, cum[-1] / 2)])
+        big = keep & (height >= 0.4 * h_text)
+        r = int(max(2, 0.8 * h_text))
+        zone = cv2.dilate(big[lab].astype(np.uint8), np.ones((2 * r + 1, 2 * r + 1), np.uint8))  # dikdörtgen: ayrışabilir, hızlı
+        near = np.bincount(lab.ravel(), weights=zone.ravel(), minlength=n) > 0
+        keep &= big | near
+    return (keep[lab] * 255).astype(np.uint8)
 
 
 class OcrEngine:
@@ -115,15 +163,19 @@ class WindowsOcrEngine(OcrEngine):
     def recognize(self, bgr: np.ndarray) -> list[OcrLine]:
         if self.mode != "auto":
             return self._recognize(bgr, self.mode)
-        # Otomatik: önce "parlak metni ayır" (beyaz/sarı altyazılarda %96 doğruluk), yeterince
-        # iyi değilse ham görüntüyü de oku ve İngilizce kelime puanı yüksek olanı seç.
-        a = self._recognize(bgr, "bright")
-        sa = english_score(" ".join(ln.text for ln in a))
-        if sa >= 0.9:
-            return a
-        b = self._recognize(bgr, "none")
-        sb = english_score(" ".join(ln.text for ln in b))
-        return a if sa >= sb else b
+        # Otomatik: "kenarlı yazıyı ayır" (kumlu/hareketli arka planda en temizi) ve "parlak metni ayır"
+        # (kenarsız beyaz/sarı yazıda güçlü) birlikte okunur; daha çok geçerli İngilizce okuyan seçilir.
+        # İkisi de zayıfsa ham görüntü de denenir.
+        best: tuple[float, float, list[OcrLine]] | None = None
+        for mode in ("outline", "bright", "none"):
+            lines = self._recognize(bgr, mode)
+            text = " ".join(ln.text for ln in lines)
+            cand = (english_mass(text), english_score(text), lines)
+            if best is None or cand[:2] > best[:2]:
+                best = cand
+            if mode == "bright" and best[1] >= 0.9:
+                break
+        return best[2]
 
     def _recognize(self, bgr: np.ndarray, mode: str) -> list[OcrLine]:
         img, f = preprocess(bgr, self.upscale, mode)

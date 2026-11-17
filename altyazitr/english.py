@@ -43,25 +43,36 @@ def is_known(word: str) -> bool:
     return False
 
 
+def _weight(raw: str) -> tuple[float, int]:
+    """Bir parçanın İngilizce ağırlığı (0..1) ve noktalamasız uzunluğu."""
+    t = raw.strip(_PUNCT)
+    if not t:
+        return 0.5, 0  # yalnız noktalama ("...", "-")
+    if _WORD.fullmatch(t):
+        if is_known(t):
+            return 1.0, len(t)
+        if t[0].isupper() and len(t) > 1 and t[1:].islower():
+            return 0.7, len(t)  # büyük harfle başlayan bilinmeyen kelime: muhtemelen özel ad
+        if t.isupper() and len(t) > 1:
+            return 0.6, len(t)  # kısaltma / bağıran yazı
+    elif re.fullmatch(r"\d+([.,:]\d+)*%?", t):
+        return 0.6, len(t)
+    return 0.0, len(t)  # harf+rakam karışımı, garip karakterler
+
+
 @lru_cache(maxsize=4096)
 def english_score(text: str) -> float:
+    """Okumanın ne kadarı İngilizce (0..1): temizlik ölçüsü."""
     toks = text.split()
     if not toks:
         return 0.0
-    total = 0.0
-    for raw in toks:
-        t = raw.strip(_PUNCT)
-        if not t:
-            total += 0.5  # yalnız noktalama ("...", "-")
-            continue
-        if _WORD.fullmatch(t):
-            if is_known(t):
-                total += 1.0
-            elif t[0].isupper() and len(t) > 1 and t[1:].islower():
-                total += 0.7  # büyük harfle başlayan bilinmeyen kelime: muhtemelen özel ad
-            elif t.isupper() and len(t) > 1:
-                total += 0.6  # kısaltma / bağıran yazı
-        elif re.fullmatch(r"\d+([.,:]\d+)*%?", t):
-            total += 0.6
-        # harf+rakam karışımı, garip karakterler: 0 puan
-    return total / len(toks)
+    return sum(_weight(t)[0] for t in toks) / len(toks)
+
+
+@lru_cache(maxsize=4096)
+def english_mass(text: str) -> float:
+    """İngilizce sayılan harflerin ağırlıklı toplamı: kapsam ölçüsü.
+
+    Aynı karenin farklı okumalarını karşılaştırırken kelime düşüren okuma english_score'u düşürmez
+    ("They're need to move" hâlâ tamamen İngilizce), ama bunu düşürür; gürültüden çıkan çöp de bunu artırmaz."""
+    return sum(w * n for w, n in map(_weight, text.split()))

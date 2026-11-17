@@ -8,9 +8,9 @@ import pytest
 
 from altyazitr.config import Settings, _from_dict
 from altyazitr.detect import ChangeGate, GateParams, text_mask
-from altyazitr.english import english_score
+from altyazitr.english import english_mass, english_score
 from altyazitr.hotkeys import parse_hotkey
-from altyazitr.ocr import OcrLine
+from altyazitr.ocr import OcrLine, outlined_text_mask
 from altyazitr.pipeline import LatestSlot, Tracker
 from altyazitr.server import style_vars
 from altyazitr.textproc import assemble, fix_ocr, is_valid, norm_key, split_sentences, split_speaker
@@ -161,6 +161,48 @@ def test_english_score():
     assert good > 0.9 and bad < 0.6
     assert english_score("Lucia drove to Vice City.") > 0.8  # özel adlar cezalandırılmaz
     assert not is_valid("Xq7 zzkr 9fj$ wq", [], 3, english_score("Xq7 zzkr 9fj$ wq"))
+
+
+def test_english_mass_prefers_complete_reading():
+    full = "They're watching us. We need to move, now!"
+    partial = "They're need to move, now!"  # kelime düşmüş ama tamamen İngilizce
+    noisy = "They're watching us. We need to move, now! x7#q zzv"
+    assert english_score(partial) >= 0.9  # temizlik ölçüsü farkı göremez...
+    assert english_mass(full) > english_mass(partial)  # ...kapsam ölçüsü görür
+    assert english_mass(noisy) == pytest.approx(english_mass(full))  # çöp kapsamı artırmaz
+
+
+def _outlined_subtitle_on_gravel(seed: int = 3) -> tuple[np.ndarray, tuple[int, int, int, int]]:
+    """Kumlu gri zemin (parlak taneler + sarı çizgi) üzerinde siyah kenarlı beyaz altyazı."""
+    rng = np.random.default_rng(seed)
+    g = np.clip(rng.normal(130, 20, (120, 900)), 0, 255).astype(np.uint8)
+    specks = rng.random(g.shape) < 0.04
+    g[specks] = rng.integers(190, 240, specks.sum()).astype(np.uint8)
+    img = cv2.cvtColor(g, cv2.COLOR_GRAY2BGR)
+    cv2.line(img, (40, 119), (140, 0), (60, 200, 225), 12)  # sarı yol çizgisi
+    org, font, scale = (200, 75), cv2.FONT_HERSHEY_DUPLEX, 1.4
+    cv2.putText(img, "Get in the car", org, font, scale, (0, 0, 0), 7, cv2.LINE_AA)  # koyu kenar
+    cv2.putText(img, "Get in the car", org, font, scale, (255, 255, 255), 2, cv2.LINE_AA)
+    (w, h), base = cv2.getTextSize("Get in the car", font, scale, 7)
+    return img, (org[0] - 6, org[1] - h - 6, org[0] + w + 6, org[1] + base + 6)
+
+
+def test_outlined_text_mask_drops_gravel_keeps_text():
+    img, (x0, y0, x1, y1) = _outlined_subtitle_on_gravel()
+    m = outlined_text_mask(img) > 0
+    inside = m[y0:y1, x0:x1]
+    outside = m.copy()
+    outside[y0:y1, x0:x1] = False
+    assert inside.mean() > 0.05  # harfler kaldı
+    assert outside.sum() < 0.02 * inside.sum()  # taneler ve sarı çizgi gitti
+    # karşılaştırma: düz parlaklık eşiği aynı karede bol gürültü bırakır
+    bright = cv2.inRange(cv2.cvtColor(img, cv2.COLOR_BGR2HSV), (0, 0, 185), (180, 60, 255)) > 0
+    bright[y0:y1, x0:x1] = False
+    assert bright.sum() > 10 * max(outside.sum(), 1)
+
+
+def test_outlined_text_mask_empty_frame():
+    assert not outlined_text_mask(np.full((60, 200, 3), 90, np.uint8)).any()
 
 
 def test_fix_ocr_noise_chars():

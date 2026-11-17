@@ -53,8 +53,10 @@ class SettingsPage(QWidget):
         adv = Collapsible("Gelişmiş")
         f = form(inside=adv)
         add_row(f, "Ön işleme", _tip(bind_combo(s.ocr, "preprocess", [
-            ("Otomatik (önerilen)", "auto"), ("Parlak metni ayır", "bright"), ("Yok", "none")], restart),
-            "Otomatik: beyaz/sarı metni ayırarak ve ham görüntüyle okur, daha anlamlı sonucu seçer."))
+            ("Otomatik (önerilen)", "auto"), ("Kenarlı yazıyı ayır", "outline"), ("Parlak metni ayır", "bright"),
+            ("Yok", "none")], restart),
+            "Otomatik: kenarlı yazıyı ve parlak metni ayrı ayrı okur, daha çok anlamlı kelime çıkanı seçer. "
+            "Kenarlı yazıyı ayır: asfalt, çimen gibi kumlu arka planda koyu kenarlı altyazılar için."))
         add_row(f, "Algılama", _tip(bind_combo(s.ocr, "detect_mode", [
             ("Akıllı (önerilen)", "smart"), ("Sabit aralık", "interval")], restart),
             "Akıllı: yalnızca altyazı değişince okur. Renkli veya koyu altyazılarda 'Sabit aralık'ı deneyin."))
