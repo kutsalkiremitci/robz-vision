@@ -47,6 +47,21 @@ Robz Vision **bilgisayar ekranındaki** altyazıyı okur. Üç kullanım için y
 > Oyunun görüntüsü bilgisayar ekranında olmalı: PS Remote Play, Xbox uygulaması ya da bir capture kartının
 > önizleme penceresi.
 
+### Televizyonda oynuyorsanız
+
+Robz Vision televizyonun kendisinde çalışamaz: TV uygulamaları HDMI'dan gelen konsol görüntüsünü okuyamaz.
+Araya bir bilgisayar koyarak çeviriyi yine de TV ekranında görebilirsiniz:
+
+1. **Bilgisayarı TV'ye HDMI ile bağlayın (en kolayı).** TV bilgisayarın ekranı olur. Konsol yerinde kalır;
+   PS Remote Play'i bilgisayarda tam ekran açarsınız, Türkçe kutu TV'de oyunun üstünde görünür. Konsolu ve
+   bilgisayarı ağa kabloyla bağlamak görüntüyü netleştirir, okumayı iyileştirir.
+2. **Kablosuz yansıtın.** Aynı kurulum, kablo yerine bilgisayar ekranını Windows'ta *Win+K* ile TV'ye
+   yansıtırsınız (LG'de *Screen Share*). Gecikme artar; hikâye oyunlarında genelde sorun olmaz. Türkçe kutu
+   TV'de görünmezse Ana sayfada **Yayında da görünsün**'ü açın.
+3. **Capture kartı kullanın (en net görüntü).** Konsol → capture kartı → bilgisayar → TV. Remote Play
+   sıkıştırması olmadığı için altyazı daha net okunur. PS5'te *Ayarlar → Sistem → HDMI → HDCP'yi Etkinleştir*
+   kapalı olmalı.
+
 <p align="center"><img src="docs/gorseller/ayirici.png" width="100%" alt=""></p>
 
 ## Neden?
