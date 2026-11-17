@@ -1,5 +1,5 @@
-"""Ana sayfa: canlı başlık bandı (başlat/durdur + durum), çevrilecek bölge ve canlı önizleme, son çeviri,
-ekran altyazısı, OBS.
+"""Ana sayfa: canlı başlık bandı (başlat/durdur + durum), çevrilecek bölge ve canlı önizleme, son çeviriler
+(gui/history.py), ekran altyazısı, OBS.
 
 Sayfanın tek cesur öğesi canlı başlık bandıdır (DESIGN.md → "Cesaret tek yerde"); geri kalan bölümler
 başlık + ince ayırıcıyla ayrılan sade bantlardır.
@@ -20,6 +20,7 @@ from altyazitr.gui import icons
 from altyazitr.gui.common import _repolish, _tip
 from altyazitr.gui.controls import Segmented
 from altyazitr.gui.dialogs import OBS_NOT_CONNECTED_TIP, show_obs_help
+from altyazitr.gui.history import PRIVACY_TIP, HistoryPanel
 from altyazitr.gui.region_dialog import bgr_to_pixmap
 from altyazitr.gui.region_picker import logical_to_physical
 from altyazitr.gui.tokens import ICON, RADIUS, SPACE, SUNSET_STOPS, C, F, motion_ms
@@ -239,7 +240,7 @@ class HomePage(QWidget):
 
         lay.addWidget(self._build_live())
         lay.addWidget(self._build_region())
-        lay.addWidget(self._build_last())
+        lay.addWidget(self._build_history())
         lay.addWidget(self._build_overlay())
         lay.addWidget(self._build_obs())
         lay.addStretch(1)
@@ -380,20 +381,15 @@ class HomePage(QWidget):
         rc.add(self._region_bar)
         return rc
 
-    def _build_last(self) -> Card:
+    def _build_history(self) -> Card:
+        """Son çeviriler: en yenisi üstte, başlığın yanında en son satırın süreleri."""
         self.metrics = _Metrics()
         self.metrics.hide()
-        last = _section("Son çeviri", self.metrics)
-        self._last_empty = label("Henüz çeviri yok", "muted")
-        self._last_empty.setStyleSheet(f"color: {C.TEXT_3};")
-        self.tr = label("—", "tr", wrap=True)
-        self.en = label("", "en", wrap=True)
-        self.tr.hide()
-        self.en.hide()
-        last.add(self._last_empty)
-        last.add(self.tr)
-        last.add(self.en)
-        return last
+        sec = _section("Son çeviriler", self.metrics)
+        sec.lay.itemAt(0).layout().itemAt(0).widget().setToolTip(PRIVACY_TIP)  # başlık
+        self.history = HistoryPanel(toast=getattr(self.win, "toast", None))
+        sec.add(self.history)
+        return sec
 
     def _build_overlay(self) -> Card:
         ctx, ov = self.ctx, self.ctx.s.overlay
@@ -585,7 +581,9 @@ class HomePage(QWidget):
         # 2 px dikey pay: Bahnschrift'te aksan/nokta (Ç, İ) kırpılmasın
         self.state.setStyleSheet(f"color: {C.TURQUOISE if running else C.TEXT_2}; padding: 2px 0;")
         self.live.set_running(running)
-        if not running:
+        if running:
+            self.history.forget_lines()  # yeniden başlayan işlem hattı satır kimliklerini baştan sayabilir
+        else:
             self.ink.hide()
 
     def _on_status(self, msg: str) -> None:
@@ -598,12 +596,7 @@ class HomePage(QWidget):
         _set_icon(self.vis, "eye-off" if visible else "eye", C.TEXT_2)
 
     def _on_sub(self, ev: dict) -> None:
-        sp = f"{ev['speaker']}: " if ev.get("speaker") else ""
-        self.tr.setText(sp + ev["text"])
-        self.en.setText(sp + ev["original"])
-        self._last_empty.hide()
-        self.tr.show()
-        self.en.setVisible(bool(ev.get("original")))
+        self.history.add(ev)
         self.metrics.set_values(ev.get("ocr_ms", 0), ev.get("tr_ms", 0))
         tip = [f"Toplam gecikme {ev.get('latency_ms', 0):.0f} ms"]
         if ev.get("engine"):

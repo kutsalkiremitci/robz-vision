@@ -57,7 +57,8 @@ Kurallar:
   düğmeler (14 px; birincil/durdur SemiBold), segmentler, tablo başlıkları, durum yazısı ve sayılar
   (ms, MB, px değerleri, sayı kutuları, kısayol tuşları).
 - **Segoe UI Variable Text** 10 pt (yoksa Segoe UI): uygulama yazı tipi; gövde, form etiketleri, ipuçları.
-  Son çeviri metni `Segoe UI Variable Display Semibold` 18 px.
+  Son çevirilerde Türkçe 14 px gövde yazısı, konuşmacı adı `Segoe UI Variable Display Semibold`, İngilizce
+  12 px `TEXT_2`, saat Bahnschrift 12 px `TEXT_3`.
 - Uygulama yazı tipi `app.setFont()` ile verilir, QSS'te genel `*` yazı kuralı yoktur; bu yüzden
   bir öğede `setFont()` çalışır (örn. yazı tipi seçici seçili aileyi kendi yüzüyle gösterir).
 - Cümle düzeni. **BÜYÜK HARF etiket yok**, başlık üstü küçük "eyebrow" etiketi yok.
@@ -84,7 +85,7 @@ Kurallar:
 │              │ [ canlı önizleme ............................ ]       │
 │ nokta Durum  │ [Bölge seç]                           Metin var       │
 │ nokta OBS    │ ───────────────────────────────────────────────────── │
-└──────────────┴ Son çeviri …                                          ┘
+└──────────────┴ Son çeviriler …                                       ┘
 ```
 
 - İçerik **sola hizalı**; bölümler kart ızgarası değil, üstte 1 px ayırıcı + başlık + boşlukla ayrılan
@@ -123,7 +124,7 @@ Kurallar:
 | `QLabel#value` | sayısal değer (44 px, %80, 1.0x), Bahnschrift 14 px `TEXT_2` |
 | `QLabel#muted`, `#field` | ikincil yazı / form etiketi (`#field` en az 120 px) |
 | `QLabel#pill`, `#pillOn`, `#pillWarn` | 22 px durum rozeti: pasif / canlı (turkuaz) / uyarı (mercan) |
-| `QLabel#tr`, `#en` | son çeviri / orijinal metin |
+| `QListView#history` | son çeviriler (`gui/history.py`): `PANEL` yüzey, satırları kendi delegesi çizer: saat sütunu + konuşmacı/Türkçe + küçük İngilizce, aralarında 1 px `LINE`. Üzerine gelince `RAISED` zemin ve sağda kopyala ikonu; odaktayken seçili satır `CYAN_SOFT`. En yenisi üstte; yükseklik içeriğe göre büyür, 300 px'te durur |
 | `QLabel#preview` | bölge önizlemesi: `PANEL` + 1 px `LINE`, 10 px |
 | `QFrame#card` | **sade bölüm**: zemin yok, üstte 1 px `LINE` ayırıcı (geriye uyumluluk için adı korunur) |
 | `QFrame#live` | canlı başlık bandı: `PANEL` + 1 px `LINE`, 10 px; alt 2 px çizgiyi `LiveBand` çizer |

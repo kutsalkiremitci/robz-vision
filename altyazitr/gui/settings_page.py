@@ -1,6 +1,9 @@
-"""Ayarlar sayfası: metin okuma (OCR), kısayollar, OBS, uygulama.
+"""Ayarlar sayfası: altyazı akışı, metin okuma (OCR), kısayollar, OBS, uygulama.
 
 Form düzeni (etiket sütunu, durum satırı, bağlantı düğmesi) Çeviri sayfasıyla ortaktır.
+
+Altyazı akışı burada durur, Görünüm'de değil: Görünüm sayfasındaki her denetim yalnız üstte seçili görünümü
+(Ekranımda ya da Yayınımda) düzenler; akış ise iki çıktıda ortaktır ve bir görünüm değil, davranıştır.
 """
 
 from __future__ import annotations
@@ -14,7 +17,7 @@ from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QWidget
 
 from altyazitr import APP_NAME, __version__
 from altyazitr.gui.common import _tip
-from altyazitr.gui.controls import Collapsible, HotkeyEdit
+from altyazitr.gui.controls import Collapsible, HotkeyEdit, Segmented
 from altyazitr.gui.dialogs import show_obs_help
 from altyazitr.gui.icons import icon
 from altyazitr.gui.tokens import C, F, SPACE
@@ -26,6 +29,63 @@ from altyazitr.paths import CONFIG_DIR, LOG_DIR, MODEL_DIR, resource_dir
 log = logging.getLogger(__name__)
 
 HOTKEYS = (("toggle", "Başlat / durdur"), ("visibility", "Gizle / göster"), ("clear", "Temizle"))
+
+FLOW_TIP = "Ekranınızdaki kutuda ve OBS'te aynı çalışır"
+FLOW_MODE_TIPS = ("Son çeviriler alt alta kalır; hızlı konuşmada satır kaybolmaz",
+                  "Yalnız en son çeviri görünür; yeni satır gelince öncekinin yerine geçer")
+FLOW_LINES_TIP = ("Aynı anda en fazla kaç çeviri alt alta dursun. Yeni satır gelince en eskisi kalkar. "
+                  "Ekranınızdaki kutu küçükse yalnızca en yeni satırlar sığar: Ana sayfa → Konumu ayarla ile "
+                  "kutuyu yukarı doğru büyütün.")
+FLOW_MIN_TIP = "Her çeviri, oyun sonraki satıra geçse de en az bu kadar ekranda kalır. Yetişemiyorsanız artırın."
+
+
+class FlowCard(Card):
+    """Altyazı akışı (Settings.flow): Akış | Tek satır, en fazla satır, en az gösterim süresi.
+    Değişiklik kaydedilir ve hemen iki çıktıya uygulanır (display.push_style)."""
+
+    def __init__(self, ctx):
+        super().__init__("Altyazı akışı")
+        self.ctx = ctx
+        fl = ctx.s.flow
+        self.setToolTip(FLOW_TIP)
+        f = form()
+        self.mode = Segmented([("Akış", "flow"), ("Tek satır", "single")])
+        for i, tip in enumerate(FLOW_MODE_TIPS):
+            self.mode.group.button(i).setToolTip(tip)
+        self.mode.setAccessibleName("Altyazı akışı")
+        self.mode.setValue(fl.mode if fl.mode in ("flow", "single") else "flow")
+        self.mode.changed.connect(self._set_mode)
+        add_row(f, "Biçim", self.mode)
+        self.lines = _tip(bind_spin(fl, "max_lines", 2, 4, self._changed, suffix=" satır"), FLOW_LINES_TIP)
+        self.lines.setAccessibleName("En fazla satır")
+        add_row(f, "En fazla satır", self.lines, tip=FLOW_LINES_TIP)
+        self.min_show = _tip(bind_spin(fl, "min_show_s", 1.5, 6.0, self._changed, step=0.5, suffix=" sn",
+                                       decimals=1), FLOW_MIN_TIP)
+        self.min_show.setAccessibleName("En az gösterim süresi")
+        add_row(f, "En az gösterim", self.min_show, tip=FLOW_MIN_TIP)
+        w = max(self.lines.sizeHint().width(), self.min_show.sizeHint().width())
+        self.lines.setFixedWidth(w)  # iki sayı kutusu aynı genişlikte
+        self.min_show.setFixedWidth(w)
+        self._flow_only = [self.lines, self.min_show, f.labelForField(self.lines), f.labelForField(self.min_show)]
+        self.add(layout=f)
+        self._sync_enabled()
+
+    def _sync_enabled(self) -> None:
+        on = self.ctx.s.flow.mode != "single"
+        for w in self._flow_only:
+            if w is not None:
+                w.setEnabled(on)
+
+    def _set_mode(self, mode) -> None:
+        if mode == self.ctx.s.flow.mode:
+            return
+        self.ctx.s.flow.mode = mode
+        self._sync_enabled()
+        self._changed()
+
+    def _changed(self) -> None:
+        self.ctx.save_later()
+        self.ctx.display.push_style()
 
 
 class SettingsPage(QWidget):
@@ -39,6 +99,10 @@ class SettingsPage(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         self.setLayout(outer)
         restart = self._restart
+
+        # --- altyazı akışı: iki çıktıda ortak davranış (bkz. modül açıklaması)
+        self.flow = FlowCard(self.ctx)
+        lay.addWidget(self.flow)
 
         # --- OCR
         ocr = Card("Metin okuma")

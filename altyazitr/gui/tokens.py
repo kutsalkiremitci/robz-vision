@@ -58,7 +58,7 @@ class F:
     DISPLAY_CONDENSED = "Bahnschrift SemiBold SemiCondensed"
     BODY = "Segoe UI Variable Text"
     BODY_FALLBACK = "Segoe UI"
-    BODY_STRONG = "Segoe UI Variable Display Semibold"  # büyük gövde metni (son çeviri)
+    BODY_STRONG = "Segoe UI Variable Display Semibold"  # vurgulu gövde (son çevirilerde konuşmacı adı)
 
     # tip ölçeği (piksel)
     PAGE_TITLE = 26     # sayfa başlığı (Bahnschrift SemiBold SemiCondensed)

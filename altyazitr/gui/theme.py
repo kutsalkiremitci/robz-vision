@@ -18,7 +18,6 @@ from altyazitr.gui.tokens import RADIUS, C, F, rgba
 _DISPLAY = f"'{F.DISPLAY}', '{F.BODY_FALLBACK}'"
 _DISPLAY_SB = f"'{F.DISPLAY_SEMIBOLD}', '{F.DISPLAY}', '{F.BODY_FALLBACK}'"
 _DISPLAY_COND = f"'{F.DISPLAY_CONDENSED}', '{F.DISPLAY_SEMIBOLD}', '{F.BODY_FALLBACK}'"
-_BODY_STRONG = f"'{F.BODY_STRONG}', '{F.BODY_FALLBACK}'"
 
 _RS, _RM, _RL = RADIUS["s"], RADIUS["m"], RADIUS["l"]
 _BORDER_HOVER = rgba(C.TEXT_3, 0.55)      # giriş/düğme kenarı, üzerine gelince
@@ -53,8 +52,6 @@ QLabel#muted, QLabel#field {{ color: {C.TEXT_2}; }}
 QLabel#muted:disabled, QLabel#field:disabled {{ color: {C.TEXT_DISABLED}; }}
 QLabel#field {{ min-width: 120px; }}
 QLabel#value {{ font-family: {_DISPLAY}; font-size: {F.BUTTON}px; color: {C.TEXT_2}; padding-top: 2px; }}
-QLabel#tr {{ font-family: {_BODY_STRONG}; font-size: 18px; color: {C.TEXT}; }}
-QLabel#en {{ font-size: {F.BODY_SIZE}px; color: {C.TEXT_2}; }}
 QLabel#pill, QLabel#pillOn, QLabel#pillWarn {{
     font-family: {_DISPLAY}; font-size: {F.SMALL + 1}px; border-radius: 10px; padding: 3px 10px;
     min-height: 16px; max-height: 16px;  /* toplam 22 px; köşe yarıçapı yüksekliğin yarısını aşmasın */

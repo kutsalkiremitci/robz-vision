@@ -171,10 +171,10 @@ STEPS: tuple[Step, ...] = (
          "Seçtiğiniz alan burada görünür. Çalışırken metin olarak algılanan yerler yeşille işaretlenir.",
          (_home("preview"),), page="home"),
     Step("start", "Başlat", _start_body, (_home("btn"),), page="home"),
-    Step("last", "Son çeviri",
-         "Okunan İngilizce satır ve Türkçesi burada görünür. Çeviri tuhafsa önce satırın doğru okunup "
-         "okunmadığına bakın.",
-         (_home_section("tr"), _home("tr")), page="home"),
+    Step("last", "Son çeviriler",
+         "Okunan satırlar İngilizcesiyle burada birikir, en yenisi üstte. Kaçırdığınızı buradan okuyun; "
+         "çeviri tuhafsa önce İngilizcesine bakın.",
+         (_home_section("history"), _home("history")), page="home"),
     Step("overlay", "Ekranınızdaki altyazı",
          "Konumu ayarla ile Türkçe altyazı kutusunu ekranda taşıyıp boyutlandırın. Bu kutu yayına girmez; "
          "girmesi için Yayında da görünsün'ü açın.",
