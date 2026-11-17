@@ -92,6 +92,14 @@ class StyleCfg:
 
 
 @dataclass
+class FlowCfg:
+    """Altyazı akışı: hızlı konuşmada hiçbir çeviri kaybolmasın diye son satırlar alt alta durur."""
+    mode: str = "flow"  # "flow" (son satırlar alt alta, en yenisi altta) | "single" (tek satır, eski davranış)
+    max_lines: int = 3  # akışta aynı anda en fazla bu kadar satır (2-4)
+    min_show_s: float = 3.0  # her satır, oyun sonrakine geçse de en az bu kadar ekranda kalır
+
+
+@dataclass
 class OverlayCfg:
     enabled: bool = True  # çeviriyi kendi ekranımda göster
     visible_in_stream: bool = False  # True: OBS Ekran Yakalama'da da görünür (tarayıcı kaynağına gerek kalmaz)
@@ -121,6 +129,7 @@ class Settings:
     # dosyalarda yoksa yayınınkinin kopyasıyla başlar (bkz. load_settings).
     style: StyleCfg = field(default_factory=StyleCfg)  # yayınımda
     screen_style: StyleCfg = field(default_factory=StyleCfg)  # ekranımda
+    flow: FlowCfg = field(default_factory=FlowCfg)  # akış: son çeviriler alt alta (iki çıktıda da)
     overlay: OverlayCfg = field(default_factory=OverlayCfg)
     server: ServerCfg = field(default_factory=ServerCfg)
     hotkeys: HotkeyCfg = field(default_factory=HotkeyCfg)
