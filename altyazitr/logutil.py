@@ -39,6 +39,12 @@ def setup_logging(debug: bool = False) -> None:
 
     # pythonw / --windowed: konsol yok (stdout None ya da guard_stdio ile os.devnull); ekleme
     if has_console(sys.stdout):
+        # Çıktı bir boruya/dosyaya yönlendirildiğinde Windows ANSI kod sayfası (ör. cp1252) Türkçe harfleri
+        # yazamaz ve her satırda "Logging error" basılır; UTF-8 kullan, yazılamayanı kaçışla göster.
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (AttributeError, ValueError, OSError):
+            pass
         sh = logging.StreamHandler(sys.stdout)
         sh.setFormatter(fmt)
         root.addHandler(sh)
