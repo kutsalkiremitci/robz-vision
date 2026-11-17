@@ -155,9 +155,6 @@ class SwatchRow(QWidget):
         lay.addStretch(1)
         self._color = "#ffffff"
 
-    def color(self) -> str:
-        return self._color
-
     def setColor(self, c: str) -> None:  # noqa: N802
         self._color = c
         matched = False
@@ -192,7 +189,7 @@ class SliderRow(QWidget):
     def __init__(self, lo: float, hi: float, step: float = 1.0, fmt: str = "{:.0f}", scale: float = 1.0,
                  minus: str | None = None, plus: str | None = None, parent: QWidget | None = None):
         super().__init__(parent)
-        self.scale, self.fmt, self.step = scale, fmt, step
+        self.scale, self.fmt = scale, fmt
         lay = QHBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(SPACE["s"])
@@ -205,19 +202,15 @@ class SliderRow(QWidget):
         self.val.setObjectName("value")
         self.val.setMinimumWidth(56)
         self.val.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        self.minus_btn: QPushButton | None = None
-        self.plus_btn: QPushButton | None = None
         if minus:
             bm = self._step_button("minus", "Azalt", minus)
             bm.clicked.connect(lambda: self.slider.setValue(self.slider.value() - self.slider.singleStep()))
             lay.addWidget(bm)
-            self.minus_btn = bm
         lay.addWidget(self.slider, 1)
         if plus:
             bp = self._step_button("plus", "Artır", plus)
             bp.clicked.connect(lambda: self.slider.setValue(self.slider.value() + self.slider.singleStep()))
             lay.addWidget(bp)
-            self.plus_btn = bp
         lay.addWidget(self.val)
         self.slider.valueChanged.connect(self._moved)
 

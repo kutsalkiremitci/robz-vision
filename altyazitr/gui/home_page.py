@@ -7,12 +7,10 @@ başlık + ince ayırıcıyla ayrılan sade bantlardır.
 
 from __future__ import annotations
 
-import inspect
 import logging
 
 from PySide6.QtCore import QEasingCurve, QRect, QRectF, QSize, Qt, QTimer, QVariantAnimation
-from PySide6.QtGui import (QColor, QGuiApplication, QIcon, QLinearGradient, QPainter, QPainterPath, QPalette,
-                           QPixmap)
+from PySide6.QtGui import QColor, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPalette, QPixmap
 from PySide6.QtWidgets import (QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy,
                                QVBoxLayout, QWidget)
 
@@ -66,58 +64,22 @@ def _icon_button(icon_name: str, tip: str) -> QPushButton:
     return b
 
 
-def _state_icon(name: str) -> QIcon:
-    """Segment ikonu: seçili değilken ikincil yazı rengi, seçiliyken camgöbeği (seçim rengi)."""
-    ic = QIcon()
-    for s in (16, 20, 24, 32):
-        ic.addPixmap(icons.pixmap(name, s, C.TEXT_2), QIcon.Mode.Normal, QIcon.State.Off)
-        ic.addPixmap(icons.pixmap(name, s, C.CYAN), QIcon.Mode.Normal, QIcon.State.On)
-        ic.addPixmap(icons.pixmap(name, s, C.TEXT_3), QIcon.Mode.Disabled, QIcon.State.Off)
-    return ic
-
-
-def _segmented(options: list[tuple[str, object]], icon_names: list[str]) -> Segmented:
-    """Segmented'in ikon desteği varsa onu kullanır; yoksa ikonları düğmelere kendimiz koyarız."""
-    try:
-        has_icons = "icons" in inspect.signature(Segmented).parameters
-    except (TypeError, ValueError):
-        has_icons = False
-    if has_icons:
-        try:
-            return Segmented(options, icons=icon_names)
-        except Exception:
-            log.debug("Segmented ikonlarla kurulamadı; ikonsuz kuruluyor", exc_info=True)
-    seg = Segmented(options)
-    for i, name in enumerate(icon_names):
-        b = seg.group.button(i)
-        if b is not None:
-            b.setIcon(_state_icon(name))
-            b.setIconSize(QSize(ICON["s"], ICON["s"]))
-    return seg
-
-
 def _section(title: str, *trailing: QWidget) -> Card:
     """Sade bölüm (widgets.Card); verilen öğeler başlık satırının sağına yerleşir."""
     card = Card(title)
     if not trailing:
         return card
-    lay = getattr(card, "lay", None) or card.layout()
-    head = lay.itemAt(0).widget() if lay.count() else None
+    lay = card.lay
+    head = lay.itemAt(0).widget()  # Card'ın başlık etiketi
     h = QHBoxLayout()
     h.setContentsMargins(0, 0, 0, 0)
     h.setSpacing(SPACE["m"])
-    if isinstance(head, QLabel):
-        lay.removeWidget(head)
-        h.addWidget(head)
-        h.addStretch(1)
-        for w in trailing:
-            h.addWidget(w)
-        lay.insertLayout(0, h)
-    else:  # başlık başka bir düzende: öğeleri hemen altına koy
-        h.addStretch(1)
-        for w in trailing:
-            h.addWidget(w)
-        lay.insertLayout(min(1, lay.count()), h)
+    lay.removeWidget(head)
+    h.addWidget(head)
+    h.addStretch(1)
+    for w in trailing:
+        h.addWidget(w)
+    lay.insertLayout(0, h)
     return card
 
 
@@ -354,8 +316,8 @@ class HomePage(QWidget):
 
     def _build_region(self) -> Card:
         s = self.ctx.s
-        self.mode = _segmented([("Ekran bölgesi", "screen"), ("Uygulama penceresi", "window")],
-                               ["monitor", "app-window"])
+        self.mode = Segmented([("Ekran bölgesi", "screen"), ("Uygulama penceresi", "window")],
+                              icons=["monitor", "app-window"])
         self.mode.group.button(0).setToolTip("Ekranın herhangi bir yerini fareyle seçin (önerilen)")
         self.mode.group.button(1).setToolTip("Belirli bir pencereden okuyun. Pencere başka pencerelerin "
                                              "arkasında kalsa da okunur; simge durumuna küçültmeyin.")
@@ -656,15 +618,7 @@ class HomePage(QWidget):
 
     def _copy_url(self) -> None:
         QGuiApplication.clipboard().setText(self.ctx.server.url)
-        toast = getattr(self.win, "toast", None)
-        if callable(toast):
-            try:
-                toast("Adres kopyalandı")
-                return
-            except Exception:
-                log.debug("Bildirim gösterilemedi", exc_info=True)
-        self.status.setText("Adres kopyalandı")
-        self.status.show()
+        self.win.toast("Adres kopyalandı")
 
     # --- ekran altyazısı ---------------------------------------------------------------------------
     def _ov_toggle(self, on) -> None:

@@ -223,7 +223,7 @@ def _guard(fn):
 
     @functools.wraps(fn)
     def wrapper(self, *args, **kwargs):
-        if getattr(self, "_closed", False) and fn.__name__ not in ("close_tour",):
+        if getattr(self, "_closed", False):
             return None
         try:
             return fn(self, *args, **kwargs)
@@ -602,14 +602,6 @@ class _TourOverlay(QWidget):
             except Exception:
                 log.debug("Tur hedefi bulunamadı: %s", step.key, exc_info=True)
         return None
-
-    def _resolve(self, step: Step) -> tuple[QWidget, QRect, QRect] | None:
-        """Hedef ve katmanda görünen dikdörtgeni; hedef yoksa ya da hiç görünmüyorsa None (adım ortada)."""
-        found = self._find(step)
-        if found is None:
-            return None
-        vis = self._visible_rect(*found)
-        return (found[0], found[1], vis) if vis is not None else None
 
     def _visible_rect(self, widget: QWidget, rect: QRect) -> QRect | None:
         """Öğe koordinatlarındaki dikdörtgenin, üst öğelerin kırptığı görünen kısmı (pencere koordinatı)."""

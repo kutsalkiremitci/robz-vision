@@ -6,10 +6,6 @@ Belirme/kaybolma süresi `tokens.motion_ms()` ile gelir (Windows'ta animasyonlar
 Kullanım (ana pencere):
     self._toasts = ToastHost(self)
     self._toasts.show("Bölge kaydedildi", "success")
-
-Başka bir modülden (ana pencereyi bilmeden):
-    from altyazitr.gui.toast import notify
-    notify(self, "Kopyalandı", "success")
 """
 
 from __future__ import annotations
@@ -230,13 +226,6 @@ class ToastHost(QObject):
         t.popup()
         return t
 
-    def clear(self) -> None:
-        for t in list(self._toasts):
-            t.dismiss()
-
-    def toasts(self) -> list[Toast]:
-        return [t for t in self._toasts if not t._closing]
-
     def _forget(self, t: Toast) -> None:
         if t in self._toasts:
             self._toasts.remove(t)
@@ -258,16 +247,6 @@ class ToastHost(QObject):
                                                                 QEvent.Type.LayoutRequest):
             self._layout()
         return False
-
-
-def notify(widget: QWidget | None, msg: str, kind: str = "info") -> bool:
-    """`widget`in ana penceresinde bildirim gösterir; pencerede `toast` yoksa False döner."""
-    win = widget.window() if widget is not None else None
-    fn = getattr(win, "toast", None)
-    if callable(fn):
-        fn(msg, kind)
-        return True
-    return False
 
 
 def _announce(widget: QWidget, text: str) -> None:

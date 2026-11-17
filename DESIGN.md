@@ -109,28 +109,26 @@ Kurallar:
 | `QPushButton#ghost` | saydam, yalnız ikon/metin `TEXT_2`; hover `HOVER` |
 | `QPushButton#icon` | 32×32 kare ikon düğmesi (ikincil görünüm); her zaman tooltip + accessibleName |
 | `QPushButton:checked` | `CYAN_SOFT` zemin + `CYAN` kenar |
-| `QFrame#segmented` › `segL / segM / segR` | segmentli seçici: `RAISED` kanal; seçili segment `CYAN_SOFT` zemin + `CYAN` kenar. Çerçevesiz `segL/M/R` eski bitişik görünümde çalışır |
+| `QFrame#segmented` › `segL / segM / segR` | segmentli seçici: `RAISED` kanal; seçili segment `CYAN_SOFT` zemin + `CYAN` kenar |
 | `QPushButton#collapse` | katlanır bölüm başlığı: chevron ikonu + cümle düzeninde metin |
 | `QPushButton#preset` | hazır stil kartı (`PANEL`, 10 px); seçiliyken camgöbeği halka + onay rozeti kodda çizilir |
 | `QPushButton#swatch` | renk yuvarlağı (kodda çizilir): seçili = camgöbeği halka + onay ikonu |
-| `QLabel#pageTitle` (`#h1`) | sayfa başlığı, Bahnschrift SemiBold SemiCondensed 26 px |
-| `QLabel#section` (`#h2`) | bölüm başlığı, Bahnschrift SemiBold 16 px |
+| `QLabel#pageTitle` | sayfa başlığı, Bahnschrift SemiBold SemiCondensed 26 px |
+| `QLabel#section` | bölüm başlığı, Bahnschrift SemiBold 16 px |
 | `QLabel#status` | canlı banttaki durum yazısı, Bahnschrift SemiBold 22 px |
 | `QLabel#value` | sayısal değer (44 px, %80, 1.0x), Bahnschrift 14 px `TEXT_2` |
 | `QLabel#muted`, `#field` | ikincil yazı / form etiketi (`#field` en az 120 px) |
-| `QLabel#warn` | uyarı yazısı (`ORANGE`) |
 | `QLabel#pill`, `#pillOn`, `#pillWarn` | 22 px durum rozeti: pasif / canlı (turkuaz) / uyarı (mercan) |
 | `QLabel#tr`, `#en` | son çeviri / orijinal metin |
-| `QLabel#brand` | kenar çubuğu ürün adı |
 | `QLabel#preview` | bölge önizlemesi: `PANEL` + 1 px `LINE`, 10 px |
 | `QFrame#card` | **sade bölüm**: zemin yok, üstte 1 px `LINE` ayırıcı (geriye uyumluluk için adı korunur) |
 | `QFrame#live` | canlı başlık bandı: `PANEL` + 1 px `LINE`, 10 px; alt 2 px çizgiyi `LiveBand` çizer |
 | `QLineEdit`, `QComboBox`, `QSpinBox` | `RAISED` zemin, `LINE_STRONG` kenar, 6 px; odakta `CYAN` kenar; salt okunur `PANEL` |
 | `QLineEdit#hotkey` | kısayol kutusu: Bahnschrift; odaktayken (tuş dinlerken) `CYAN_SOFT` zemin |
 | `QComboBox` açılır listesi | `RAISED`, öğe 28 px; hover `HOVER`, seçili `CYAN_SOFT` (`combobox-popup: 0`) |
-| `QCheckBox` / `QRadioButton` | 18 px; işaretli = `CYAN` dolgu + koyu onay / `CYAN` nokta |
+| `QCheckBox` | 18 px; işaretli = `CYAN` dolgu + koyu onay |
 | `QSlider` | 4 px oluk `LINE_STRONG`, dolgu `CYAN`, beyaz tutamak (hover camgöbeği) |
-| `QProgressBar` | 6 px ince çubuk, `PINK` dolgu; `#success` turkuaz; yüzde yazısı gösterilmez |
+| `QProgressBar` | 6 px ince çubuk, `PINK` dolgu; yüzde yazısı gösterilmez |
 | `QTableWidget` / `QHeaderView` | `PANEL`, ızgara `LINE`; başlık Bahnschrift `TEXT_2`; seçili satır `CYAN_SOFT` |
 | `QMenu`, `QToolTip`, `QMessageBox` | `RAISED` yüzey + `LINE_STRONG` kenar; menü öğesi hover `HOVER` |
 | `QScrollBar` | 8 px tutamak `LINE_STRONG`, hover `TEXT_3`; ok düğmesi yok |

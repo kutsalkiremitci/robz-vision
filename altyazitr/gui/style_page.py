@@ -5,11 +5,9 @@ böylece aşağıdaki bir ayarı değiştirirken sonucu hep görürsünüz."""
 from __future__ import annotations
 
 import dataclasses
-import inspect
 import math
 
 from PySide6.QtCore import QEvent, QSize, Qt
-from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy,
                                QVBoxLayout, QWidget)
 
@@ -50,34 +48,6 @@ CONTROL_MAX = 440          # kaydırıcılı satırlar bu genişlikte durur (ço
 SLIDER_MIN = 120           # 780 px pencerede bile yatay taşma olmasın
 PREVIEW_MIN_H = 160
 _QMAX = 16777215           # QWIDGETSIZE_MAX
-
-
-def _seg_icon(name: str) -> QIcon:
-    """Segment ikonu: seçili değilken ikincil, seçiliyken birincil yazı renginde."""
-    ic = QIcon()
-    for s in (16, 20, 24, 32):
-        ic.addPixmap(icons.pixmap(name, s, C.TEXT_2), QIcon.Mode.Normal, QIcon.State.Off)
-        ic.addPixmap(icons.pixmap(name, s, C.TEXT), QIcon.Mode.Normal, QIcon.State.On)
-        ic.addPixmap(icons.pixmap(name, s, C.TEXT_3), QIcon.Mode.Disabled, QIcon.State.Off)
-    return ic
-
-
-def _segmented(options, icon_names: list[str]) -> Segmented:
-    """İkonlu segmentli seçici. Segmented `icons=` destekliyorsa onu kullanır, yoksa ikonları kendisi ekler."""
-    seg = None
-    try:
-        if "icons" in inspect.signature(Segmented).parameters:
-            seg = Segmented(options, icons=icon_names)
-    except Exception:
-        seg = None
-    if seg is None:
-        seg = Segmented(options)
-    for i, name in enumerate(icon_names):
-        b = seg.group.button(i)
-        if b is not None and b.icon().isNull():
-            b.setIcon(_seg_icon(name))
-            b.setIconSize(QSize(ICON["s"], ICON["s"]))
-    return seg
 
 
 class _Field(QWidget):
@@ -150,7 +120,6 @@ class _PresetGrid(QWidget):
 class StylePage(QWidget):
     def __init__(self, win):
         super().__init__()
-        self.win = win
         self.ctx = win.ctx
         self.st: StyleCfg = self.ctx.s.style
         ov = self.ctx.s.overlay
@@ -177,7 +146,7 @@ class StylePage(QWidget):
         stl.setSpacing(SPACE["s"])
         self.preview = SubtitlePreview(self.st)
         stl.addWidget(self.preview)
-        self.scene = _segmented([("Aydınlık", False), ("Karanlık", True)], ["sun", "moon"])
+        self.scene = Segmented([("Aydınlık", False), ("Karanlık", True)], icons=["sun", "moon"])
         self.scene.group.button(0).setToolTip("Önizlemeyi gündüz sahnesinde göster")
         self.scene.group.button(1).setToolTip("Önizlemeyi gece sahnesinde göster")
         self.scene.group.button(0).setAccessibleName("Aydınlık sahne")
@@ -207,8 +176,7 @@ class StylePage(QWidget):
         bar.addWidget(self._test_btn)
         stl.addLayout(bar)
         self._preview_max_h = self.preview.maximumHeight()
-        if self._preview_max_h < _QMAX:  # sabit yükseklikli önizleme: dar alanda 16:9'a göre kısalt
-            self.preview.installEventFilter(self)
+        self.preview.installEventFilter(self)  # sabit yükseklikli önizleme: dar alanda 16:9'a göre kısalt
 
         # --- hazır stiller ------------------------------------------------------------------
         self.cards: list[PresetCard] = []
@@ -273,7 +241,7 @@ class StylePage(QWidget):
         self.bg_details = QWidget()
         bd = QVBoxLayout(self.bg_details)
         bd.setContentsMargins(0, 0, 0, 0)
-        bd.setSpacing(self._row_spacing(bc))
+        bd.setSpacing(bc.lay.spacing())
         bd.addWidget(self._field("Kutu rengi", self.bg_color))
         bd.addWidget(self._field("Opaklık", self.bg_alpha, stretch=True, tip="Kutunun arkayı ne kadar kapattığı"))
         bc.add(self.bg_details)
@@ -316,8 +284,7 @@ class StylePage(QWidget):
         self.mask_alpha.changed.connect(lambda v: self._set("mask_opacity", round(v, 2)))
 
         adv = Collapsible("Gelişmiş ayarlar")
-        body = getattr(adv, "body_lay", None)
-        ind = body.contentsMargins().left() if body is not None else 0
+        ind = adv.body_lay.contentsMargins().left()
         adv.add(self._field("Konuşmacı rengi", self.speaker, tip="Konuşanın adı (ör. LUCIA) bu renkte yazılır",
                              indent=ind))
         adv.add(self._field("Geçiş süresi", self.fade, stretch=True, tip="Altyazının belirme ve kaybolma süresi",
@@ -331,7 +298,7 @@ class StylePage(QWidget):
         self._mask_rows = QWidget()
         mr = QVBoxLayout(self._mask_rows)
         mr.setContentsMargins(0, 0, 0, 0)
-        mr.setSpacing(body.spacing() if body is not None else SPACE["m"])
+        mr.setSpacing(adv.body_lay.spacing())
         mr.addWidget(self._field("Maske rengi", self.mask_color, indent=ind))
         mr.addWidget(self._field("Maske opaklığı", self.mask_alpha, stretch=True, indent=ind))
         adv.add(self._mask_rows)
@@ -368,11 +335,6 @@ class StylePage(QWidget):
         f = _Field(text, control, stretch, tip, indent)
         self._fields.append(f)
         return f
-
-    @staticmethod
-    def _row_spacing(card: QWidget) -> int:
-        lay = getattr(card, "lay", None)
-        return lay.spacing() if lay is not None and lay.spacing() >= 0 else SPACE["m"]
 
     def _equalize_labels(self) -> None:
         """Tüm bölümlerde etiket sütunu aynı genişlikte olsun (en uzun etikete göre)."""

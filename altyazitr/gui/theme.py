@@ -14,17 +14,6 @@ from PySide6.QtWidgets import QApplication, QWidget
 
 from altyazitr.gui.tokens import RADIUS, C, F, rgba
 
-# --- geriye uyumluluk: eski modül sabitleri artık token'lara bağlı ------------------------------
-ACCENT = C.PINK
-ACCENT_HOVER = C.PINK_HOVER
-DANGER = C.DANGER
-BG = C.BG
-PANEL = C.PANEL
-CARD = C.RAISED
-BORDER = C.LINE_STRONG
-TEXT = C.TEXT
-MUTED = C.TEXT_2
-
 # QSS yazı ailesi dizgeleri
 _DISPLAY = f"'{F.DISPLAY}', '{F.BODY_FALLBACK}'"
 _DISPLAY_SB = f"'{F.DISPLAY_SEMIBOLD}', '{F.DISPLAY}', '{F.BODY_FALLBACK}'"
@@ -48,25 +37,22 @@ QMainWindow, QDialog, QMessageBox {{ background: {C.BG}; }}
 QWidget#page {{ background: {C.BG}; }}
 QScrollArea, QScrollArea > QWidget > QWidget {{ background: transparent; border: none; }}
 QStackedWidget {{ background: {C.BG}; }}
-QStatusBar {{ background: {C.PANEL}; color: {C.TEXT_2}; border-top: 1px solid {C.LINE}; }}
 
 /* ---------- yazı ---------- */
 QLabel {{ color: {C.TEXT}; background: transparent; }}
 QLabel:disabled {{ color: {C.TEXT_DISABLED}; }}
 /* Bahnschrift'te "İ" noktası satır üstünü aşar: üstte pay bırak (seçilebilir etiket yapmayın, bkz. widgets.label) */
-QLabel#pageTitle, QLabel#h1 {{
+QLabel#pageTitle {{
     font-family: {_DISPLAY_COND}; font-size: {F.PAGE_TITLE}px; color: {C.TEXT}; padding-top: 3px;
 }}
-QLabel#section, QLabel#h2 {{ font-family: {_DISPLAY_SB}; font-size: {F.SECTION}px; color: {C.TEXT}; padding-top: 2px; }}
+QLabel#section {{ font-family: {_DISPLAY_SB}; font-size: {F.SECTION}px; color: {C.TEXT}; padding-top: 2px; }}
 QLabel#status {{ font-family: {_DISPLAY_SB}; font-size: {F.STATUS}px; color: {C.TEXT}; padding-top: 3px; }}
 /* QSS iç boşluğu QLabel'e çerçeve kazandırır ve Qt metni yarım "x" kadar içeri iter; bunu sıfırla */
-QLabel#pageTitle, QLabel#h1, QLabel#section, QLabel#h2, QLabel#status, QLabel#value {{ qproperty-indent: 0; }}
+QLabel#pageTitle, QLabel#section, QLabel#status, QLabel#value {{ qproperty-indent: 0; }}
 QLabel#muted, QLabel#field {{ color: {C.TEXT_2}; }}
 QLabel#muted:disabled, QLabel#field:disabled {{ color: {C.TEXT_DISABLED}; }}
 QLabel#field {{ min-width: 120px; }}
 QLabel#value {{ font-family: {_DISPLAY}; font-size: {F.BUTTON}px; color: {C.TEXT_2}; padding-top: 2px; }}
-QLabel#warn {{ color: {C.ORANGE}; }}
-QLabel#brand {{ font-family: {_DISPLAY_COND}; font-size: 20px; color: {C.TEXT}; padding: 4px 8px 12px 8px; }}
 QLabel#tr {{ font-family: {_BODY_STRONG}; font-size: 18px; color: {C.TEXT}; }}
 QLabel#en {{ font-size: {F.BODY_SIZE}px; color: {C.TEXT_2}; }}
 QLabel#pill, QLabel#pillOn, QLabel#pillWarn {{
@@ -81,11 +67,6 @@ QLabel#preview {{ background: {C.PANEL}; border: 1px solid {C.LINE}; border-radi
 /* ---------- bölümler ---------- */
 QFrame#card {{ background: transparent; border: none; border-top: 1px solid {C.LINE}; border-radius: 0; }}
 QFrame#live {{ background: {C.PANEL}; border: 1px solid {C.LINE}; border-radius: {_RL}px; }}
-QGroupBox {{
-    background: transparent; border: none; border-top: 1px solid {C.LINE}; margin-top: 22px; padding-top: 10px;
-    color: {C.TEXT}; font-family: {_DISPLAY_SB}; font-size: {F.SECTION}px;
-}}
-QGroupBox::title {{ subcontrol-origin: margin; left: 0; padding: 0; color: {C.TEXT}; }}
 
 /* ---------- düğmeler ---------- */
 QPushButton {{
@@ -166,32 +147,21 @@ QFrame#segmented QPushButton#segL:checked:disabled, QFrame#segmented QPushButton
 QFrame#segmented QPushButton#segR:checked:disabled {{ background: {C.LINE}; border-color: {C.LINE_STRONG}; }}
 QFrame#segmented QPushButton#segL{_KB}, QFrame#segmented QPushButton#segM{_KB},
 QFrame#segmented QPushButton#segR{_KB} {{ border-color: {C.CYAN}; }}
-/* çerçevesiz kullanılan eski tip bitişik segmentler */
-QPushButton#segL, QPushButton#segM, QPushButton#segR {{
-    font-family: {_DISPLAY}; color: {C.TEXT_2}; background: {C.RAISED}; border: 1px solid {C.LINE_STRONG};
-    border-radius: 0; padding: 6px 14px;
-}}
-QPushButton#segL {{ border-top-left-radius: {_RM}px; border-bottom-left-radius: {_RM}px; }}
-QPushButton#segR {{ border-top-right-radius: {_RM}px; border-bottom-right-radius: {_RM}px; }}
-QPushButton#segL:checked, QPushButton#segM:checked, QPushButton#segR:checked {{
-    color: {C.TEXT}; background: {C.CYAN_SOFT}; border-color: {C.CYAN};
-}}
 
 /* ---------- metin girişleri ---------- */
-QLineEdit, QPlainTextEdit, QTextEdit, QKeySequenceEdit, QSpinBox, QDoubleSpinBox, QComboBox {{
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {{
     color: {C.TEXT}; background: {C.RAISED}; border: 1px solid {C.LINE_STRONG}; border-radius: {_RM}px;
     padding: 5px 10px; selection-background-color: {C.CYAN}; selection-color: {C.INVERSE};
 }}
-QLineEdit:hover, QPlainTextEdit:hover, QTextEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover,
-QComboBox:hover {{ border-color: {_BORDER_HOVER}; }}
-QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QKeySequenceEdit:focus, QSpinBox:focus,
-QDoubleSpinBox:focus, QComboBox:editable:focus, QComboBox:on, QComboBox{_KB} {{ border-color: {C.CYAN}; }}
+QLineEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover, QComboBox:hover {{ border-color: {_BORDER_HOVER}; }}
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:editable:focus, QComboBox:on,
+QComboBox{_KB} {{ border-color: {C.CYAN}; }}
 QLineEdit:read-only {{ background: {C.PANEL}; }}
-QLineEdit:disabled, QPlainTextEdit:disabled, QTextEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled,
+QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled,
 QComboBox:disabled {{ color: {C.TEXT_DISABLED}; background: {C.PANEL}; border-color: {C.LINE}; }}
 QLineEdit {{ placeholder-text-color: {C.TEXT_3}; }}
 /* bileşik denetimlerin içindeki satır kutusu */
-QSpinBox QLineEdit, QDoubleSpinBox QLineEdit, QKeySequenceEdit QLineEdit, QComboBox QLineEdit {{
+QSpinBox QLineEdit, QDoubleSpinBox QLineEdit, QComboBox QLineEdit {{
     border: none; background: transparent; padding: 0; min-width: 0;
 }}
 QSpinBox, QDoubleSpinBox {{ font-family: {_DISPLAY}; font-size: {F.BUTTON}px; padding: 4px 8px; }}
@@ -214,9 +184,9 @@ QComboBox QAbstractItemView::item {{ min-height: 28px; padding: 0 8px; border-ra
 QComboBox QAbstractItemView::item:hover {{ background: {C.HOVER}; }}
 QComboBox QAbstractItemView::item:selected {{ background: {C.CYAN_SOFT}; color: {C.TEXT}; }}
 
-/* ---------- onay kutusu / seçenek ---------- */
-QCheckBox, QRadioButton {{ color: {C.TEXT}; spacing: 10px; background: transparent; outline: none; }}
-QCheckBox:disabled, QRadioButton:disabled {{ color: {C.TEXT_DISABLED}; }}
+/* ---------- onay kutusu ---------- */
+QCheckBox {{ color: {C.TEXT}; spacing: 10px; background: transparent; outline: none; }}
+QCheckBox:disabled {{ color: {C.TEXT_DISABLED}; }}
 
 /* ---------- kaydırıcı ---------- */
 QSlider {{ background: transparent; min-height: 22px; outline: none; }}
@@ -238,7 +208,6 @@ QProgressBar {{
     color: transparent; text-align: center;
 }}
 QProgressBar::chunk {{ background: {C.PINK}; border-radius: 3px; }}
-QProgressBar#success::chunk {{ background: {C.TURQUOISE}; }}
 
 /* ---------- tablo ---------- */
 QTableView, QTableWidget, QListView {{
@@ -284,7 +253,7 @@ QSS = build_qss()
 
 
 def _ui_images() -> dict[str, str]:
-    """QSS için ok, onay ve seçenek işareti görsellerini çizip kaydeder (SVG eklentisine bağımlı olmamak
+    """QSS için ok ve onay işareti görsellerini çizip kaydeder (SVG eklentisine bağımlı olmamak
     için). Dosya adları temaya özgüdür; böylece çalışan eski bir sürümün görselleri değişmez."""
     from PySide6.QtCore import QPointF
     from PySide6.QtGui import QPen, QPolygonF
@@ -323,26 +292,17 @@ def _ui_images() -> dict[str, str]:
             p.drawPolyline(QPolygonF([QPointF(8, 16.5), QPointF(13.5, 22), QPointF(24, 10.5)]))
         return draw
 
-    def dot(color: str):
-        def draw(p: QPainter) -> None:
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor(color))
-            p.drawEllipse(QPointF(16, 16), 7, 7)
-        return draw
-
     save("yukari", chevron(True, C.TEXT_2))
     save("asagi", chevron(False, C.TEXT_2))
     save("yukari_pasif", chevron(True, C.TEXT_DISABLED))
     save("asagi_pasif", chevron(False, C.TEXT_DISABLED))
     save("onay", check(C.INVERSE))
     save("onay_pasif", check(C.TEXT_3))
-    save("nokta", dot(C.CYAN))
-    save("nokta_pasif", dot(C.TEXT_DISABLED))
     return out
 
 
 def _extra_qss(img: dict[str, str]) -> str:
-    """Çizilmiş görsellere dayanan kurallar: oklar, onay işareti, seçenek noktası."""
+    """Çizilmiş görsellere dayanan kurallar: oklar ve onay işareti."""
     return f"""
 QSpinBox, QDoubleSpinBox {{ padding-right: 26px; }}
 QSpinBox::up-button, QDoubleSpinBox::up-button {{
@@ -379,15 +339,6 @@ QCheckBox::indicator:checked:disabled {{
     background: {C.LINE_STRONG}; border-color: {C.LINE_STRONG}; image: url("{img['onay_pasif']}");
 }}
 QCheckBox{_KBP}::indicator:focus {{ border: 2px solid {C.CYAN}; width: 16px; height: 16px; }}
-
-QRadioButton::indicator {{
-    width: 18px; height: 18px; border-radius: 10px; border: 1px solid {C.TEXT_3}; background: {C.RAISED};
-}}
-QRadioButton::indicator:hover {{ border-color: {C.TEXT_2}; background: {C.HOVER}; }}
-QRadioButton::indicator:checked {{ border-color: {C.CYAN}; image: url("{img['nokta']}"); }}
-QRadioButton::indicator:disabled {{ background: {C.PANEL}; border-color: {C.LINE_STRONG}; }}
-QRadioButton::indicator:checked:disabled {{ image: url("{img['nokta_pasif']}"); }}
-QRadioButton{_KBP}::indicator:focus {{ border: 2px solid {C.CYAN}; width: 16px; height: 16px; }}
 """
 
 

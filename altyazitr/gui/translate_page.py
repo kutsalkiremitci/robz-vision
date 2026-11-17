@@ -6,8 +6,6 @@ Ayarlar sayfasında da kullanılır; böylece iki sayfanın alanları aynı dike
 
 from __future__ import annotations
 
-import logging
-
 from PySide6.QtCore import QSize, Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFormLayout, QHBoxLayout, QHeaderView, QLabel,
@@ -21,8 +19,6 @@ from altyazitr.gui.tokens import C, F, ICON, SPACE
 from altyazitr.gui.widgets import Card, bind_check, bind_combo, bind_line, bind_spin, label, page, row
 from altyazitr.translate import (ENGINE_LABELS, GEMINI_MODELS, OLLAMA_PRESETS, QUICKMT_DIR, download_quickmt,
                                  ollama_list, ollama_pull, quickmt_downloaded)
-
-log = logging.getLogger(__name__)
 
 
 # --- ortak form düzeni (Çeviri + Ayarlar) ---------------------------------------------
@@ -204,7 +200,6 @@ GLOSSARY_TIP = ("Oyundaki adlar ve terimler. Türkçe karşılığı boş bırak
 class TranslatePage(QWidget):
     def __init__(self, win):
         super().__init__()
-        self.win = win
         self.ctx = win.ctx
         t = self.ctx.s.translate
         sa, lay = page("Çeviri")
@@ -277,7 +272,6 @@ class TranslatePage(QWidget):
         self.ol_pull = with_icon(QPushButton("Modeli indir"), "download")
         self.ol_pull.setToolTip("Seçili modeli Ollama'ya indirir")
         self.ol_line = StatusLine()
-        self.ol_status = self.ol_line.text
         self.ol_pull.clicked.connect(self._ollama_pull)
         self.ol_bar = progress_bar()
         self.ol_bar.setRange(0, 1000)

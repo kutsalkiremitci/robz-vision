@@ -89,7 +89,6 @@ class SettingsPage(QWidget):
         self.edits: dict[str, HotkeyEdit] = {}
         for attr, title in HOTKEYS:
             e = HotkeyEdit(getattr(hk, attr))
-            e.setObjectName("hotkey")
             e.setMinimumWidth(240)
             e.setAccessibleName(f"{title} kısayolu")
             e.addAction(icon("keyboard", C.TEXT_3), QLineEdit.ActionPosition.LeadingPosition)
@@ -100,7 +99,6 @@ class SettingsPage(QWidget):
         apply.setToolTip("Kısayolları kaydeder ve hemen etkinleştirir")
         apply.clicked.connect(self._apply_hotkeys)
         self.hk_line = StatusLine()
-        self.hk_msg = self.hk_line.text
         add_row(f, "", layout=hbox(apply, self.hk_line, None, spacing=SPACE["m"]))
         kc.add(layout=f)
         self._show_hotkey_errors(self.ctx.hotkey_errors)

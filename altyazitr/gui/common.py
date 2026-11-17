@@ -1,4 +1,4 @@
-"""Sayfaların ortak yardımcıları (arka plan işi, form düzeni, ipucu, stil yenileme, bağlantı)."""
+"""Sayfaların ortak yardımcıları (arka plan işi, form düzeni, ipucu, stil yenileme)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import logging
 import threading
 
 from PySide6.QtCore import QThread, Qt, Signal
-from PySide6.QtWidgets import QFormLayout, QLabel, QWidget
+from PySide6.QtWidgets import QFormLayout, QWidget
 
 log = logging.getLogger(__name__)
 
@@ -49,11 +49,3 @@ def _repolish(w: QWidget, name: str) -> None:
     w.setObjectName(name)
     w.style().unpolish(w)
     w.style().polish(w)
-
-
-def link(text: str, url: str) -> QLabel:
-    from altyazitr.gui.tokens import C
-
-    lb = QLabel(f"<a href='{url}' style='color:{C.CYAN}; text-decoration:none'>{text}</a>")
-    lb.setOpenExternalLinks(True)
-    return lb

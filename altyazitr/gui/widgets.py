@@ -5,11 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
-from PySide6.QtWidgets import (QCheckBox, QColorDialog, QComboBox, QDoubleSpinBox, QFrame, QHBoxLayout,
-                               QLabel, QLineEdit, QPushButton, QScrollArea, QSlider, QSpinBox,
-                               QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox, QFrame, QHBoxLayout, QLabel, QLineEdit,
+                               QScrollArea, QSpinBox, QVBoxLayout, QWidget)
 
 from altyazitr.gui.tokens import RADIUS, SPACE, C, F
 
@@ -17,8 +16,7 @@ Changed = Callable[[], None]
 
 # Bahnschrift ile yazılan etiket stilleri (gui/theme.py). Seçilebilir QLabel metni QTextDocument ile
 # çizer ve satır üstünü kırpar; Bahnschrift'te "İ" noktası kaybolur. Bu yüzden bunlar seçilebilir yapılmaz.
-DISPLAY_LABELS = frozenset({"pageTitle", "h1", "section", "h2", "brand", "status", "value",
-                            "pill", "pillOn", "pillWarn"})
+DISPLAY_LABELS = frozenset({"pageTitle", "section", "status", "value", "pill", "pillOn", "pillWarn"})
 
 
 def label(text: str, obj: str | None = None, wrap: bool = False) -> QLabel:
@@ -28,13 +26,6 @@ def label(text: str, obj: str | None = None, wrap: bool = False) -> QLabel:
     lb.setWordWrap(wrap)
     if wrap and obj not in DISPLAY_LABELS:
         lb.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-    return lb
-
-
-def hint(text: str) -> QLabel:
-    lb = label(text, "muted", wrap=True)
-    lb.setTextFormat(Qt.TextFormat.RichText)
-    lb.setOpenExternalLinks(True)
     return lb
 
 
@@ -57,7 +48,7 @@ class Card(QFrame):
             self.lay.addLayout(layout)
 
 
-def page(title: str, subtitle: str = "") -> tuple[QScrollArea, QVBoxLayout]:
+def page(title: str) -> tuple[QScrollArea, QVBoxLayout]:
     """Kaydırılabilir sayfa iskeleti: 32 px kenar boşluğu, bölümler arası 24 px."""
     inner = QWidget()
     inner.setObjectName("page")
@@ -69,8 +60,6 @@ def page(title: str, subtitle: str = "") -> tuple[QScrollArea, QVBoxLayout]:
     head.setContentsMargins(0, 0, 0, 0)
     head.setSpacing(SPACE["xs"])
     head.addWidget(label(title, "pageTitle"))
-    if subtitle:
-        head.addWidget(hint(subtitle))
     lay.addLayout(head)
     sa = QScrollArea()
     sa.setWidgetResizable(True)
@@ -132,35 +121,6 @@ def color_chip_qss(color: str, ring: str | None = None) -> str:
             f"padding: {pad}; font-family: '{F.DISPLAY}'; font-size: {F.BUTTON - 1}px; }}"
             f"QPushButton:hover {{ border-color: {ring or C.TEXT_3}; }}"
             f"QPushButton[kbfocus=\"true\"]:focus {{ border: 2px solid {C.CYAN}; padding: 5px 11px; }}")
-
-
-class ColorButton(QPushButton):
-    colorChanged = Signal(str)
-
-    def __init__(self, color: str = "#ffffff", parent: QWidget | None = None):
-        super().__init__(parent)
-        self.setFixedWidth(110)
-        self._color = color
-        self.clicked.connect(self._pick)
-        self._refresh()
-
-    def color(self) -> str:
-        return self._color
-
-    def setColor(self, c: str) -> None:  # noqa: N802
-        self._color = c
-        self._refresh()
-
-    def _refresh(self) -> None:
-        self.setText(self._color.upper())
-        self.setStyleSheet(color_chip_qss(self._color))
-
-    def _pick(self) -> None:
-        c = QColorDialog.getColor(QColor(self._color), self, "Renk seçin")
-        if c.isValid():
-            self._color = c.name()
-            self._refresh()
-            self.colorChanged.emit(self._color)
 
 
 # --- ayar bağlama yardımcıları --------------------------------------------
@@ -232,41 +192,3 @@ def bind_line(obj: Any, attr: str, on_change: Changed, placeholder: str = "", pa
 
     w.editingFinished.connect(ch)
     return w
-
-
-def bind_color(obj: Any, attr: str, on_change: Changed) -> ColorButton:
-    w = ColorButton(getattr(obj, attr))
-
-    def ch(c):
-        setattr(obj, attr, c)
-        on_change()
-
-    w.colorChanged.connect(ch)
-    return w
-
-
-def bind_slider(obj: Any, attr: str, lo: float, hi: float, on_change: Changed, scale: float = 100.0,
-                fmt: str = "{:.0%}") -> QWidget:
-    """0..1 gibi ondalık değerler için kaydırıcı + değer etiketi."""
-    box = QWidget()
-    h = QHBoxLayout(box)
-    h.setContentsMargins(0, 0, 0, 0)
-    h.setSpacing(SPACE["m"])
-    s = QSlider(Qt.Orientation.Horizontal)
-    s.setRange(int(lo * scale), int(hi * scale))
-    s.setValue(int(round(getattr(obj, attr) * scale)))
-    s.setMinimumWidth(180)
-    val = QLabel(fmt.format(getattr(obj, attr)))
-    val.setObjectName("value")
-    val.setMinimumWidth(48)
-    val.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-
-    def ch(v):
-        setattr(obj, attr, v / scale)
-        val.setText(fmt.format(v / scale))
-        on_change()
-
-    s.valueChanged.connect(ch)
-    h.addWidget(s, 1)
-    h.addWidget(val)
-    return box

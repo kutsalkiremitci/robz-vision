@@ -247,7 +247,6 @@ class _StatusRow(QWidget):
     def __init__(self, icon_name: str, parent: QWidget | None = None):
         super().__init__(parent)
         self._icon_name = icon_name
-        self._on = False
         h = QHBoxLayout(self)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(SPACE["m"])
@@ -260,7 +259,6 @@ class _StatusRow(QWidget):
         self.setFixedHeight(28)
 
     def set_state(self, on: bool, text: str, tip: str) -> None:
-        self._on = on
         color = C.TURQUOISE if on else C.TEXT_3
         self.ic.setPixmap(pixmap(self._icon_name, 16, color, dpr=max(2.0, _dpr(self))))
         self.tx.setText(text)

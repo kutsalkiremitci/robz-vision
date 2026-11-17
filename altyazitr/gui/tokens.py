@@ -39,7 +39,6 @@ class C:
     TURQUOISE = "#2BC4AE"   # tropik turkuaz — canlı/çalışıyor, başarı
     DANGER = "#FF5A5F"      # durdur / hata
     # yarı saydam katmanlar (yalnızca QSS içinde; QColor bu biçimi okumaz → qcolor() kullanın)
-    PINK_SOFT = "rgba(255, 77, 148, 0.14)"
     CYAN_SOFT = "rgba(63, 216, 238, 0.14)"
     TURQ_SOFT = "rgba(43, 196, 174, 0.16)"
     ORANGE_SOFT = "rgba(255, 138, 91, 0.16)"
@@ -74,7 +73,7 @@ class F:
 SPACE = {"xs": 4, "s": 8, "m": 12, "l": 16, "xl": 24, "xxl": 32}
 RADIUS = {"s": 4, "m": 6, "l": 10}   # girişler/küçük düğmeler 4–6, açılır yüzeyler 10; kart ızgarası yok
 ICON = {"s": 16, "m": 20, "l": 24}
-MOTION = {"fast": 120, "base": 180, "slow": 260}  # ms; yalnızca kullanıcı eylemine yanıt olarak
+MOTION = {"fast": 120, "base": 180}  # ms; yalnızca kullanıcı eylemine yanıt olarak
 
 # Gün batımı geçişi: YALNIZCA canlı başlık bandının alt çizgisinde kullanılır (marka işareti hazır logodur).
 SUNSET_STOPS = ((0.0, C.PINK), (1.0, C.ORANGE))

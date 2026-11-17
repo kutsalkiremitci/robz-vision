@@ -32,7 +32,6 @@ class _Band(QRubberBand):
 class _Canvas(QLabel):
     def __init__(self, pm: QPixmap, initial: tuple[float, float, float, float] | None):
         super().__init__()
-        self._pm = pm
         self.setStyleSheet("background: transparent; border: none; padding: 0;")
         self.setPixmap(pm)
         self.setFixedSize(pm.size())
