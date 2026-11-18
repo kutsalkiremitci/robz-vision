@@ -122,6 +122,35 @@ karşılaştırabilir. Seçenekler için `--help`.
 Oyun profilini, çeviri istemini ya da önerilen modeli değiştiren pull request'lere önce/sonra raporlarını
 ekleyin. Test setine eklediğiniz sahneler de özgün olmalı; oyun metninden alıntı yapmayın.
 
+## Sürüm çıkarırken
+
+Etiketi göndermeden önce:
+
+- Sürüm numarasını `altyazitr/__init__.py`, `pyproject.toml`, `installer/RobzVision.iss` (`AppVersion`) ve
+  `.github/ISSUE_TEMPLATE/hata.yml`'de güncelleyin. CHANGELOG.md'de *Yayımlanmadı* başlığını sürüm ve tarihle
+  değiştirin, alttaki karşılaştırma bağlantılarını güncelleyin.
+- **Ollama sabitlerini güncelleyin.** Robz Vision, Ollama'nın kurulum dosyasını sabit bir sürümden indirir;
+  boyutunu ve SHA256 özetini koddaki değerlerle karşılaştırır. Son sürümün değerlerini GitHub'ın sürüm
+  kaydından okuyun (dosya inmez):
+
+  ```powershell
+  gh api repos/ollama/ollama/releases/latest --jq '.tag_name, (.assets[] | [.name, .digest, .size] | @tsv)' | Select-String '^v\d|^OllamaSetup\.exe'
+  ```
+
+  İlk satır sürüm etiketidir. `OllamaSetup.exe` satırının ikinci alanı SHA256 özetidir (`sha256:` önekini
+  atın), üçüncüsü bayt cinsinden boyuttur. Değerleri şu sabitlere yazın:
+
+  - `altyazitr/ollama_install.py`: `OLLAMA_VERSION` (`"0.40.16"` biçiminde), `SETUP_SHA256`, `SETUP_BYTES`.
+    `SETUP_URL` sürümden oluşur; GitHub'daki adres biçimi değişmediyse dokunmayın.
+  - `altyazitr/ai_setup.py`'deki kopyalar: `OLLAMA_VERSION` (`(0, 40, 16)` biçiminde) ve `SETUP_BYTES`.
+  - `altyazitr/gui/ai_setup_view.py`'deki yedek değerler: `_SETUP_VERSION` ve `_SETUP_BYTES`.
+  - Testlerdeki kopyalar: `tests/test_ai_setup.py` (`NEW`, `INST_NEW`) ve `tests/test_setup_dialog.py`
+    (`SETUP`).
+
+  Testleri çalıştırın ve yeni Ollama sürümünü temiz bir bilgisayarda, ilk açılıştaki yapay zekâ kurulumuyla
+  baştan sona deneyin.
+- `v<sürüm>` etiketini gönderin; GitHub Actions derleyip Releases'e yükler.
+
 ## Pull request
 
 - Bir pull request tek bir konuyu çözsün. Büyük değişikliklerden önce bir kayıt açıp konuşalım.

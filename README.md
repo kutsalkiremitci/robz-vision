@@ -81,13 +81,14 @@ PC oyunları, PS Remote Play ve Xbox uygulaması gibi uzaktan oynatma pencereler
 
 - **Yerel yapay zekâ çevirisi (önerilen).** Ollama ile bilgisayarınızda çalışan Gemma 4 (`gemma4:12b`),
   konuşmanın önceki 8 satırını görerek çevirir. OCR'ın yanlış okuduğu harfleri düzeltir, tuş ipuçlarını
-  ("Hold L2 to …") ayırır. Ücretsizdir; internetsiz ve kotasız çalışır.
-  [Kurulumu](#yerel-yapay-zekâ-çevirisi-önerilen) iki adımdır.
+  ("Hold L2 to …") ayırır. Ücretsizdir; internetsiz ve kotasız çalışır. İlk açılışta *Yapay zekâ ile*'yi
+  seçmeniz yeterli: Robz Vision Ollama'yı ve modeli [kendisi kurar](#yerel-yapay-zekâ-çevirisi-önerilen).
 - **Oyun profilleri.** Varsayılan *GTA 6* profili modele oyunun dünyasını ve tonunu, çevrilmeyecek adları
   (karakter, yer, silah, araç, marka), suç dünyası argosunu ve üslup örneklerini verir. Kelimesi kelimesine
   saçma çeviriler azalır. Diğer oyunlar için *Genel* profil var; kendi notunuzu da ekleyebilirsiniz.
 - **Ücretsiz ve yerel.** OCR ve hızlı çeviri modeli (quickmt) bilgisayarınızda çalışır. Hesap, API anahtarı
-  ya da abonelik gerekmez. Varsayılan ayarlarla internet yalnızca ilk açılışta modeli indirmek için kullanılır.
+  ya da abonelik gerekmez. Varsayılan ayarlarla internet yalnızca modelleri (yapay zekâyı seçerseniz Ollama'yı
+  da) bir kez indirmek için kullanılır.
 - **Hızlı.** OCR yaklaşık 10 ms, hızlı çeviri işlemcide 20–60 ms, yapay zekâ çevirisi satır başına yaklaşık
   1 sn sürer. Yapay zekâ gecikirse önce hızlı çeviri görünür, yapay zekânınki gelince yerine geçer.
 - **İki ayrı çıktı.** Kendi ekranınızda taşıyıp boyutlandırabileceğiniz bir altyazı kutusu, izleyicileriniz
@@ -173,8 +174,10 @@ kartının görüntüsünü bir pencerede açabilirsiniz. Ayrıntılar ve OBS ku
 **Kurulum dosyası (önerilen).** [Releases](https://github.com/kutsalkiremitci/robz-vision/releases/latest)
 sayfasından `RobzVision-Setup-<sürüm>-x64.exe` dosyasını indirip çalıştırın ve sihirbazda **İleri**'ye
 basarak kurun. Yönetici izni istemez; program kendi kullanıcı klasörünüze kurulur, Başlat menüsüne eklenir ve
-*Ayarlar → Uygulamalar*'dan kaldırılabilir. İlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez
-indirilir; indirme bitince program açılır.
+*Ayarlar → Uygulamalar*'dan kaldırılabilir. İlk açılışta program çevirinin nasıl yapılacağını sorar:
+*Yapay zekâ ile* ya da *Yalnız hızlı çeviri*. Ücretsiz hızlı çeviri modeli (404 MB) her durumda bir kez
+indirilir; indirme bitince program açılır. Ayrıntılar:
+[Yerel yapay zekâ çevirisi](#yerel-yapay-zekâ-çevirisi-önerilen).
 
 **Taşınabilir sürüm.** `RobzVision-Portable-<sürüm>-x64.zip` (ya da daha küçük `.7z`) dosyasını kısa bir
 klasöre (ör. `C:\RobzVision`) çıkarıp `RobzVision.exe`'yi çalıştırın. İndirilen dosyayı doğrulamak için
@@ -198,16 +201,38 @@ Add-WindowsCapability -Online -Name "Language.OCR~~~en-US~0.0.1.0"
 
 ### Yerel yapay zekâ çevirisi (önerilen)
 
-Robz Vision kurulunca hızlı yerel çeviriyle hemen çalışır. Daha doğal çeviri için Ollama ile Gemma 4'ü
-(`gemma4:12b`) kurun. Ücretsizdir; internetsiz ve kotasız çalışır.
+Robz Vision hızlı yerel çeviriyle her bilgisayarda çalışır. Daha doğal çeviri için yerel yapay zekâyı kurun:
+Ollama ve Gemma 4. Ücretsizdir; internetsiz ve kotasız çalışır. Ollama'yı ayrıca kurmanız gerekmez, Robz
+Vision kendisi kurar.
 
-1. [ollama.com/download](https://ollama.com/download) adresinden Ollama'yı indirip kurun.
-2. Robz Vision'da **Çeviri** sayfasında *Motor*'u *Yerel yapay zekâ — Ollama* yapın ve açılan *Ollama*
-   bölümünde **Önerilen kurulum**'a basın. Düğme modeli indirir (yaklaşık 8 GB), çeviri motorunu ayarlar ve
-   GTA 6 profilini seçer.
+1. İlk açılışta **Çeviri nasıl yapılsın?** sorusunda *Yapay zekâ ile*'yi seçip **Devam**'a basın. Ekran
+   kartınız uygunsa bu seçenek önceden seçili gelir.
+2. İndirilecekleri ve boş disk alanını gösteren ekranda **Kur**'a basın. Kur'a basmadan yapay zekâ için
+   hiçbir şey inmez.
+3. Hızlı çeviri modeli inince **Şimdi başla**'ya basın. Yapay zekâ arka planda iner, hazır olunca devreye
+   girer. Çeviri çalışırken indirme durur, durdurunca kaldığı yerden sürer.
 
-Model 12 GB bellekli bir ekran kartında rahat çalışır; satır başına yaklaşık 1 sn sürer. Daha zayıf kartlar
-için `gemma4:e4b` var. Ayrıntılar: [kullanım kılavuzu](docs/KULLANIM.md#7-çeviriyi-iyileştirin).
+İlk açılışta *Yalnız hızlı çeviri*'yi seçtiyseniz ya da önceki bir sürümden güncellediyseniz *Çeviri*
+sayfasında **Önerilen kurulum**'a basın; aynı kurulum başlar.
+
+**Boyutlar.** Hızlı çeviri modeli 404 MB, her durumda iner. Yapay zekâ yaklaşık 10 GB daha: Ollama 1,9 GB ve
+Gemma 4 12B 8,0 GB. 8 GB bellekli ekran kartında 12B yerine daha hafif Gemma 4 E4B (6,6 GB) iner. Kurulum
+sırasında yaklaşık 15 GB boş disk alanı gerekir.
+
+**Gerekenler.** Windows 10 22H2 ya da Windows 11 ve en az 8 GB belleği olan bir NVIDIA ya da AMD ekran
+kartı. Gemma 4 12B, 12 GB bellekli kartta rahat çalışır; satır başına yaklaşık 1 sn sürer.
+
+**Güvenlik.** Ollama'nın resmî kurulum dosyası GitHub'daki sürüm sayfasından iner; sürümü sabittir. Robz
+Vision dosyayı çalıştırmadan önce SHA256 özetini ve dijital imzasını (Ollama Inc.) denetler; tutmazsa siler ve
+kurmaz. Kurulum sessizdir ve yönetici izni istemez. Ollama ekran kartınızı kullanamıyorsa model indirilmez.
+
+**Ollama ayrı bir programdır.** Windows açılınca arka planda başlar; kapalıysa Robz Vision onu kendisi
+başlatır. Ollama kendini de günceller: yeni sürümü (yaklaşık 1,9 GB) arka planda indirir, Windows açılışında
+ya da görev çubuğundaki simgesinden *Restart to update* ile kurar. İndirmeyi istemiyorsanız Ollama'nın
+ayarlarında *Auto-download updates*'i kapatın. Robz Vision'ı kaldırınca Ollama kalır.
+
+Ayrıntılar: [kullanım kılavuzu](docs/KULLANIM.md#7-çeviriyi-iyileştirin). Kurulum yapılamazsa:
+[Yapay zekâ kurulumu sorunları](docs/KULLANIM.md#yapay-zekâ-kurulumu).
 
 ## İlk kullanım
 
@@ -215,8 +240,9 @@ için `gemma4:e4b` var. Ayrıntılar: [kullanım kılavuzu](docs/KULLANIM.md#7-�
   <img src="docs/gorseller/ana_pencere.png" width="760" alt="Robz Vision ana sayfası: Başlat düğmesi, çevrilecek bölgenin önizlemesi, son çeviri, Ekranımda ve OBS bölümleri">
 </p>
 
-1. **Tanıtım turu.** İlk açılışta kısa bir tur arayüzün bölümlerini gösterir. Atlarsanız
-   *Ayarlar → Tanıtım turunu başlat* ile yeniden açabilirsiniz.
+1. **İlk açılış.** Program çevirinin nasıl yapılacağını sorar: *Yapay zekâ ile* ya da *Yalnız hızlı çeviri*
+   ([ayrıntılar](#yerel-yapay-zekâ-çevirisi-önerilen)). Ana pencere açılınca kısa bir tur arayüzün bölümlerini
+   gösterir. Atlarsanız *Ayarlar → Tanıtım turunu başlat* ile yeniden açabilirsiniz.
 2. **Bölge seç.** Ana sayfada **Bölge seç**'e basın. Ekran kararır, oyun arkada akmaya devam eder.
    Altyazının çıktığı alanı fareyle çizip **Onayla**'ya basın.
 3. **Başlat.** Altyazı ekrana geldiğinde Türkçesi de gelir.
@@ -225,8 +251,9 @@ için `gemma4:e4b` var. Ayrıntılar: [kullanım kılavuzu](docs/KULLANIM.md#7-�
 5. **OBS (isteğe bağlı).** Ana sayfadaki adresi kopyalayın, OBS'te **Tarayıcı** kaynağı olarak ekleyin:
    *Yerel dosya* işaretsiz, genişlik ve yükseklik tuvalle aynı (ör. 1920 × 1080), kaynak oyun görüntüsünün
    üstünde.
-6. **Daha iyi çeviri (önerilen).** Ollama'yı kurup *Çeviri* sayfasının *Ollama* bölümünde
-   **Önerilen kurulum**'a basın: [Yerel yapay zekâ çevirisi](#yerel-yapay-zekâ-çevirisi-önerilen).
+6. **Daha iyi çeviri (önerilen).** Yalnız hızlı çeviriyle başladıysanız *Çeviri* sayfasında
+   **Önerilen kurulum**'a basın; Robz Vision Ollama'yı ve Gemma 4'ü kendisi kurar:
+   [Yerel yapay zekâ çevirisi](#yerel-yapay-zekâ-çevirisi-önerilen).
 
 Kısayollar: `Ctrl+Alt+T` başlat/durdur, `Ctrl+Alt+H` gizle/göster, `Ctrl+Alt+C` temizle.
 Ayarlar sayfasından değiştirilebilir.
@@ -238,7 +265,7 @@ Adım adım anlatım, ekran görüntüleri ve senaryolara göre ipuçları: **[d
 | Motor | Maliyet | Yaklaşık süre | Gereken |
 |---|---|---|---|
 | **Hızlı yerel çeviri, quickmt** (varsayılan) | Ücretsiz | 20–60 ms | Hiçbir şey |
-| **Yerel yapay zekâ: Ollama + Gemma 4** (önerilen) | Ücretsiz, internetsiz, kotasız | ~1 sn | [Ollama](https://ollama.com/download), `gemma4:12b` (~8 GB), 12 GB ekran kartı; daha zayıf kartlarda `gemma4:e4b` |
+| **Yerel yapay zekâ: Ollama + Gemma 4** (önerilen) | Ücretsiz, internetsiz, kotasız | ~1 sn | Ollama ve Gemma 4 (Robz Vision kurar, ~10 GB); 12 GB ekran kartında `gemma4:12b`, 8 GB'ta `gemma4:e4b` |
 | **Google Gemini** | Ücretsiz katman, kotalı | 0,3–0,8 sn | Kendi API anahtarınız |
 | **DeepL API Free** | Ayda 500 bin karaktere kadar ücretsiz | ~0,3 sn | Kendi API anahtarınız |
 
@@ -261,9 +288,14 @@ Ticari olmayan lisanslı modeller (ör. NLLB) para kazanılan yayınlarla çeli�
 - Varsayılan ayarlarla ekran görüntüsü, OCR ve çeviri bilgisayarınızda kalır. Görüntüler diske kaydedilmez,
   uygulama kullanım verisi toplamaz.
 - Ana sayfadaki *Son çeviriler* listesi yalnız bellekte tutulur, diske yazılmaz; uygulama kapanınca silinir.
-- İnternet bağlantısı yalnızca ilk açılışta çeviri modelini Hugging Face'ten indirmek için kullanılır.
-  OCR modelleri programla birlikte gelir. Yerel yapay zekâyı kurarsanız Ollama modeli bir kez indirir;
-  çeviri sonra internetsiz çalışır, altyazılar bilgisayarınızdan çıkmaz.
+- Varsayılan ayarlarla internet yalnızca indirme için kullanılır. İlk açılışta hızlı çeviri modeli Hugging
+  Face'ten iner; OCR modelleri programla birlikte gelir. Yerel yapay zekâyı kurarsanız Robz Vision yalnız iki
+  yerden daha indirir: Ollama'nın kurulum dosyasını GitHub'daki resmî sürüm sayfasından
+  (`github.com/ollama/ollama`), Gemma 4 modelini Ollama'nın kayıt sunucusundan (`registry.ollama.ai`; modeli
+  Ollama indirir). Çeviri sonra internetsiz çalışır, altyazılar bilgisayarınızdan çıkmaz.
+- Ollama ayrı bir programdır ve kendini günceller: saatte bir `ollama.com`'a yeni sürüm olup olmadığını sorar,
+  varsa (yaklaşık 1,9 GB) arka planda indirir. Bu Ollama'nın kendi davranışıdır; Ollama'nın ayarlarındaki
+  *Auto-download updates* ile kapatabilirsiniz.
 - OBS sunucusu yalnızca `127.0.0.1` adresini dinler; ağdaki başka cihazlar erişemez.
 - Çeviri önbelleği (İngilizce–Türkçe metin çiftleri) ve günlük dosyaları `%LOCALAPPDATA%\RobzVision`
   altında, ayarlar ve API anahtarları `%APPDATA%\RobzVision\ayarlar.json` dosyasında tutulur.
@@ -290,10 +322,21 @@ diğer motoru deneyin (RapidOCR ↔ Windows OCR).
 <details>
 <summary><b>Yapay zekâ çevirisi gelmiyor ya da gecikiyor</b></summary>
 
-Ollama'nın açık olduğunu ve *Çeviri* sayfasındaki adresin `http://127.0.0.1:11434` olduğunu kontrol edin.
-Ollama'ya ulaşılamazsa Robz Vision hızlı yerel çeviriyle devam eder. Çeviri sık sık gecikiyorsa ya da ekran
-kartının belleği yetmiyorsa `gemma4:e4b`'yi seçin. Ayrıntılar:
+Ollama kapalıysa Robz Vision onu kendisi başlatır. Başlatamazsa ya da model indirilmemişse hızlı yerel
+çeviriyle devam eder ve bir bildirim gösterir. *Çeviri* sayfasındaki adres `http://127.0.0.1:11434` olmalı.
+Çeviri sık sık gecikiyorsa ya da ekran kartının belleği yetmiyorsa `gemma4:e4b`'yi seçin. Ayrıntılar:
 [kullanım kılavuzu, Sorun giderme](docs/KULLANIM.md#10-sorun-giderme).
+</details>
+
+<details>
+<summary><b>Yapay zekâ kurulamadı</b></summary>
+
+Kurulum ekranında hatalı adımın altında nedeni yazar; hızlı çeviri bu sırada çalışır. İnternet kesildiyse ya da
+diskte yer kalmadıysa sorunu giderip **Tekrar dene**'ye basın; indirme kaldığı yerden sürer. Antivirüs ya da
+şirket ilkesi kurulumu engellediyse ya da Ollama dosyasının imzası doğrulanamadıysa **Ollama'yı elle kur**
+bağlantısıyla Ollama'yı [ollama.com/download](https://ollama.com/download) adresinden kendiniz kurun, sonra
+**Tekrar dene**'ye basın: Robz Vision kurulu Ollama'yı bulur, yalnız modeli indirir. Ayrıntılar:
+[kullanım kılavuzu, Yapay zekâ kurulumu](docs/KULLANIM.md#yapay-zekâ-kurulumu).
 </details>
 
 <details>
@@ -357,8 +400,10 @@ Başka bir program aynı tuşları kullanıyor olabilir. Ayarlar sayfasından de
 <details>
 <summary><b>Kaldırınca her şey silinir mi?</b></summary>
 
-Program dosyaları silinir. Ayarlar (`%APPDATA%\RobzVision`) ve indirilen model (`%LOCALAPPDATA%\RobzVision`)
-yeniden kurulumda tekrar indirme gerekmesin diye kalır; isterseniz bu klasörleri elle silebilirsiniz.
+Program dosyaları ve indirilmiş Ollama kurulum dosyası silinir. Ayarlar (`%APPDATA%\RobzVision`) ve hızlı
+çeviri modeli (`%LOCALAPPDATA%\RobzVision`) yeniden kurulumda tekrar indirme gerekmesin diye kalır; isterseniz
+bu klasörleri elle silebilirsiniz. Ollama ayrı bir programdır ve kalır; Ollama'yı ve modellerini kaldırmak için
+[kullanım kılavuzu, Kaldırma](docs/KULLANIM.md#kaldırma).
 </details>
 
 Hata bildirirken günlük dosyasını ekleyin: *Ayarlar → Uygulama → Günlükler* ya da
@@ -415,7 +460,9 @@ Değişiklik geçmişi [CHANGELOG.md](CHANGELOG.md)'de.
 Kaynak kod [MIT](LICENSE) lisanslıdır. Kullanılan bileşenlerin ve çeviri modelinin lisansları
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)'de. Varsayılan çeviri modeli quickmt-en-tr,
 CC BY 4.0 lisanslıdır ve programla birlikte dağıtılmaz, ilk açılışta indirilir. Önerilen yerel yapay zekâda
-Ollama MIT, Gemma 4 Apache-2.0 lisanslıdır; ikisi de programla birlikte dağıtılmaz, siz indirirsiniz.
+Ollama MIT, Gemma 4 Apache-2.0 lisanslıdır; ikisi de programla birlikte dağıtılmaz. Kurulumu onaylarsanız
+Robz Vision Ollama'yı GitHub'daki resmî sürüm sayfasından indirip kurar; Gemma 4'ü Ollama, kendi kayıt
+sunucusundan indirir.
 
 Robz Vision bağımsız, gönüllü bir açık kaynak projedir. Rockstar Games, Take-Two Interactive, Sony
 Interactive Entertainment, Microsoft, OBS Project, Kick, Twitch, YouTube, Google, Ollama veya DeepL ile

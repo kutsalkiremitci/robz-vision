@@ -27,13 +27,14 @@ olarak yer alır ve her biri kendi lisansına tabidir.
 
 ## Programla birlikte dağıtılmayan, isteğe bağlı bileşenler ve hizmetler
 
-Aşağıdakiler Robz Vision'la birlikte dağıtılmaz; kullanmak isterseniz kendiniz kurar ya da indirirsiniz.
-Her biri kendi lisansına ve şartlarına tabidir.
+Aşağıdakiler Robz Vision'la birlikte dağıtılmaz. Ollama'yı ve Gemma 4'ü, yerel yapay zekâ kurulumunu
+onaylarsanız Robz Vision resmî kaynaklarından kurar (ayrıntı tabloda); ötekileri kullanmak isterseniz kendiniz
+kurar ya da indirirsiniz. Her biri kendi lisansına ve şartlarına tabidir.
 
 | Bileşen | Lisans | Not |
 |---|---|---|
-| Ollama | MIT | © Ollama — https://github.com/ollama/ollama . Yerel yapay zekâ çevirisi için ayrı kurulur; Robz Vision ona yerel adresinden (varsayılan `http://127.0.0.1:11434`) bağlanır. |
-| Gemma 4 dil modelleri (`gemma4:12b`, `gemma4:e4b`, `gemma4:26b`) | Apache-2.0 | Google DeepMind — https://gemma.ai/models/gemma-4/ , lisans: https://gemma.ai/resources/apache-2/ . Önerilen yerel yapay zekâ modeli; Ollama üzerinden indirilir: https://ollama.com/library/gemma4 |
+| Ollama | MIT | © Ollama — https://github.com/ollama/ollama . Programla dağıtılmaz. Yerel yapay zekâ kurulumunu onaylarsanız Robz Vision, Ollama'nın resmî ve imzalı Windows kurulum dosyasını (`OllamaSetup.exe`, sabit sürüm) GitHub'daki sürüm sayfasından indirir, SHA256 özetini ve imzasını denetleyip kullanıcı hesabınıza kurar. Ollama ayrı bir program olarak kalır ve kendi kaldırıcısıyla kaldırılır; Robz Vision ona yerel adresinden (varsayılan `http://127.0.0.1:11434`) bağlanır. |
+| Gemma 4 dil modelleri (`gemma4:12b`, `gemma4:e4b`, `gemma4:26b`) | Apache-2.0 | Google DeepMind — https://gemma.ai/models/gemma-4/ , lisans: https://gemma.ai/resources/apache-2/ . Programla dağıtılmaz. Önerilen yerel yapay zekâ modeli; kurulumu onaylarsanız Ollama, kendi kayıt sunucusundan (`registry.ollama.ai`) indirir: https://ollama.com/library/gemma4 |
 
 - Ollama'dan indirdiğiniz diğer modellerde model sayfasındaki lisans koşulları geçerlidir. Örneğin
   TranslateGemma, Gemma 4'ten farklı olarak Gemma Kullanım Şartları'na tabidir:

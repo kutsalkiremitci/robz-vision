@@ -37,12 +37,61 @@ getirin:
 **Oyunda İngilizce altyazıyı açın.** Robz Vision ses dinlemez, yalnızca ekrandaki yazıyı okur.
 Altyazı ne kadar okunaklıysa (büyük, kenarlı ya da arka planlı) sonuç o kadar iyi olur.
 
-**İlk açılış.** Program ilk açıldığında ücretsiz çeviri modelini (yaklaşık 400 MB) bir kez indirir. Sonra
-kısa bir tanıtım turu arayüzün bölümlerini gösterir. Turu atlarsanız *Ayarlar → Tanıtım turunu başlat* ile
-istediğiniz zaman yeniden açabilirsiniz.
+### İlk açılış
 
-**Daha doğal çeviri.** Ekran kartınız varsa yerel yapay zekâyı da kurun; iki adımdır:
-[Yerel yapay zekâ](#yerel-yapay-zekâ-önerilen).
+Program ilk açıldığında çevirinin nasıl yapılacağını sorar. Ana pencere açılınca kısa bir tanıtım turu
+arayüzün bölümlerini gösterir. Turu atlarsanız *Ayarlar → Tanıtım turunu başlat* ile istediğiniz zaman
+yeniden açabilirsiniz.
+
+**1. Seçim: Çeviri nasıl yapılsın?** İki seçenek var:
+
+- **Yapay zekâ ile:** konuşmayı takip eder, argoyu anlar. Robz Vision, Ollama'yı (yapay zekâyı çalıştıran
+  ücretsiz program) ve Gemma 4 modelini kurar; yaklaşık 10 GB iner. İnternetsiz çalışır. Hızlı çeviri yedekte
+  kalır: yapay zekâ gecikirse o görünür.
+- **Yalnız hızlı çeviri:** her bilgisayarda çalışır, anında çevirir; bazen düz ya da yanlış çevirir. 404 MB.
+
+Robz Vision ekran kartınızı okur ve adını seçeneğin altında gösterir. Yapay zekâ için en az 8 GB belleği olan
+bir NVIDIA ya da AMD ekran kartı gerekir; kartınız uygunsa *Yapay zekâ ile* önceden seçili gelir. 6 GB'lık
+kartta da seçebilirsiniz ama yayın açıkken çeviri gecikebilir. Uygun kart yoksa bu seçenek soluk görünür ve
+seçilemez. Seçiminizi sonra *Çeviri* sayfasından değiştirebilirsiniz.
+
+Hızlı çeviri modeli iki seçenekte de gerekir: pencere açılır açılmaz inmeye başlar, ilerlemesi pencerenin
+altında görünür. **Çıkış**'a basarsanız program açılmaz; indirme sonraki açılışta tamamlanır.
+
+**2. Onay.** *Yapay zekâ ile*'yi seçip **Devam**'a basınca indirilecekler ve boyutları listelenir: Ollama
+(1,9 GB), model (Gemma 4 12B 8,0 GB ya da daha hafif Gemma 4 E4B 6,6 GB; ekran kartınıza göre seçili gelir),
+toplam indirme ve boş disk alanı. Oyun da bu bilgisayarda çalışıyorsa E4B'yi seçebilirsiniz; daha hızlı ve
+hafiftir. **Kur**'a basmadan yapay zekâ için hiçbir şey inmez. Diskte yer yetmiyorsa **Kur** kapalı kalır.
+Ollama ya da model zaten kuruluysa satırında *Kurulu* yazar; ikisi de kuruluysa bu ekran atlanır, yalnız ayar
+yapılır.
+
+**3. İlerleme.** Her adım kendi satırında görünür: Ollama'nın indirilmesi, imza ve bütünlük denetimi,
+kurulumu (1–2 dk), başlatılması, ekran kartının denetimi ve modelin indirilmesi. Altta toplam ilerleme,
+indirme hızı ve kalan süre yazar. Yapay zekâ indirmesi hızlı çeviri modeli inince başlar.
+
+- **Şimdi başla** hızlı çeviri modeli inince açılır. Basınca ana pencere açılır ve hızlı çeviriyle
+  başlarsınız; yapay zekâ arka planda iner, hazır olunca devreye girer.
+- **Yapay zekâyı iptal et** kurulumu durdurur, hızlı çeviri kalır. *Ollama kuruluyor* adımında iptal
+  edilemez; kurulum bitince durur.
+- Ekran kartı denetiminde Ollama kartınızı kullanamıyorsa model indirilmez. Kartın belleği Gemma 4 12B'ye
+  yetmiyorsa yerine daha hafif E4B iner.
+- Bir adım başarısız olursa satırı kırmızı olur ve altında nedeni yazar. **Tekrar dene** kaldığı yerden
+  sürer, **Hızlı çeviride kal** yapay zekâdan vazgeçer. Çözümler: [Yapay zekâ kurulumu](#yapay-zekâ-kurulumu).
+
+**4. Sonuç.** Her şey bitince *Yapay zekâ hazır* yazar; **Başla** ile programı açın. Çeviri motoru
+kendiliğinden yapay zekâya geçer.
+
+**Şimdi başla**'ya bastıktan sonra kurulum arka planda sürer:
+
+- Kenar çubuğundaki yapay zekâ satırı ilerlemeyi gösterir; tıklayınca *Çeviri* sayfası açılır. İlerleme ve
+  **İptal** orada da vardır.
+- **Çeviri çalışırken indirme durur:** büyük indirme yayın bağlantınızı ve Wi-Fi'deki Remote Play görüntüsünü
+  bozabilir. Çeviriyi durdurunca indirme kaldığı yerden sürer. Beklemek istemiyorsanız *Çeviri* sayfasında
+  **Yine de sürdür**'e basın.
+- Kurulum bitince bildirim çıkar. Çeviri o sırada çalışıyorsa yapay zekâ bir sonraki **Başlat**'ta devreye
+  girer.
+- Programı kurulum bitmeden kapatırsanız iş sonraki açılışta kaldığı yerden sürer. Hatayla biten kurulum
+  kendiliğinden sürmez; *Çeviri* sayfasında **Tekrar dene**'ye basın.
 
 ## 2. Bölgeyi seçin
 
@@ -197,23 +246,35 @@ ya da yanlış çevirir. Ekran kartınız varsa yerel yapay zekâyı kurun.
 
 ### Yerel yapay zekâ (önerilen)
 
-Gemma 4 (`gemma4:12b`), Ollama ile bilgisayarınızda çalışan bir dil modelidir.
+Gemma 4, Ollama ile bilgisayarınızda çalışan bir dil modelidir.
 
 - Ücretsizdir; internetsiz ve kotasız çalışır. Altyazılar bilgisayarınızdan çıkmaz.
 - Önceki 8 satırı görür, cümleyi konuşmanın gidişatına göre çevirir.
 - OCR'ın yanlış okuduğu harfleri düzeltir, tuş ipuçlarını ("Hold L2 to …") ayırır.
-- Yaklaşık 8 GB indirilir. 12 GB bellekli ekran kartında rahat çalışır; satır başına yaklaşık 1 sn sürer.
+- En az 8 GB belleği olan bir NVIDIA ya da AMD ekran kartı ve Windows 10 22H2 ya da daha yenisi gerekir.
+  12 GB'lık kartta Gemma 4 12B (`gemma4:12b`, 8,0 GB), 8 GB'lık kartta daha hafif Gemma 4 E4B (`gemma4:e4b`,
+  6,6 GB) kurulur. 12 GB bellekli kartta satır başına yaklaşık 1 sn sürer.
 
-Kurulum:
+Ollama'yı ayrıca kurmanız gerekmez; Robz Vision kendisi kurar. İlk açılışta *Yapay zekâ ile*'yi seçtiyseniz
+kurulum zaten yapılır ([İlk açılış](#1-başlamadan-önce)). Sonradan kurmak için:
 
-1. [ollama.com/download](https://ollama.com/download) adresinden Ollama'yı indirip kurun.
-2. Robz Vision'da **Çeviri** sayfasını açın. *Motor* listesinden *Yerel yapay zekâ — Ollama*'yı seçin;
-   açılan *Ollama* bölümünde **Önerilen kurulum**'a basın. Düğme modeli indirir, çeviri motorunu ayarlar ve
-   *GTA 6* profilini seçer. İndirme sürerken ilerleme çubuğu görünür; **İptal** ile durdurabilirsiniz.
+1. **Çeviri** sayfasında **Önerilen kurulum**'a basın. Düğme *Motor* seçiminin altındaki davette, motor
+   Ollama'yken *Ollama* bölümündedir.
+2. *Yapay zekâ kurulumu* penceresinde modeli, indirilecekleri ve boş disk alanını görürsünüz. **Kur**'a basın.
+   Ollama yoksa önce o indirilip kurulur, sonra model iner. İkisi de kuruluysa pencere kendiliğinden kapanır,
+   yalnız ayar yapılır.
+3. İlerleme *Çeviri* sayfasında ve kenar çubuğundaki yapay zekâ satırında görünür; **İptal** ile
+   durdurabilirsiniz. Bitince çeviri motoru yapay zekâya geçer.
 
-Ekran kartınız daha zayıfsa (ör. 8 GB) ya da oyun ve yayın aynı ekran kartında çalışıyorsa *Ollama*
-bölümünde modeli `gemma4:e4b` yapıp **Modeli indir**'e basın. Listede olmayan bir Ollama modelinin adını da
-yazabilirsiniz.
+Kurulum ilk açılıştaki gibi çalışır: çeviri çalışırken indirme durur, program kapanırsa sonraki açılışta
+kaldığı yerden sürer. Listede olmayan bir Ollama modelini *Ollama* bölümünde adını yazıp **Modeli indir** ile
+indirebilirsiniz.
+
+**Ollama ayrı bir programdır.** Windows açılınca arka planda başlar; kapalıysa Robz Vision **Başlat**'ta onu
+kendisi başlatır. Windows açılışında başlamasını istemiyorsanız *Görev Yöneticisi → Başlangıç uygulamaları*'ndan
+kapatabilirsiniz. Ollama kendini de günceller: yeni sürümü (yaklaşık 1,9 GB) arka planda indirir, Windows
+açılışında ya da görev çubuğundaki simgesinden *Restart to update* ile kurar. İndirmeyi istemiyorsanız
+Ollama'nın ayarlarında *Auto-download updates*'i kapatın.
 
 TranslateGemma artık önerilmiyor: önceki satırları (bağlamı) ve oyun profilini kullanmıyor. Kullanıyorsanız
 Gemma 4'e geçin.
@@ -312,12 +373,15 @@ değiştirip **Kaydet**'e basın.
 
 ## 10. Sorun giderme
 
-**Ollama'ya ulaşılamıyor ya da model yüklü değil.** Robz Vision bu sırada hızlı yerel çeviriyle devam eder.
+**Ollama'ya ulaşılamıyor ya da model yüklü değil.** Robz Vision bu sırada hızlı yerel çeviriyle devam eder ve
+hata penceresi yerine bir bildirim gösterir (ör. *Gemma 4 12B hazırlanamadı; hızlı çeviri kullanılıyor.*).
 
-- Ollama kurulu ve açık olmalı. Ollama, Windows açılınca kendiliğinden başlar; kapattıysanız Başlat
-  menüsünden yeniden açın.
-- *Çeviri* sayfasının *Ollama* bölümündeki adres `http://127.0.0.1:11434` olmalı.
-- Model indirilmemişse ya da indirme yarıda kaldıysa **Önerilen kurulum**'a yeniden basın.
+- Ollama kapalıysa Robz Vision **Başlat**'ta onu kendisi başlatır. Başlatamazsa Ollama'yı Başlat
+  menüsünden açın.
+- *Çeviri* sayfasının *Ollama* bölümündeki adres `http://127.0.0.1:11434` olmalı. Ollama'yı başka bir
+  adreste çalıştırıyorsanız aşağıdaki *Ollama başka bir adreste* maddesine bakın.
+- Model indirilmemişse ya da indirme yarıda kaldıysa **Önerilen kurulum**'a yeniden basın; inmiş kısım
+  yeniden inmez.
 
 **Çeviri gecikiyor.** Ekranda önce hızlı çeviri görünüp sık sık sonradan değişiyorsa yapay zekâ yetişemiyor
 demektir. Daha küçük bir model seçin: *Ollama* bölümünde modeli `gemma4:e4b` yapıp **Modeli indir**'e basın.
@@ -333,6 +397,64 @@ yetmezse Ollama modelin bir kısmını işlemcide çalıştırır ve çeviri yav
 
 **Çeviri, İngilizce altyazı ekrandayken kayboluyor.** Her satır en fazla *En uzun kalma* süresi kadar
 görünür (varsayılan 7 sn). Uzun altyazılı sahnelerde *Ayarlar → Altyazı akışı → En uzun kalma*'yı artırın.
+
+### Yapay zekâ kurulumu
+
+Kurulum bir adımda takılırsa ilerleme listesinde o satır kırmızı olur ve altında kısa nedeni yazar; ayrıntısı
+**Tekrar dene**'nin ipucundadır. Hızlı çeviri bu sırada çalışmaya devam eder. Ollama kurulumunun günlüğü:
+`%LOCALAPPDATA%\RobzVision\Logs\ollama-kurulum.log`.
+
+**İnternet kesildi.** *İnternet bağlantısı yok. Bağlantı gelince kaldığı yerden sürer.* Robz Vision 5, 15 ve
+45 saniye arayla yeniden dener. Bağlantı yine gelmezse kurulum durur; bağlantı gelince **Tekrar dene**'ye
+basın. İnmiş kısım silinmez: Ollama'nın kurulum dosyası da model de kaldığı yerden iner.
+
+**Diskte yer yetmiyor.** Onay penceresi kurulumdan önce boş yere bakar. Yer yetmiyorsa *C: sürücüsünde yer
+yetmiyor: 9 GB boş, ~15 GB gerekli* gibi bir satır çıkar ve **Kur** kapalı kalır. Kurulum sürerken disk
+dolarsa *Diskte yer kalmadı (C:). Yer açıp Tekrar dene'ye basın.* yazar. Gemma 4 12B ile kurulum sırasında
+yaklaşık 15 GB boş yer gerekir.
+
+- Ollama ve geçici kurulum dosyası `%LOCALAPPDATA%` sürücüsüne (genelde C:), modeller
+  `%USERPROFILE%\.ollama\models` klasörüne iner.
+- Modelleri başka bir sürücüde tutmak için kullanıcı ortam değişkenlerine `OLLAMA_MODELS` ekleyin
+  (ör. `D:\ollama\models`), sonra Ollama'yı ve Robz Vision'ı yeniden başlatın. Disk denetimi de o sürücüye
+  bakar.
+
+**Antivirüs ya da şirket ilkesi engelledi.** *Ollama kurulumu engellendi.* Antivirüs programınız ya da
+bilgisayardaki şirket ilkesi (AppLocker, WDAC) Ollama'nın kurulum dosyasını durdurmuş olabilir. Robz Vision'ın
+çalıştırdığı dosya, Ollama'nın GitHub'daki resmî ve imzalı kurulum dosyasıdır; çalıştırılmadan önce SHA256
+özeti ve imzası denetlenir. **Ollama'yı elle kur** bağlantısıyla Ollama'yı sitesinden
+([ollama.com/download](https://ollama.com/download)) indirip kendiniz kurun, sonra **Tekrar dene**'ye basın:
+Robz Vision kurulu Ollama'yı bulur, yalnız modeli indirir. Şirket bilgisayarında BT yöneticinize danışın.
+
+**İmza doğrulanamadı.** *Ollama dosyasının imzası doğrulanamadı; kurulmadı.* Robz Vision, Ollama'nın kurulum
+dosyasını çalıştırmadan önce dijital imzasına bakar: imza geçerli ve Ollama Inc. adına olmalıdır. Değilse
+dosya silinir ve hiçbir şey kurulmaz. **Ollama'yı elle kur** bağlantısıyla Ollama'yı sitesinden indirip
+kendiniz kurun, sonra **Tekrar dene**'ye basın. Sorun sürerse günlük dosyasıyla bir hata kaydı açın.
+
+**Ollama ekran kartınızı kullanamıyor.** Ollama yalnız işlemciyi ya da tümleşik kartı görüyorsa model
+indirilmez; yapay zekâ işlemcide çok yavaş çalışırdı. Ekran kartı sürücüsünü güncelleyin (NVIDIA'da en az
+551.61) ve **Tekrar dene**'ye basın.
+
+**11434 portunu başka bir program kullanıyor.** Ollama'nın portunda başka bir program çalıştığı için kurulum
+başlamaz; onay penceresinde **Kur** kapalı kalır. O programı kapatıp yeniden deneyin.
+
+**Ollama başka bir adreste (`OLLAMA_HOST`).** Ollama'yı `OLLAMA_HOST` ortam değişkeniyle başka bir portta
+çalıştırıyorsanız (ör. `127.0.0.1:11500`) Robz Vision bu değişkeni okur ve Ollama'yı orada bulur; kurulum
+bitince *Çeviri* sayfasındaki adres de buna göre ayarlanır. Değişkeni Robz Vision açıkken tanımladıysanız da
+okunur. Kurulum yalnız bu bilgisayardaki Ollama'yla çalışır. Başka bir bilgisayardaki Ollama'yı kullanmak için
+modeli o bilgisayarda indirin ve adresini *Çeviri* sayfasının *Ollama* bölümüne yazın.
+
+### Kaldırma
+
+Robz Vision'ı *Ayarlar → Uygulamalar*'dan kaldırırsınız. Program dosyaları ve indirilmiş Ollama kurulum
+dosyası (`%LOCALAPPDATA%\RobzVision\indirilenler`) silinir. Ayarlar (`%APPDATA%\RobzVision`) ve hızlı çeviri
+modeli (`%LOCALAPPDATA%\RobzVision`) yeniden kurulumda tekrar inmesin diye kalır; isterseniz elle
+silebilirsiniz.
+
+**Robz Vision kaldırılınca Ollama kalır.** Ollama ayrı bir programdır; başka programlar da kullanabilir.
+Ollama'yı da kaldırmak isterseniz *Ayarlar → Uygulamalar*'da *Ollama*'yı bulup kaldırın. Ollama'nın kaldırıcısı
+modelleri de silmeyi önerir (*Remove models* kutusu). Modeller `%USERPROFILE%\.ollama\models` klasöründedir
+(Gemma 4 12B yaklaşık 8 GB); kaldırıcı silmediyse bu klasörü elle silebilirsiniz.
 
 ---
 
