@@ -6,6 +6,18 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.2.1] - 2026-11-18
+
+### Eklendi
+
+- "Oyun profili"nin yanında bilgi simgesi: üzerine gelince profilin ne işe yaradığı görünür (oyunun dünyası
+  ve tonu, çevrilmeyecek adlar, argo sözlüğü, üslup); başka bir oyun oynarken *Genel*'i seçin.
+
+### Değişti
+
+- Çeviri sayfasının Ollama bölümünde seçili model zaten yüklüyse **Modeli indir** düğmesi görünmez. Yüklü
+  modeller arka planda okunur; yenile düğmesi artık arayüzü dondurmuyor.
+
 ## [1.2.0] - 2026-11-18
 
 ### Eklendi
@@ -198,7 +210,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.2.0...HEAD
+[Yayımlanmadı]: ../../compare/v1.2.1...HEAD
+[1.2.1]: ../../releases/tag/v1.2.1
 [1.2.0]: ../../releases/tag/v1.2.0
 [1.1.0]: ../../releases/tag/v1.1.0
 [1.0.4]: ../../releases/tag/v1.0.4
