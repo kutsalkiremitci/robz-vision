@@ -188,8 +188,8 @@ STEPS: tuple[Step, ...] = (
          "seçip yazı tipini, boyutu ve rengi değiştirin.",
          (_nav_item("Görünüm", 1), lambda w: w.nav), page="style", prefer=NAV_PREFER, pad=0),
     Step("engine", "Çeviri motoru",
-         "Varsayılan motor ücretsizdir ve tamamen bilgisayarınızda çalışır. Daha doğal çeviri için "
-         "Ollama'yı veya Gemini'yi seçebilirsiniz.",
+         "Varsayılan motor ücretsizdir ve bilgisayarınızda çalışır. En doğal çeviri için Ollama'yı "
+         "(yerel yapay zekâ, önerilen kalite) kurup Önerilen kurulum'a basın.",
          (_nav_item("Çeviri", 2), lambda w: w.nav), page="translate", prefer=NAV_PREFER, pad=0),
     Step("done", "Hazırsınız",
          "Bölgeyi seçip Başlat'a basmanız yeterli. Bu turu Ayarlar'dan yeniden başlatabilirsiniz.",

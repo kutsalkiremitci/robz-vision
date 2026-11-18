@@ -76,6 +76,12 @@ BG_COLORS = [("#000000", "Siyah"), ("#1E1E1E", "Koyu gri"), ("#0B1A3A", "Laciver
              ("#3A0B12", "Bordo")]
 SPEAKER_COLORS = [("#FFD54A", "Sarı"), ("#FFB347", "Turuncu"), ("#8BE9FD", "Açık mavi"), ("#6EE7A0", "Yeşil"),
                   ("#FF9ECF", "Pembe"), ("#FFFFFF", "Beyaz")]
+# Vurgulu kelimelerin rengi; ilki varsayılan (GTA 6'nın görev yazısındaki pembe)
+HIGHLIGHT_COLORS = [("#EC8DC0", "Pembe (GTA 6)"), ("#8BE9FD", "Açık mavi"), ("#FFE14D", "Sarı"),
+                    ("#A3F7A1", "Açık yeşil"), ("#FFB347", "Turuncu")]
+HIGHLIGHT_TIP = ("Oyunda renkli yazılan kelimeler (yer, kişi, eşya adları) çeviride de renkli görünür. İki görünümde "
+                 "de kapalıysa renkli kelime hiç aranmaz.")
+HIGHLIGHT_COLOR_TIP = "Oyunda renkli yazılan yer ve kişi adları çeviride bu renkle görünür."
 MASK_COLORS = [("#101010", "Siyah"), ("#2A2A2A", "Koyu gri"), ("#0B1A3A", "Lacivert")]
 
 # --- düzen ölçüleri ----------------------------------------------------------------
@@ -265,12 +271,19 @@ class StylePage(QWidget):
         self.size.changed.connect(lambda v: self._set("font_size", int(v)))
         self.color = SwatchRow(TEXT_COLORS)
         self.color.changed.connect(lambda c: self._set("text_color", c))
+        self.highlight = Segmented([("Kapalı", False), ("Açık", True)])
+        self.highlight.changed.connect(lambda v: self._set("highlight", bool(v)))
+        self.highlight_color = SwatchRow(HIGHLIGHT_COLORS)
+        self.highlight_color.changed.connect(lambda c: self._set("highlight_color", c))
         self.font.setToolTip("Listede olmayan bir yazı tipi için listenin en altındaki seçeneği kullanın")
         tc.add(self._field("Yazı tipi", self.font))
         tc.add(self._field("Kalınlık", self.weight))
         self._size_row = self._field("Boyut", self.size, stretch=True, tip=SIDE_TEXT[STREAM]["size_tip"])
         tc.add(self._size_row)
         tc.add(self._field("Renk", self.color))
+        tc.add(self._field("Vurgulu kelimeler", self.highlight, tip=HIGHLIGHT_TIP))
+        self._hl_color_row = self._field("Vurgu rengi", self.highlight_color, tip=HIGHLIGHT_COLOR_TIP)
+        tc.add(self._hl_color_row)
         lay.addWidget(tc)
 
         # --- kenar ve gölge -------------------------------------------------------------------
@@ -590,6 +603,8 @@ class StylePage(QWidget):
             self.weight.setNearest(st.font_weight)
             self.size.setValue(st.font_size)
             self.color.setColor(st.text_color)
+            self.highlight.setValue(bool(st.highlight))
+            self.highlight_color.setColor(st.highlight_color)
             self.outline.setNearest(st.outline_width)
             self.outline_color.setColor(st.outline_color)
             self.shadow.setValue(bool(st.shadow))
@@ -621,6 +636,7 @@ class StylePage(QWidget):
         self.bg_alpha.setValue(max(0.05, op))
         self.bg_details.setVisible(op > 0.001)
         self.outline_color_row.setVisible(self.st.outline_width > 0)
+        self._hl_color_row.setVisible(bool(self.st.highlight))
         self._orig_row.setVisible(bool(self.st.show_original))
         stream = self._prof == STREAM  # OBS maskesi yalnız yayında
         self._mask_row.setVisible(stream)
@@ -630,7 +646,7 @@ class StylePage(QWidget):
         if self._loading:
             return
         setattr(self.st, attr, value)
-        if attr in ("bg_opacity", "outline_width", "show_original", "mask_original"):
+        if attr in ("bg_opacity", "outline_width", "show_original", "mask_original", "highlight"):
             self._sync_bg()
         self._changed()
 

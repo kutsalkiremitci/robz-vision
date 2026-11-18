@@ -1,6 +1,8 @@
 """Altyazı akışı: son çeviriler alt alta (en yenisi altta), iki çıktıda da. Zamanlama SubtitleDisplay'de:
 aynı "line" kimliği yerinde güncellenir, yeni kimlik alta eklenir, yığın dolunca en eski düşer, her satır en az
-min_show_s kalır, en yeni satır ayrıca oyunu izler (on_gone/on_same). "Tek satır" modu akıştan önceki gibidir.
+min_show_s kalır, en yeni satır ayrıca oyunu izler (on_gone/on_same). Oyun yazıyı göstermeye devam etse de her
+satır en geç max_show_s sonra kalkar (üst sınır; 0 = sınır yok, eski davranış). "Tek satır" modu akıştan
+önceki gibidir. Ayarlar'daki "Altyazı akışı" kartının en uzun kalma denetimi de burada sınanır.
 
 Ekran gerektirmez: Qt 'offscreen' QApplication'dan hemen önce, fikstürün içinde ayarlanır (bkz. test_profiles).
 Oluşturulan pencereler her testten sonra kapatılıp silinir; süreç kapanırken çökme olmasın."""
@@ -10,6 +12,7 @@ import json
 import os
 import socket
 import time
+from types import SimpleNamespace
 
 import aiohttp
 import numpy as np
@@ -75,9 +78,9 @@ class _Box:
         return self.calls[-1] if self.calls else []
 
 
-def _settings(mode="flow", max_lines=3, min_show=3.0) -> Settings:
+def _settings(mode="flow", max_lines=3, min_show=3.0, max_show=7.0) -> Settings:
     s = Settings()
-    s.flow.mode, s.flow.max_lines, s.flow.min_show_s = mode, max_lines, min_show
+    s.flow.mode, s.flow.max_lines, s.flow.min_show_s, s.flow.max_show_s = mode, max_lines, min_show, max_show
     s.ocr.hide_delay_ms = 700
     s.capture.mode = "window"  # maske pencereye göre: sonuç monitörlerden bağımsız
     s.capture.region = [0.1, 0.7, 0.8, 0.2]
@@ -204,14 +207,14 @@ def test_suresi_dolmus_ya_da_temizlenmis_satir_geri_gelmez(make_display):
 
 def test_yeni_okuma_oyunun_satiri_gosterdigini_bildirir(make_display):
     """Aynı satırın yeni okuması (orijinal uzadı: daktilo) bekleyen gizlemeyi iptal eder."""
-    d, box, clock = make_display(min_show=1.0)
+    d, box, clock = make_display(min_show=1.0, max_show=0)
     d.on_subtitle(_ev(1, "Arabaya", original="Get in"))
     clock.t += 2.0
     d.on_gone()
     clock.t += 0.3
     d.on_subtitle(_ev(1, "Arabaya bin", original="Get in the car"))
     _advance(d, clock, 5.0)
-    assert _texts(box) == ["Arabaya bin"]  # oyun gösteriyor: süresiz
+    assert _texts(box) == ["Arabaya bin"]  # oyun gösteriyor: süresiz (üst sınır kapalı)
 
 
 def test_tek_satir_modunda_eski_kimlik_yok_sayilir(make_display):
@@ -244,7 +247,7 @@ def test_akista_gec_gelen_eski_satir_sirasina_girer(make_display):
 
 # --- süreler ---------------------------------------------------------------------------------------
 def test_eski_satir_en_az_min_show_kalir_sonra_duser(make_display):
-    d, box, clock = make_display(min_show=3.0)
+    d, box, clock = make_display(min_show=3.0, max_show=0)
     d.on_subtitle(_ev(1, "Kısa"))
     clock.t += 0.4
     d.on_subtitle(_ev(2, "Sonraki"))  # oyun geçti ama 1 okunabilsin
@@ -254,24 +257,26 @@ def test_eski_satir_en_az_min_show_kalir_sonra_duser(make_display):
     assert _texts(box) == ["Kısa", "Sonraki"]
     _advance(d, clock, 0.7)  # 1 doğalı 3,1 sn
     assert _texts(box) == ["Sonraki"]
-    # en yeni satır oyunda durdukça süresiz kalır
+    # en yeni satır oyunda durdukça süresiz kalır (üst sınır kapalı)
     _advance(d, clock, 30)
     assert _texts(box) == ["Sonraki"] and not d._hide.isActive()
 
 
+LONG = "Bu satır epey uzun, okunması için birkaç saniye gerekir ve erken kaybolmamalıdır."  # okuma süresi ~4,9 sn
+
+
 def test_uzun_satir_okuma_suresi_kadar_kalir(make_display):
     d, box, clock = make_display(min_show=1.0)
-    long_text = "Bu satır epey uzun, okunması için birkaç saniye gerekir ve erken kaybolmamalıdır."
-    d.on_subtitle(_ev(1, long_text))
+    d.on_subtitle(_ev(1, LONG))
     d.on_subtitle(_ev(2, "Tamam"))
     _advance(d, clock, 3.0)  # min_show (1 sn) geçti ama okuma süresi (~4,9 sn) geçmedi
-    assert _texts(box) == [long_text, "Tamam"]
+    assert _texts(box) == [LONG, "Tamam"]
     _advance(d, clock, 2.0)
     assert _texts(box) == ["Tamam"]
 
 
 def test_en_yeni_satir_oyunu_izler(make_display):
-    d, box, clock = make_display(min_show=3.0)
+    d, box, clock = make_display(min_show=3.0, max_show=0)
     d.on_subtitle(_ev(1, "Merhaba"))
     clock.t += 5
     d.on_gone()  # oyundaki altyazı kayboldu: hide_delay (0,7 sn) sonra gider
@@ -358,8 +363,8 @@ def test_gorunurluk_temizle_ve_test(make_display):
     assert _texts(box) == ["Gerçek satır"]
 
 
-def test_maske_oyundaki_altyaziya_bagli(make_display):
-    d, box, clock = make_display(min_show=3.0)
+def _record_masks(d) -> list:
+    """Maskeyi açar ve OBS'e giden maskeleri (sunucu yerine) sırayla kaydeder; None = maske kapalı."""
     d.s.style.mask_original = True
     sent = []
     d.server = type("S", (), {})()
@@ -372,6 +377,12 @@ def test_maske_oyundaki_altyaziya_bagli(make_display):
 
     d.server.set_lines, d.server.set_mask = set_lines, set_mask
     d.bridge = type("B", (), {"submit": staticmethod(lambda c: asyncio.run(c))})()
+    return sent
+
+
+def test_maske_oyundaki_altyaziya_bagli(make_display):
+    d, box, clock = make_display(min_show=3.0)
+    sent = _record_masks(d)
     d.on_subtitle(_ev(1, "Bir"))
     assert sent[-1] is not None  # oyunda altyazı var: maske açık
     clock.t += 2.0
@@ -381,6 +392,183 @@ def test_maske_oyundaki_altyaziya_bagli(make_display):
     assert _texts(box) == ["Bir"]  # … satır ise min_show_s dolana kadar durur
     _advance(d, clock, 0.5)
     assert _texts(box) == []
+
+
+# --- üst sınır: oyunda duran yazının çevirisi sonsuza dek kalmaz (flow.max_show_s) -----------------------
+HINT = "Hold L2 to interact with Andrew"  # oyunda ekranda sabit kalan tuş ipucu
+HINT_TR = "Andrew ile konuşmak için L2'yi basılı tut"
+
+
+def test_oyunda_duran_satir_en_fazla_max_show_kalir(make_display):
+    d, box, clock = make_display(max_show=7.0)
+    d.on_subtitle(_ev(1, HINT_TR, original=HINT))
+    assert d._hide.isActive() and 6900 <= d._hide.remainingTime() <= 7000  # süresiz değil: üst sınıra kurulu
+    _advance(d, clock, 5.0)
+    d.on_gone()  # OCR yazıyı bir an kaçırdı …
+    _advance(d, clock, 0.3)
+    d.on_same()  # … oyun hâlâ gösteriyor: bekleyen gizleme iptal, üst sınır yine geçerli
+    _advance(d, clock, 1.6)
+    assert _texts(box) == [HINT_TR]
+    _advance(d, clock, 0.2)  # doğalı 7,1 sn
+    assert box.last == [] and not d.lines and not d._hide.isActive()
+
+
+def test_uzun_satir_ust_sinira_ragmen_okuma_suresi_kadar_kalir(make_display):
+    """Üst sınır okuma süresini kısaltmaz; oyun yazıyı gösterdikçe maske de o süre boyunca açık kalır."""
+    d, box, clock = make_display(min_show=1.5, max_show=3.0)
+    masks = _record_masks(d)
+    d.on_subtitle(_ev(1, LONG))
+    _advance(d, clock, 4.0)  # üst sınır (3 sn) geçti ama okuma süresi (~4,9 sn) geçmedi
+    assert _texts(box) == [LONG] and masks[-1] is not None
+    _advance(d, clock, 1.0)
+    assert box.last == [] and masks[-1] is None
+    # yazısı yeni değişen satır (daktilo: orijinal uzadı) yeni yazının okuma süresi kadar görünür
+    d.on_subtitle(_ev(2, "Bu satır epey uzun,", original="This line is quite long,"))
+    _advance(d, clock, 2.5)
+    d.on_subtitle(_ev(2, LONG, original="This line is quite long, it takes a few seconds to read."))
+    _advance(d, clock, 4.0)  # doğalı 6,5 sn
+    assert _texts(box) == [LONG] and masks[-1] is not None
+    _advance(d, clock, 1.0)
+    assert box.last == [] and masks[-1] is None
+
+
+def test_maske_ust_sinirda_kapanir(make_display):
+    """Üst sınırla kalkan en yeni satırla maske de kapanır; ekranda yalnız eski satır kalsa da kapalı kalır."""
+    d, box, clock = make_display(min_show=1.5, max_show=3.0)
+    masks = _record_masks(d)
+    d.on_subtitle(_ev(1, LONG))
+    clock.t += 0.5
+    d.on_subtitle(_ev(2, "Tamam"))  # oyun bunu göstermeye devam ediyor
+    _advance(d, clock, 2.9)
+    assert _texts(box) == [LONG, "Tamam"] and masks[-1] is not None
+    _advance(d, clock, 0.2)  # 2'nin üst sınırı (doğalı 3 sn) doldu
+    assert _texts(box) == [LONG] and masks[-1] is None  # eski satır hâlâ okunuyor; maske kapalı
+    _advance(d, clock, 1.4)
+    assert box.last == []
+
+
+def test_ust_sinirla_kalkan_satir_geri_gelmez(make_display):
+    """Kalkan satırın kimliği ekrandan çıkmışlara yazılır: oyun yazıyı göstermeyi sürdürse de sonradan kaldırsa
+    da o satırın yeni okumaları ve geç gelen çevirileri onu geri getirmez."""
+    d, box, clock = make_display(max_show=7.0)
+    d.on_subtitle(_ev(1, "Andrevv ile konuşmak için L2'yi basılı tut", original="Hold L2 to interact with Andrevv"))
+    _advance(d, clock, 7.1)
+    assert box.last == [] and d._live is None
+    d.on_same()  # oyun yazıyı hâlâ gösteriyor
+    d.on_subtitle(_ev(1, HINT_TR, original=HINT))  # aynı satırın daha temiz okuması
+    d.on_subtitle(_ev(1, "L2'yi basılı tutup Andrew'la konuş", original=HINT))  # karma mod: asıl çeviri geç geldi
+    assert box.last == [] and not d.lines
+    d.on_gone()  # oyun yazıyı kaldırdı; kimlik yine de hatırlanır
+    d.on_subtitle(_ev(1, "L2'yi basılı tutup Andrew'la konuş", original=HINT))
+    _advance(d, clock, 1.0)
+    assert box.last == [] and not d.lines
+
+
+def test_takili_yazi_yeni_kimlikle_gelse_de_gosterilmez(make_display):
+    """Oyun yazıyı kaldırmadıkça üst sınırla kalkan yazı, OCR titremesiyle yeni kimlikle gelse de gösterilmez."""
+    d, box, clock = make_display(max_show=7.0)
+    d.on_subtitle(_ev(1, HINT_TR, original=HINT))
+    _advance(d, clock, 7.1)
+    d.on_subtitle(_ev(2, HINT_TR, original="hold L2 to interact with  Andrew!"))  # harf, boşluk, noktalama farkı
+    assert box.last == [] and not d.lines
+    d.on_subtitle(_ev(3, "Hadi gidelim.", original="Let's go."))  # başka yazı her zamanki gibi gösterilir
+    assert _texts(box) == ["Hadi gidelim."]
+    d.on_subtitle(_ev(4, HINT_TR, original=HINT))  # altyazı bitti, ipucu yine okundu: oyun onu hiç kaldırmadı
+    assert _texts(box) == ["Hadi gidelim."]
+
+
+def test_oyun_yaziyi_kaldirinca_ayni_yazi_yeniden_gosterilir(make_display):
+    """Oyun yazıyı kaldırınca (on_gone; ekranda satır yokken de) takılı yazı unutulur: yeniden gösterilen yazının
+    çevirisi yine görünür. Engellenen okumanın geç çevirisi ise gelmez; o okuma hiç gösterilmedi."""
+    d, box, clock = make_display(max_show=7.0)
+    d.on_subtitle(_ev(1, HINT_TR, original=HINT))
+    _advance(d, clock, 7.1)
+    d.on_subtitle(_ev(2, HINT_TR, original=HINT))  # engellenir
+    assert d._live is None
+    d.on_gone()  # oyun yazıyı kaldırdı
+    d.on_subtitle(_ev(2, "L2'yi basılı tutup Andrew'la konuş", original=HINT))  # 2'nin karma mod çevirisi
+    assert box.last == [] and not d.lines
+    d.on_subtitle(_ev(3, HINT_TR, original=HINT))  # oyun yazıyı yeniden gösterdi
+    assert _texts(box) == [HINT_TR]
+
+
+def test_tek_satir_modunda_da_ust_sinir(make_display):
+    d, box, clock = make_display(mode="single", max_show=7.0)
+    d.on_subtitle(_ev(1, HINT_TR, original=HINT))
+    _advance(d, clock, 6.9)
+    assert _texts(box) == [HINT_TR]
+    _advance(d, clock, 0.2)
+    assert box.last == [] and not d.lines
+    d.on_subtitle(_ev(2, HINT_TR, original=HINT))  # oyun kaldırmadan yeni kimlik: gösterilmez
+    assert box.last == []
+    d.on_gone()
+    d.on_subtitle(_ev(3, HINT_TR, original=HINT))
+    assert _texts(box) == [HINT_TR]
+
+
+@pytest.mark.parametrize("max_show", [0, -1.0])
+def test_max_show_sifir_ya_da_eksiyse_ust_sinir_yok(make_display, max_show):
+    """Eski davranış: en yeni satır oyunda durdukça süresiz kalır; oyun yazıyı kaldırınca gizlenir."""
+    d, box, clock = make_display(max_show=max_show)
+    d.on_subtitle(_ev(1, HINT_TR, original=HINT))
+    _advance(d, clock, 60)
+    assert _texts(box) == [HINT_TR] and not d._hide.isActive()  # süre dolumu kurulmaz (yoklama da yok)
+    d.on_gone()
+    _advance(d, clock, 0.75)
+    assert box.last == []
+
+
+# --- Ayarlar: "Altyazı akışı" kartında en uzun kalma ------------------------------------------------------
+@pytest.fixture
+def flow_card(qapp):
+    """Ayarlar'daki akış kartı (gösterilmez); kayıt ve push_style çağrıları sırayla listeye yazılır. Kart
+    testten sonra kapatılıp Qt tarafında silinir."""
+    from PySide6.QtCore import QCoreApplication, QEvent
+
+    from altyazitr.gui.settings_page import FlowCard
+
+    made = []
+
+    def make(**flow):
+        s = Settings()
+        for k, v in flow.items():
+            setattr(s.flow, k, v)
+        calls: list[str] = []
+        ctx = SimpleNamespace(s=s, save_later=lambda: calls.append("save"),
+                              display=SimpleNamespace(push_style=lambda: calls.append("push")))
+        made.append(FlowCard(ctx))
+        return made[-1], s, calls
+
+    try:
+        yield make
+    finally:
+        for card in made:
+            card.close()
+            card.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+
+def test_ayarlarda_en_uzun_kalma(flow_card):
+    card, s, calls = flow_card()
+    sp = card.max_show
+    assert sp.value() == 7.0 and (sp.minimum(), sp.maximum(), sp.singleStep()) == (3.0, 20.0, 0.5)
+    assert sp.suffix() == " sn" and sp.toolTip().startswith("Oyundaki yazı ekranda dursa bile")
+    sp.setValue(10.5)
+    assert s.flow.max_show_s == 10.5 and calls == ["save", "push"]  # öbür denetimler gibi: kaydet, uygula
+    # en az gösterim en uzun kalmayı geçemez: iki sayı kutusunun aralığı birbirine bağlı
+    sp.setValue(4.0)
+    assert card.min_show.maximum() == 4.0
+    card.min_show.setValue(4.0)
+    assert sp.minimum() == 4.0
+    sp.setValue(3.0)  # en az gösterimin altına inmez
+    assert s.flow.max_show_s == 4.0 == s.flow.min_show_s
+    card.mode.group.button(1).click()  # Tek satır: üst sınır bu biçimde de geçerli
+    assert sp.isEnabled() and not card.min_show.isEnabled()
+
+    card, _, calls = flow_card(mode="single", min_show_s=5.5, max_show_s=12.0)  # kayıtlı ayarlarla açılış
+    assert card.max_show.value() == 12.0 and card.max_show.isEnabled()
+    assert (card.max_show.minimum(), card.min_show.maximum()) == (5.5, 6.0)
+    assert calls == []  # açılırken hiçbir şey kaydedilmez
 
 
 # --- OBS: WebSocket "lines" mesajı -----------------------------------------------------------------

@@ -1,11 +1,22 @@
 """Çeviri motorları (İngilizce → Türkçe).
 
 * QuickMtTranslator — quickmt/quickmt-en-tr (CTranslate2, CC-BY-4.0). Yerel, ücretsiz,
-  CPU'da ~20-60 ms. Varsayılan motor; ilk kullanımda ~400 MB model indirilir.
-* OllamaTranslator — Ollama üzerinden yerel LLM (TranslateGemma, Gemma, Qwen, Hy-MT...).
-  En iyi kalite; önceki satırları bağlam olarak kullanır, sözlüğe uyar.
+  CPU'da ~20-60 ms. Varsayılan motor ve LLM'lerin yedeği; ilk kullanımda ~400 MB model indirilir.
+  Bağlam kullanmaz.
+* OllamaTranslator — Ollama üzerinden yerel LLM (önerilen: Gemma 4). En iyi kalite: oyun profilini
+  (dünya, ton, çevrilmeyecek adlar, argo sözlüğü, üslup örnekleri), önceki satırları ve sözlüğü kullanır;
+  OCR'ın yanlış okuduğu harfleri düzeltir. İnternetsiz ve ücretsiz çalışır.
+* GeminiTranslator — Google Gemini API (ücretsiz katman, kendi anahtarınızla); istemi Ollama ile aynı.
 * DeepLTranslator — DeepL API Free (ayda 500.000 karakter ücretsiz, kendi anahtarınızla).
 * NoTranslator — çeviri yapmaz (yalnızca OCR testi için).
+
+Bağlam (Context): önceki satırların (en, tr) çiftleri, eskiden yeniye. tr boşsa o satırın güvenilir bir
+Türkçesi yoktur (ör. yalnız hızlı yedek çeviri gösterildi); LLM onu yalnız İngilizce bağlam olarak görür.
+
+Vurgulu kelimeler (oyunun renkli yazdığı yer, kişi, eşya adları) translate_marked ile çevrilir: girdi
+"Drive to the [[radar station]]" gibi işaretlidir, çıktıda vurguların Türkçe karşılığı işaretlenir. LLM'ler
+işareti kendisi taşır (kullanıcı mesajına kısa bir kural eklenir; sistem istemi değişmez), quickmt vurgulu
+ifadeyi ayrıca çevirip tam çeviride arar, DeepL ve TranslateGemma vurgusuz çevirir. Bağlam her zaman işaretsizdir.
 """
 
 from __future__ import annotations
@@ -19,11 +30,15 @@ import threading
 import time
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING
 
 from rapidfuzz import fuzz, process
 
 from altyazitr.paths import MODEL_DIR
-from altyazitr.textproc import split_sentences
+from altyazitr.textproc import Spans, clean_marks, mark, snap_spans, split_sentences, unmark
+
+if TYPE_CHECKING:
+    from altyazitr.game_profiles import GameProfile
 
 log = logging.getLogger(__name__)
 
@@ -105,12 +120,13 @@ class TranslationCache:
         self._lock = threading.Lock()
         self._dirty = False
 
-    def get(self, key: str) -> str | None:
+    def get(self, key: str, fuzzy: bool = True) -> str | None:
+        """Birebir anahtar; yoksa (fuzzy ise) son girdilerde çok benzer anahtar (OCR'ın tek harf farkı)."""
         with self._lock:
             if key in self._d:
                 self._d.move_to_end(key)
                 return self._d[key]
-            if len(key) < 12:
+            if not fuzzy or len(key) < 12:
                 return None
             recent = list(self._d.keys())[-96:]
             hit = process.extractOne(key, recent, scorer=fuzz.ratio, score_cutoff=94)
@@ -169,10 +185,16 @@ class Translator:
     label = ""
 
     def prepare(self, status: StatusCb) -> None:
-        """Modeli indirir/yükler. Uzun sürebilir; çeviri iş parçacığında çağrılır."""
+        """Modeli indirir/yükler. Uzun sürebilir; arayüz iş parçacığında çağrılmaz. Karma modda asıl motor bunu
+        uzak çeviri iş parçacığında yapar; o sırada hızlı yerel çeviri satırları göstermeye devam eder."""
 
     def translate(self, text: str, context: Context = ()) -> str:  # pragma: no cover - arayüz
         raise NotImplementedError
+
+    def translate_marked(self, text: str, context: Context = ()) -> str:
+        """Vurgulu kelimeleri [[...]] ile işaretli satırı çevirir. Çıktıda vurguların Türkçe karşılığı işaretlidir;
+        karşılığı bulunamayan vurgu işaretsiz kalır. Varsayılan: vurgusuz çeviri."""
+        return self.translate(unmark(text)[0], context)
 
     def close(self) -> None:
         pass
@@ -183,6 +205,9 @@ class NoTranslator(Translator):
     label = "Çeviri yok (yalnızca İngilizce göster)"
 
     def translate(self, text: str, context: Context = ()) -> str:
+        return text
+
+    def translate_marked(self, text: str, context: Context = ()) -> str:
         return text
 
 
@@ -345,7 +370,7 @@ def _add_cuda_dll_dirs() -> None:
 
 class QuickMtTranslator(Translator):
     key = "quickmt"
-    label = "Yerel hızlı çeviri — quickmt (ücretsiz, önerilen)"
+    label = "Yerel hızlı çeviri — quickmt (ücretsiz, en hafif, bağlamsız)"
 
     def __init__(self, glossary: Glossary, device: str = "cpu"):
         self.glossary = glossary
@@ -387,17 +412,94 @@ class QuickMtTranslator(Translator):
         log.info("quickmt yüklendi (%s)", self.active_device)
 
     def translate(self, text: str, context: Context = ()) -> str:
+        return self._translate_all([text])[0]
+
+    def translate_marked(self, text: str, context: Context = ()) -> str:
+        """En iyi çaba: vurgulu ifadeler aynı toplu çağrıda ayrıca çevrilir ve tam çeviride aranır (Türkçe ekleri
+        tolere edilir: "radar istasyonu" ↔ "Radar istasyonuna"). Bulunamayan ifade vurgusuz kalır. Çevrilmeyecek ad
+        (Lucia, Ammu-Nation) çevrilmez, olduğu gibi aranır. Diğer ifadeler "The … ." kalıbında çevrilir: quickmt
+        tek başına verilen ifadeyi eksik çevirebiliyor ("radar station" → "Radar")."""
+        plain, spans = unmark(text)
+        phrases = [plain[s:e] for s, e in spans]
+        names = [self._kept_name(p) for p in phrases]
+        full, *outs = self._translate_all([plain, *(f"The {p}." for p, n in zip(phrases, names) if n is None)])
+        found = iter(outs)
+        return mark(full, locate_phrases(full, [n if n is not None else next(found) for n in names]))
+
+    def _kept_name(self, phrase: str) -> str | None:
+        """İfade bütünüyle çevrilmeyecek bir adsa (sözlük, oyun profili) o ad; değilse None."""
+        prot, mapping = self.glossary.protect(phrase)
+        return mapping.get(prot.strip())
+
+    def _translate_all(self, texts: Sequence[str]) -> list[str]:
+        """Metinleri tek translate_batch çağrısıyla çevirir (cümlelere bölünür; çevrilmeyecek adlar korunur)."""
         assert self._tr is not None and self._src is not None and self._tgt is not None
-        text = _sentence_case_if_shouting(text)
-        text, mapping = self.glossary.protect(text)
-        parts = split_sentences(text) or [text]
-        batch = [self._src.encode(p, out_type=str) + ["</s>"] for p in parts]
+        batch, jobs = [], []
+        for text in texts:
+            text, mapping = self.glossary.protect(_sentence_case_if_shouting(text))
+            parts = split_sentences(text) or [text]
+            batch += [self._src.encode(p, out_type=str) + ["</s>"] for p in parts]
+            jobs.append((len(parts), mapping))
         res = self._tr.translate_batch(batch, beam_size=2, max_decoding_length=256, repetition_penalty=1.05)
-        out = " ".join(self._tgt.decode(r.hypotheses[0]) for r in res)
-        return Glossary.restore(out, mapping).strip()
+        decoded = [self._tgt.decode(r.hypotheses[0]) for r in res]
+        out, i = [], 0
+        for n, mapping in jobs:
+            out.append(Glossary.restore(" ".join(decoded[i:i + n]), mapping).strip())
+            i += n
+        return out
 
     def close(self) -> None:
         self._tr = None
+
+
+_TR_WORD_RE = re.compile(r"\w+(?:['’-]\w+)*")
+
+
+def _tr_fold(s: str) -> str:
+    """Türkçe büyük/küçük harf duyarsız karşılaştırma: İ → i, I → ı."""
+    return s.replace("İ", "i").replace("I", "ı").lower()
+
+
+def _stem_match(p: str, w: str, short_exact: bool = True) -> float:
+    """İfadenin bir kelimesi (p) çeviride w olarak geçiyor mu (0..1). Türkçe ekler sona gelir, kök sonu da
+    yumuşayabilir (kitap → kitabı): ortak önek p'nin boyuna oranlanır. Tek kelimelik ifadede kısa kelime (ev) tam
+    eşleşmeli ("evet" ev değildir); çok kelimeli ifadede komşu kelimeler de tuttuğu için eki kabul edilir (eve)."""
+    if (short_exact and len(p) <= 2) or len(w) < len(p) - 1:
+        return 1.0 if p == w else 0.0
+    n = 0
+    for a, b in zip(p, w):
+        if a != b:
+            break
+        n += 1
+    return n / len(p)
+
+
+def locate_phrases(text: str, phrases: Sequence[str], min_score: float = 0.75) -> Spans:
+    """Ayrıca çevrilmiş ifadelerin tam çevirideki yerleri (bulunanlar). Her ifade, kelime sayısı kadar ardışık
+    kelimeyle karşılaştırılır; her kelime en az `min_score` tutmalı, en iyi tutan pencere seçilir. Tutmazsa ifadenin
+    son kelimesi tek başına aranır: Türkçe tamlamada asıl kelime sondadır ve tam çeviri tamlamayı tek kelimeyle
+    söyleyebilir ("Polis karakolu" ↔ "Karakola"). Bulunan aralıklar birbiriyle çakışmaz."""
+    words = [(m.start(), m.end(), _tr_fold(m.group())) for m in _TR_WORD_RE.finditer(text)]
+    taken: Spans = []
+
+    def best_window(pw: list[str]) -> tuple[int, int] | None:
+        k = len(pw)
+        best: tuple[float, int] | None = None
+        for i in range(len(words) - k + 1 if k else 0):
+            s, e = words[i][0], words[i + k - 1][1]
+            if any(s < te and ts < e for ts, te in taken):
+                continue
+            scores = [_stem_match(p, words[i + j][2], short_exact=k == 1) for j, p in enumerate(pw)]
+            if min(scores) >= min_score and (best is None or sum(scores) > best[0]):
+                best = (sum(scores), i)
+        return None if best is None else (words[best[1]][0], words[best[1] + k - 1][1])
+
+    for phrase in phrases:
+        pw = [_tr_fold(m.group()) for m in _TR_WORD_RE.finditer(phrase)]
+        found = best_window(pw) or (best_window(pw[-1:]) if len(pw) > 1 else None)
+        if found is not None:
+            taken.append(found)
+    return snap_spans(text, taken, whole_words=True)
 
 
 # --- Ollama ---------------------------------------------------------------
@@ -409,44 +511,119 @@ TG_TEMPLATE = (
     "Please translate the following English text into Turkish:\n\n\n{text}"
 )
 
-LLM_SYSTEM = (
-    "You are a professional video game localizer. Translate English game subtitles into natural, "
-    "fluent Turkish for a Turkish live-stream audience.\n"
-    "Rules:\n"
-    "- Translate ONLY the last user message. Earlier messages are previous subtitle lines, given only as context.\n"
-    "- Keep the tone: casual dialogue stays casual (use 'sen'), keep slang, jokes and swearing natural in Turkish.\n"
-    "- Do not translate names of people, places, gangs, brands or vehicles.\n"
-    "- If a glossary term appears, use the glossary translation exactly.\n"
-    "- Output ONLY the Turkish translation: no quotes, no notes, no explanations, no English.\n"
-    "- Keep it short and easy to read as a subtitle."
-)
-
+# Önerilen yerel model ve hazır listeler (ilk öğe önerilen). Ölçümler: RTX 4070, Ollama 0.40, GTA 6 profili.
+RECOMMENDED_OLLAMA_MODEL = "gemma4:12b"
 OLLAMA_PRESETS = [
-    ("translategemma:4b", "TranslateGemma 4B — hızlı, ~3.3 GB (önerilen başlangıç)"),
-    ("translategemma:12b", "TranslateGemma 12B — en iyi kalite, ~8.1 GB VRAM"),
-    ("gemma4:12b", "Gemma 4 12B — bağlam + sözlük desteği güçlü"),
-    ("qwen3.5:9b", "Qwen 3.5 9B — genel amaçlı, hızlı"),
-    ("kaelri/hy-mt2:7b-q4_K_M", "Tencent Hy-MT2 7B — çeviriye özel (Apache-2.0)"),
+    ("gemma4:12b", "Gemma 4 12B — önerilen: en iyi bağlam ve Türkçe, ~8 GB, 12 GB+ ekran kartı"),
+    ("gemma4:e4b", "Gemma 4 E4B — en hızlı, ~6,6 GB, 8 GB ekran kartı ya da yayın + oyun aynı kartta"),
+    ("gemma4:26b", "Gemma 4 26B — en yüksek kalite, ~17 GB, 24 GB ekran kartı"),
+    ("translategemma:12b", "TranslateGemma 12B — yalnız çeviri modeli; bağlam ve profil kullanmaz"),
 ]
+
+# Her oyun profilinin kurallarına eklenen, istemin biçimine bağlı ortak kurallar
+LLM_BASE_RULES = (
+    "The input is read from the screen by OCR: silently fix obvious misreadings (wrong or missing letters, "
+    "missing apostrophes, ALL CAPS) and translate what was meant.",
+    "Never invent words or controller buttons that are not in the input; if a button icon is missing "
+    "(\"Hold to interact\"), leave the button out.",
+    "Translate only the last EN line. Earlier lines are context: use them to understand who is talking, what "
+    "is happening and what short replies refer to. Never translate or repeat them.",
+    "Output only the Turkish subtitle: no labels, quotes, notes, alternatives, explanations or English.",
+)
+LLM_INTRO = "You translate English video game subtitles into Turkish, live, for a Turkish stream audience."
+# Vurgulu satırda kullanıcı mesajına eklenen kural. Sistem istemi her istekte aynı kalır (Ollama istemin ortak
+# başını önbellekten kullanır); işaretsiz satırın istemi hiç değişmez.
+LLM_MARK_RULE = ("The words in [[ ]] are highlighted in the game. In your Turkish line, put [[ ]] around their "
+                 "translation, suffixes included.")
+
+# Ollama istek ayarları. num_ctx her istekte aynı kalmalı: değişirse Ollama modeli yeniden yükler.
+OLLAMA_NUM_CTX = 4096
+OLLAMA_KEEP_ALIVE = "60m"  # uygulama açıkken model bellekte kalsın; kapanınca close() boşaltır
+# Isınma cümleleri: ekran kartı farklı uzunluktaki istemler için çekirdekleri ilk kez derlerken birkaç saniye
+# takılıyor; bunu yayın başlamadan, hazırlıkta yaşarız.
+WARMUP_LINES = ("Hey.", "Get in the car, we're late.",
+                "Hold L2 to talk to the clerk. We need two pistols and a lot of ammo before tonight.")
+
+
+def _merge_terms(profile: GameProfile | None, glossary: Glossary) -> tuple[list[str], list[tuple[str, str]]]:
+    """İstem için çevrilmeyecek adlar ve tercih edilen karşılıklar: profil + kullanıcı sözlüğü.
+    Kullanıcının girdisi aynı İngilizce terim için profili ezer; büyük/küçük harf fark etmez."""
+    keep: dict[str, str] = {}
+    terms: dict[str, tuple[str, str]] = {}
+    if profile is not None:
+        for name in profile.keep:
+            keep.setdefault(name.casefold(), name)
+        for en, tr in profile.glossary:
+            terms[en.casefold()] = (en, tr)
+    for en, tr in glossary.entries:
+        k = en.casefold()
+        if not tr or tr.casefold() == k:
+            keep.setdefault(k, en)
+            terms.pop(k, None)
+        else:
+            terms[k] = (en, tr)
+            keep.pop(k, None)
+    return list(keep.values()), list(terms.values())
+
+
+def build_system_prompt(profile: GameProfile | None, glossary: Glossary, extra: str = "") -> str:
+    """LLM'in sistem istemi. Her istekte aynıdır (oyun ve ayarlar değişmedikçe); satıra bağlı her şey
+    kullanıcı mesajındadır (build_user_prompt)."""
+    parts = [LLM_INTRO]
+    if profile is not None and profile.world:
+        parts.append(f"Game: {profile.name}. {profile.world}")
+    rules = [*(profile.rules if profile is not None else ()), *LLM_BASE_RULES]
+    parts.append("Rules:\n" + "\n".join(f"- {r}" for r in rules))
+    keep, terms = _merge_terms(profile, glossary)
+    if keep:
+        parts.append("Never translate these names: " + ", ".join(keep) + ".")
+    if terms:
+        parts.append("Preferred terms: " + "; ".join(f"{en} = {tr}" for en, tr in terms) + ".")
+    extra = extra.strip()
+    if extra:
+        parts.append(f"Extra context from the player: {extra}")
+    if profile is not None and profile.examples:
+        parts.append("Examples:\n" + "\n".join(f"EN: {en}\nTR: {tr}" for en, tr in profile.examples))
+    return "\n\n".join(parts)
+
+
+def build_user_prompt(text: str, context: Context = ()) -> str:
+    """Önceki satırlar (bağlam) ve çevrilecek satır. Türkçesi boş bağlam satırı yalnız İngilizce gider. Satırda
+    vurgu işareti ([[...]]) varsa satırdan hemen önce işaret kuralı eklenir; yoksa istem hiç değişmez."""
+    parts = []
+    if context:
+        parts.append("Previous lines (context only):")
+        parts += [f"EN: {en}\nTR: {tr}" if tr else f"EN: {en}" for en, tr in context]
+        parts.append("Line to translate:")
+    if unmark(text)[1]:
+        parts.append(LLM_MARK_RULE)
+    parts.append(f"EN: {text}\nTR:")
+    return "\n".join(parts)
+
+
+_LABEL_RE = re.compile(r"^(?:tr|türkçe|turkish|çeviri|translation|translate|line to translate)\s*:\s*", re.I)
 
 
 def _clean_llm_output(s: str) -> str:
     s = re.sub(r"<think>.*?</think>", "", s, flags=re.S | re.I)
     lines = [ln.strip() for ln in s.strip().splitlines() if ln.strip()]
+    # model istemin biçimini tekrarlarsa ("EN: …" + "TR: …") yalnız Türkçe satır kalır
+    if any(re.match(r"^tr\s*:", ln, re.I) for ln in lines):
+        lines = [ln for ln in lines if not re.match(r"^en\s*:", ln, re.I)]
     if not lines:
         return ""
-    lines = lines[:2]
-    out = " ".join(lines)
-    out = re.sub(r"^(türkçe|turkish|çeviri|translation)\s*:\s*", "", out, flags=re.I)
+    out = " ".join(lines[:2])
+    for _ in range(2):  # "Translate: TR: …" gibi iç içe etiketler
+        out = _LABEL_RE.sub("", out)
     return out.strip().strip('"“”«»').strip()
 
 
 class OllamaTranslator(Translator):
     key = "ollama"
-    label = "Ollama yerel LLM (en iyi kalite, ücretsiz)"
+    label = "Yerel yapay zekâ — Ollama (önerilen kalite, ücretsiz, internetsiz)"
 
     def __init__(self, url: str, model: str, glossary: Glossary, game_context: str = "",
-                 timeout: float = 6.0):
+                 timeout: float = 6.0, profile: GameProfile | None = None):
         import requests
 
         self.url = url.rstrip("/")
@@ -454,60 +631,72 @@ class OllamaTranslator(Translator):
         self.glossary = glossary
         self.game_context = game_context.strip()
         self.timeout = timeout
+        self.profile = profile
         self._s = requests.Session()
         self._think_ok = True
         self.is_tg = self.model.lower().startswith("translategemma")
-
-    def _system(self) -> str:
-        s = LLM_SYSTEM
-        if self.game_context:
-            s += f"\nGame / scene context: {self.game_context}"
-        if self.glossary:
-            s += "\nGlossary:\n" + self.glossary.prompt_lines()
-        return s
+        self.system = build_system_prompt(profile, glossary, self.game_context)
 
     def prepare(self, status: StatusCb) -> None:
         status(f"Ollama'ya bağlanılıyor ({self.url})…")
         names = ollama_list(self.url)
         if names is None:
             raise TranslatorError(
-                "Ollama'ya ulaşılamadı. Ollama'yı https://ollama.com adresinden kurup çalıştırın "
+                "Ollama'ya ulaşılamadı. Ollama'yı https://ollama.com/download adresinden kurup çalıştırın "
                 "veya çeviri motorunu 'Yerel hızlı çeviri' olarak değiştirin.")
         if not _model_in(self.model, names):
             raise TranslatorError(
-                f"'{self.model}' modeli Ollama'da yüklü değil. Çeviri sekmesindeki "
-                "'Modeli indir' düğmesiyle indirebilirsiniz.")
-        status(f"{self.model} belleğe yükleniyor (ilk seferde biraz sürebilir)…")
-        try:
-            self._s.post(f"{self.url}/api/generate", json={"model": self.model, "prompt": "",
-                                                            "keep_alive": "30m"}, timeout=180)
-        except Exception as e:
-            log.warning("Ollama ön yükleme başarısız: %s", e)
+                f"'{self.model}' modeli Ollama'da yüklü değil. Çeviri sayfasındaki "
+                "'Önerilen kurulum' ya da 'Modeli indir' düğmesiyle indirebilirsiniz.")
+        status(f"{self.model} belleğe yükleniyor ve ısınıyor (ilk seferde biraz sürebilir)…")
+        ctx: list[tuple[str, str]] = []
+        for i, line in enumerate(WARMUP_LINES):
+            try:
+                out = self._request(line, ctx, timeout=180.0 if i == 0 else 60.0)
+                ctx.append((line, out))
+            except Exception as e:  # ısınma başarısız olsa da çeviri denensin; hata orada görünür
+                log.warning("Ollama ısınması başarısız: %s", e)
+                break
 
-    def translate(self, text: str, context: Context = ()) -> str:
-        options = {"temperature": 0.0 if self.is_tg else 0.2, "num_predict": 200, "num_ctx": 2048}
-        if self.is_tg:
-            prot, mapping = self.glossary.protect(text)
-            messages = [{"role": "user", "content": TG_TEMPLATE.format(text=prot)}]
+    def _body(self, text: str, context: Context) -> dict:
+        if self.is_tg:  # TranslateGemma yalnız kendi şablonuyla çalışır: bağlam ve profil gitmez
+            options = {"temperature": 0.0, "num_predict": 160, "num_ctx": OLLAMA_NUM_CTX}
+            messages = [{"role": "user", "content": TG_TEMPLATE.format(text=text)}]
         else:
-            mapping = {}
-            messages = [{"role": "system", "content": self._system()}]
-            for en, tr in context:
-                messages += [{"role": "user", "content": en}, {"role": "assistant", "content": tr}]
-            messages.append({"role": "user", "content": text})
-        body = {"model": self.model, "messages": messages, "stream": False, "keep_alive": "30m",
+            options = {"temperature": 0.15, "top_p": 0.9, "num_predict": 160, "num_ctx": OLLAMA_NUM_CTX,
+                       "stop": ["\nEN:"]}
+            messages = [{"role": "system", "content": self.system},
+                        {"role": "user", "content": build_user_prompt(text, context)}]
+        body = {"model": self.model, "messages": messages, "stream": False, "keep_alive": OLLAMA_KEEP_ALIVE,
                 "options": options}
         if self._think_ok and not self.is_tg:
             body["think"] = False
-        r = self._s.post(f"{self.url}/api/chat", json=body, timeout=self.timeout)
+        return body
+
+    def _request(self, text: str, context: Context, timeout: float | None = None) -> str:
+        body = self._body(text, context)
+        timeout = self.timeout if timeout is None else timeout
+        r = self._s.post(f"{self.url}/api/chat", json=body, timeout=timeout)
         if r.status_code == 400 and "think" in r.text.lower() and "think" in body:
             self._think_ok = False
             body.pop("think")
-            r = self._s.post(f"{self.url}/api/chat", json=body, timeout=self.timeout)
+            r = self._s.post(f"{self.url}/api/chat", json=body, timeout=timeout)
         if r.status_code != 200:
             raise TranslatorError(f"Ollama hatası ({r.status_code}): {r.text[:200]}")
-        out = _clean_llm_output(r.json().get("message", {}).get("content", ""))
-        return Glossary.restore(out, mapping) if mapping else out
+        return _clean_llm_output(r.json().get("message", {}).get("content", ""))
+
+    def translate(self, text: str, context: Context = ()) -> str:
+        if self.is_tg:
+            prot, mapping = self.glossary.protect(text)
+            return Glossary.restore(self._request(prot, ()), mapping)
+        return self._request(text, context)
+
+    def translate_marked(self, text: str, context: Context = ()) -> str:
+        """İşaretli satır modele işaretli gider; işaretler bozuk, eksik ya da fazlaysa vurgusuz düz metin döner.
+        TranslateGemma kendi şablonu dışında talimat almaz: vurgusuz çevirir."""
+        if self.is_tg:
+            return super().translate_marked(text, context)
+        return clean_marks(self._request(text, context), len(unmark(text)[1]))
 
     def close(self) -> None:
         # VRAM'i boşalt
@@ -604,20 +793,21 @@ class DeepLTranslator(Translator):
 
 # --- Google Gemini ------------------------------------------------------------
 GEMINI_MODELS = [
-    ("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite — hızlı, çeviri için önerilen"),
-    ("gemini-3.6-flash", "Gemini 3.6 Flash — daha güçlü, daha düşük ücretsiz limit"),
+    ("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite — önerilen: hızlı, ücretsiz kotası en geniş"),
+    ("gemini-3.6-flash", "Gemini 3.6 Flash — daha güçlü ama ücretsiz kotası canlı yayında dakikalar içinde dolar"),
 ]
 
 
 class GeminiTranslator(Translator):
-    """Google Gemini API (ücretsiz katman, kendi API anahtarınızla). Kota (429) dolunca
-    sunucunun bildirdiği süre kadar bekler; bu sırada hat yerel çeviriye düşer."""
+    """Google Gemini API (ücretsiz katman, kendi API anahtarınızla). İstem Ollama ile aynıdır (oyun profili,
+    bağlam, sözlük). Kota (429) dolunca sunucunun bildirdiği süre kadar bekler; bu sırada hat yerel çeviriye
+    düşer."""
 
     key = "gemini"
-    label = "Google Gemini API (çevrimiçi, ücretsiz katman)"
+    label = "Google Gemini API (çevrimiçi, ücretsiz kotası sınırlı)"
 
     def __init__(self, api_key: str, model: str, glossary: Glossary, game_context: str = "",
-                 timeout: float = 6.0):
+                 timeout: float = 6.0, profile: GameProfile | None = None):
         import requests
 
         self.api_key = api_key.strip()
@@ -625,17 +815,11 @@ class GeminiTranslator(Translator):
         self.glossary = glossary
         self.game_context = game_context.strip()
         self.timeout = timeout
+        self.profile = profile
+        self.system = build_system_prompt(profile, glossary, self.game_context)
         self._s = requests.Session()
         self._thinking_ok = True
         self._cool_until = 0.0
-
-    def _system(self) -> str:
-        s = LLM_SYSTEM
-        if self.game_context:
-            s += f"\nGame / scene context: {self.game_context}"
-        if self.glossary:
-            s += "\nGlossary:\n" + self.glossary.prompt_lines()
-        return s
 
     def prepare(self, status: StatusCb) -> None:
         if not self.api_key:
@@ -646,14 +830,11 @@ class GeminiTranslator(Translator):
         now = time.monotonic()
         if now < self._cool_until:
             raise TranslatorError(f"Gemini kota beklemesi ({self._cool_until - now:.0f} sn)")
-        contents = []
-        for en, tr in context:
-            contents += [{"role": "user", "parts": [{"text": en}]}, {"role": "model", "parts": [{"text": tr}]}]
-        contents.append({"role": "user", "parts": [{"text": text}]})
-        gen = {"temperature": 0.2, "maxOutputTokens": 256}
+        contents = [{"role": "user", "parts": [{"text": build_user_prompt(text, context)}]}]
+        gen = {"temperature": 0.15, "maxOutputTokens": 256, "stopSequences": ["\nEN:"]}
         if self._thinking_ok:
             gen["thinkingConfig"] = {"thinkingLevel": "MINIMAL"}
-        body = {"systemInstruction": {"parts": [{"text": self._system()}]}, "contents": contents,
+        body = {"systemInstruction": {"parts": [{"text": self.system}]}, "contents": contents,
                 "generationConfig": gen}
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
         headers = {"x-goog-api-key": self.api_key}
@@ -686,6 +867,10 @@ class GeminiTranslator(Translator):
             raise TranslatorError("Gemini boş yanıt döndürdü (içerik filtresi olabilir).") from e
         return _clean_llm_output("".join(p.get("text", "") for p in parts if not p.get("thought")))
 
+    def translate_marked(self, text: str, context: Context = ()) -> str:
+        """İstem Ollama ile aynı: işaretler bozuk, eksik ya da fazlaysa vurgusuz düz metin döner."""
+        return clean_marks(self.translate(text, context), len(unmark(text)[1]))
+
     def close(self) -> None:
         self._s.close()
 
@@ -716,11 +901,30 @@ ENGINE_LABELS = {
 }
 
 
+def build_glossary(cfg) -> Glossary:
+    """Kullanıcı sözlüğü + seçili oyun profilinin çevrilmeyecek adları. Yer tutucuyla ad koruyan motorlar
+    (quickmt, DeepL, TranslateGemma) profilin adlarını da korusun diye; LLM istemi profili ayrıca kullanır."""
+    from altyazitr.game_profiles import get_profile
+
+    pairs = [list(p) for p in cfg.glossary]
+    known = {(p[0] or "").strip().casefold() for p in pairs if p}
+    for name in get_profile(getattr(cfg, "profile", "")).keep:
+        if name.casefold() not in known:
+            pairs.append([name, ""])
+            known.add(name.casefold())
+    return Glossary(pairs)
+
+
 def create_translator(cfg, glossary: Glossary) -> Translator:
-    if cfg.engine == "ollama":
-        return OllamaTranslator(cfg.ollama_url, cfg.ollama_model, glossary, cfg.game_context, cfg.timeout_s)
-    if cfg.engine == "gemini":
-        return GeminiTranslator(cfg.gemini_key, cfg.gemini_model, glossary, cfg.game_context, cfg.timeout_s)
+    if cfg.engine in ("ollama", "gemini"):
+        from altyazitr.game_profiles import get_profile
+
+        profile = get_profile(getattr(cfg, "profile", ""))
+        if cfg.engine == "ollama":
+            return OllamaTranslator(cfg.ollama_url, cfg.ollama_model, glossary, cfg.game_context, cfg.timeout_s,
+                                    profile=profile)
+        return GeminiTranslator(cfg.gemini_key, cfg.gemini_model, glossary, cfg.game_context, cfg.timeout_s,
+                                profile=profile)
     if cfg.engine == "deepl":
         return DeepLTranslator(cfg.deepl_key, glossary, cfg.timeout_s)
     if cfg.engine == "none":

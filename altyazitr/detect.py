@@ -8,12 +8,17 @@ Yöntem:
 * Maske doluluk oranı ile metnin var/yok olduğu (histerezisli) belirlenir.
 * Maske, en son OCR yapılan maskeden belirgin farklıysa ve birkaç kare boyunca
   sabit kaldıysa OCR tetiklenir (daktilo efekti / yavaş beliren yazılar için).
+
+Okunan satırdaki *vurgulu* kelimeler (görev yazısında renkli yazılan yer, kişi ve eşya adları) de burada,
+OCR'ın satır ve kelime kutularıyla bulunur (bkz. word_colors).
 """
 
 from __future__ import annotations
 
 import logging
+import math
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import cv2
@@ -149,6 +154,95 @@ def boxed_text_mask(small: np.ndarray, boxes: list[np.ndarray], delta: int = 25)
         # var" dediyse kutuların kendisi yazı sayılır. Değişim, kutuların yeri/boyu değişince anlaşılır.
         return inside > 0
     return cv2.dilate(strokes, _K3) > 0
+
+
+# --- vurgulu (renkli) kelimeler ------------------------------------------------------------------------------------
+# Oyunlar görev yazılarında yer, kişi ve eşya adlarını renkli yazar (GTA 6'da pembe; eskilerde mavi, sarı, yeşil).
+# Ölçüt renkten bağımsızdır: harf piksellerinin doygunluğu (HSV'deki S = (V - en küçük kanal) / V). Beyaz ve gri
+# gövde metninde S ~0'dır. Harf pikseli, çevresinin ortalamasından belirgin parlak olandır: kenar çizgisi ve gölge
+# koyu olduğu için sayılmaz, geniş parlak zemin (gökyüzü) de çevresinden parlak olmadığı için sayılmaz. Video
+# sıkıştırması (4:2:0) zeminin rengini harf kenarlarına taşır; bu yüzden yalnız harflerin parlak özüne bakılır.
+HL_STROKE_DELTA = 25  # harf pikseli: çevresinin ortalamasından en az bu kadar parlak (V, 0-255)
+HL_MIN_V = 90  # bundan koyu piksel harf sayılmaz
+HL_CORE_PCT = 40  # harf piksellerinin parlaklıkça alttaki bu yüzdesi (zeminle karışan kenarlar) atılır
+HL_SAT = 0.25  # öz pikseli bu doygunluktan yüksekse renkli (beyaz/gri yazı sıkıştırmayla bile ~0,1'i geçmez)
+HL_COLOR_FRAC = 0.6  # öz piksellerinin en az bu kadarı renkliyse kelime renkli (kelimenin büyük çoğunluğu)
+HL_PLAIN_FRAC = 0.3  # en çok bu kadarı renkliyse kelime beyaz/gri; arası belirsiz
+HL_MIN_PIXELS = 12  # bundan az harf pikseli olan kelime belirsiz
+
+
+def word_colors(bgr: np.ndarray, box: Sequence[float], ranges: Sequence[tuple[float, float]] | None,
+                counts: Sequence[int]) -> list[bool | None]:
+    """Satırdaki kelimelerin rengi: True renkli, False beyaz/gri, None belirsiz (harf pikseli az ya da karışık).
+
+    box: satırın kutusu (x, y, w, h), `bgr` görüntüsünün koordinatında. ranges: kelimelerin yatay aralıkları
+    [(x0, x1)], soldan sağa; None ise harflerin sütun izdüşümündeki boşluklardan bulunur. counts: kelimelerin harf
+    sayıları (aralıklar yokken kullanılır; dönen listenin uzunluğu da budur). Bir satır ~1 ms sürer."""
+    n = len(counts)
+    x, y, w, h = (float(v) for v in box)
+    H, W = bgr.shape[:2]
+    if n == 0 or w <= 0 or h <= 0:
+        return [None] * n
+    pad = int(round(0.35 * h)) + 2  # çevrenin ortalaması için satırın etrafından biraz zemin
+    X0, X1 = max(0, int(x) - pad), min(W, math.ceil(x + w) + pad)
+    Y0, Y1 = max(0, int(y) - pad), min(H, math.ceil(y + h) + pad)
+    if X1 - X0 < 3 or Y1 - Y0 < 3:
+        return [None] * n
+    crop = bgr[Y0:Y1, X0:X1]
+    v = crop.max(axis=2)
+    k = int(np.clip(h * 0.9, 9, 61)) | 1
+    stroke = (v.astype(np.int16) >= cv2.blur(v, (k, k)).astype(np.int16) + HL_STROKE_DELTA) & (v >= HL_MIN_V)
+    stroke[:max(0, int(y) - Y0)] = False  # yalnız satırın kendi yüksekliği: üst/alt satırın harfleri karışmasın
+    stroke[max(0, math.ceil(y + h) - Y0):] = False
+    if ranges is None or len(ranges) != n:
+        ranges = _word_ranges(stroke, counts, X0)
+    low = crop.min(axis=2)
+    out: list[bool | None] = []
+    for a, b in ranges:
+        c0 = int(np.clip(math.floor(a) - X0, 0, X1 - X0))
+        c1 = int(np.clip(math.ceil(b) - X0, 0, X1 - X0))
+        st = stroke[:, c0:c1]
+        vw = v[:, c0:c1]
+        ink = vw[st]
+        if ink.size < HL_MIN_PIXELS:
+            out.append(None)
+            continue
+        core = st & (vw >= np.percentile(ink, HL_CORE_PCT))
+        vc = vw[core].astype(np.float32)
+        colored = float(np.mean(vc - low[:, c0:c1][core] >= HL_SAT * vc))
+        out.append(True if colored >= HL_COLOR_FRAC else False if colored <= HL_PLAIN_FRAC else None)
+    return out
+
+
+def _word_ranges(stroke: np.ndarray, counts: Sequence[int], x0: int) -> list[tuple[float, float]]:
+    """Kelime kutusu vermeyen motor için kelimelerin yatay aralıkları (görüntü koordinatında). Harf olmayan sütun
+    dizilerinden en genişleri kelime araları sayılır; bunlar harf aralarından belirgin geniş değilse (sıkışık yazı)
+    satır, kelimelerin harf sayısına göre bölünür."""
+    n = len(counts)
+    cols = stroke.any(axis=0)
+    ink = np.flatnonzero(cols)
+    if ink.size == 0:
+        return [(x0, x0)] * n
+    left, right = int(ink[0]), int(ink[-1]) + 1
+    if n > 1:
+        blank = np.concatenate(([0], (~cols[left:right]).astype(np.int8), [0]))
+        d = np.diff(blank)
+        starts, ends = np.flatnonzero(d == 1), np.flatnonzero(d == -1)
+        widths = ends - starts
+        if len(widths) >= n - 1:
+            order = np.argsort(widths, kind="stable")
+            gaps, rest = np.sort(order[-(n - 1):]), order[:-(n - 1)]
+            line_h = max(1, int(stroke.any(axis=1).sum()))
+            if widths[gaps].min() >= max(2.0, 0.1 * line_h) and (
+                    rest.size == 0 or widths[gaps].min() >= 1.5 * widths[rest].max()):
+                edges = [left] + [v for g in gaps for v in (left + starts[g], left + ends[g])] + [right]
+                return [(x0 + edges[2 * i], x0 + edges[2 * i + 1]) for i in range(n)]
+    unit = (right - left) / max(1, sum(counts) + n - 1)  # kelime arası boşluk bir harf sayılır
+    out, pos = [], float(left)
+    for c in counts:
+        out.append((x0 + pos, x0 + pos + c * unit))
+        pos += (c + 1) * unit
+    return out
 
 
 def jaccard_distance(a: np.ndarray, b: np.ndarray) -> float:

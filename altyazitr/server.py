@@ -58,6 +58,21 @@ def _hex_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{max(0.0, min(1.0, alpha)):.3f})"
 
 
+def clean_spans(spans, length: int) -> list[list[int]]:
+    """Vurgu aralıklarını denetler: tamsayı, metnin içinde, boş değil, sıralı ve çakışmasız olanlar kalır."""
+    out: list[list[int]] = []
+    for sp in spans if isinstance(spans, (list, tuple)) else ():
+        if not isinstance(sp, (list, tuple)) or len(sp) != 2:
+            continue
+        try:
+            s, e = int(sp[0]), int(sp[1])
+        except (TypeError, ValueError):
+            continue
+        if 0 <= s < e <= length and (not out or s >= out[-1][1]):
+            out.append([s, e])
+    return out
+
+
 def style_vars(st: StyleCfg) -> dict[str, str]:
     """StyleCfg → sayfadaki CSS değişkenleri. Pikseller 1080p tuvale göre vh'ye çevrilir."""
     vh = lambda px: f"{px / 10.8:.3f}vh"  # noqa: E731
@@ -72,6 +87,7 @@ def style_vars(st: StyleCfg) -> dict[str, str]:
         "shadow": shadow,
         "bg": _hex_rgba(st.bg_color, st.bg_opacity),
         "speaker": st.speaker_color,
+        "hl": st.highlight_color if st.highlight else st.text_color,  # vurgu kapalıysa vurgulu kelime yazı renginde
         "bottom": f"{st.bottom_percent:.2f}vh",
         "maxw": f"{st.max_width_percent:.2f}vw",
         "fade": f"{max(0, st.fade_ms)}ms",
@@ -172,8 +188,9 @@ class OverlayServer:
     # --- Qt tarafından AsyncBridge.submit ile çağrılır ----------------
     async def set_lines(self, lines: list[dict]) -> None:
         """Ekrandaki altyazı akışı, eskiden yeniye: [{"line": int, "text", "speaker", "original"}, …];
-        boş liste = altyazı yok. Sayfaya {"type": "lines", "lines": […]} gider; eski sayfa kopyaları için
-        en yeni satır ayrıca {"type": "sub"} olarak gönderilir."""
+        boş liste = altyazı yok. Satırda vurgu varsa "spans": [[başlangıç, bitiş], …] (metindeki karakter
+        aralıkları) de gider; yoksa alan hiç yazılmaz. Sayfaya {"type": "lines", "lines": […]} gider; eski sayfa
+        kopyaları için en yeni satır ayrıca {"type": "sub"} olarak gönderilir."""
         clean = []
         for ln in lines:
             text = str(ln.get("text") or "")
@@ -183,8 +200,12 @@ class OverlayServer:
                 lid = int(ln.get("line") or 0)
             except (TypeError, ValueError):
                 lid = 0
-            clean.append({"line": lid, "text": text, "speaker": ln.get("speaker") or None,
-                          "original": str(ln.get("original") or "")})
+            item = {"line": lid, "text": text, "speaker": ln.get("speaker") or None,
+                    "original": str(ln.get("original") or "")}
+            spans = clean_spans(ln.get("spans"), len(text))
+            if spans:
+                item["spans"] = spans
+            clean.append(item)
         new = clean[-1] if clean else {"text": "", "speaker": None, "original": ""}
         self.state["lines"] = {"type": "lines", "lines": clean}
         self.state["sub"] = {"type": "sub", "text": new["text"], "speaker": new["speaker"], "original": new["original"]}

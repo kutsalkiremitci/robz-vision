@@ -14,6 +14,7 @@
     --shadow: 0 0.315vh 0.926vh rgba(0,0,0,.85);
     --bg: rgba(0,0,0,.45);
     --speaker: #ffd54a;
+    --hl: #ec8dc0;
     --bottom: 8vh;
     --maxw: 80vw;
     --fade: 180ms;
@@ -71,6 +72,8 @@
     text-wrap: balance;
   }
   .sp { color: var(--speaker); }
+  /* Vurgulu kelimeler (oyunun renkli yazdığı yer, kişi, eşya adları): kenar ve gölge satırdan gelir */
+  .hl { color: var(--hl); }
   .og {
     display: var(--orig-display);
     font-family: var(--font);
@@ -112,17 +115,44 @@
 
   const fadeMs = () => parseFloat(getComputedStyle(root).getPropertyValue('--fade')) || 0;
 
+  // Metin her zaman düz metin olarak yazılır (OCR'dan gelir, güvenilmez): HTML olarak yorumlanmaz. Vurgulu
+  // parçalar [[başlangıç, bitiş]] aralıklarıyla gelir; her biri .hl öğesine textContent ile yazılır.
+  function paintText(node, text, spans) {
+    node.textContent = '';
+    let at = 0;
+    for (const sp of Array.isArray(spans) ? spans : []) {
+      const s = Array.isArray(sp) ? sp[0] : NaN, e = Array.isArray(sp) ? sp[1] : NaN;
+      if (!Number.isInteger(s) || !Number.isInteger(e) || s < at || e <= s || e > text.length) continue;
+      if (s > at) node.append(text.slice(at, s));
+      const hl = document.createElement('span');
+      hl.className = 'hl';
+      hl.textContent = text.slice(s, e);
+      node.append(hl);
+      at = e;
+    }
+    if (at < text.length) node.append(text.slice(at));
+  }
+
   function fill(el, l) {
     el.querySelector('.sp').textContent = l.speaker ? l.speaker + ': ' : '';
-    el.querySelector('.t').textContent = l.text || '';
+    paintText(el.querySelector('.t'), String(l.text || ''), l.spans);
     el.querySelector('.og').textContent = l.original || '';
   }
 
+  function part(tag, cls, parent) {
+    const el = document.createElement(tag);
+    el.className = cls;
+    if (parent) parent.appendChild(el);
+    return el;
+  }
+
   function make(l) {
-    const el = document.createElement('div');
-    el.className = 'ln';
-    el.innerHTML = '<div class="box"><div class="tx"><span class="sp"></span><span class="t"></span></div>'
-                 + '<div class="og"></div></div>';
+    const el = part('div', 'ln');
+    const box = part('div', 'box', el);
+    const tx = part('div', 'tx', box);
+    part('span', 'sp', tx);
+    part('span', 't', tx);
+    part('div', 'og', box);
     fill(el, l);
     return el;
   }
@@ -235,7 +265,7 @@
 
   if (params.has('ornek')) {
     showLines([
-      {line: -3, text: 'Arabaya bin, Vice City\'ye gidiyoruz.', speaker: 'LUCIA', original: 'Get in the car, we\'re going to Vice City.'},
+      {line: -3, text: 'Arabaya bin, Vice City\'ye gidiyoruz.', speaker: 'LUCIA', original: 'Get in the car, we\'re going to Vice City.', spans: [[13, 25]]},
       {line: -2, text: 'Köprüyü geçince sola dön, sonra güneye ilerle.', speaker: null, original: 'Turn left after the bridge, then head south.'},
       {line: -1, text: 'Şimdi İstanbul\'a dönüyoruz — ğüşıöç ĞÜŞİÖÇ', speaker: 'JASON', original: 'We are heading back now.'},
     ]);

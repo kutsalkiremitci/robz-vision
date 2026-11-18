@@ -139,10 +139,11 @@ class ScreenOverlay(QWidget):
 
     def set_lines(self, lines: list[dict]) -> None:
         """Gösterilecek satırlar, eskiden yeniye (SubtitleDisplay'in OBS'e gönderdiği listeyle aynı:
-        {"line", "text", "speaker", "original"}). Boş liste kutuyu soldurur. Yığına yeni bir satır eklenince
-        o satır belirir ve eskiler yukarı kayar; tek satırda yazı eskisi gibi anında değişir."""
+        {"line", "text", "speaker", "original"} ve vurgu varsa "spans"). Boş liste kutuyu soldurur. Yığına yeni bir
+        satır eklenince o satır belirir ve eskiler yukarı kayar; tek satırda yazı eskisi gibi anında değişir."""
         lines = [{"line": ln.get("line"), "text": ln.get("text", ""), "speaker": ln.get("speaker"),
-                  "original": ln.get("original", "") or ""} for ln in lines if ln.get("text")]
+                  "original": ln.get("original", "") or "", "spans": ln.get("spans") or []}
+                 for ln in lines if ln.get("text")]
         if not lines:
             self.clear()
             return
@@ -344,7 +345,8 @@ class ScreenOverlay(QWidget):
         *older, new = lines
         ref_h = (self.screen() or QGuiApplication.primaryScreen()).geometry().height()
         paint_subtitle(p, W, H, self.look, new["text"], new.get("speaker"), new.get("original", ""),
-                       self.s.overlay.scale, ref_height=ref_h, in_box=True, older=older, progress=progress)
+                       self.s.overlay.scale, ref_height=ref_h, in_box=True, older=older, progress=progress,
+                       spans=new.get("spans") or ())
 
     @staticmethod
     def _paint_edit_chrome(p: QPainter, W: int, H: int) -> None:

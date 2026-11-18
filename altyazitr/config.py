@@ -52,14 +52,20 @@ class OcrCfg:
 @dataclass
 class TranslateCfg:
     engine: str = "quickmt"  # "quickmt" | "ollama" | "gemini" | "deepl" | "none"
-    hybrid: bool = True  # LLM/çevrimiçi motor seçiliyken önce hızlı çeviriyi göster
+    # LLM/çevrimiçi motor seçiliyken yerel hızlı çeviri (quickmt) yedekte hazır bekler. Asıl motorun çevirisi
+    # hybrid_wait_ms içinde gelirse yalnız o gösterilir; gecikirse önce hızlı çeviri görünür, asıl çeviri
+    # gelince aynı satırın üstüne yazılır. hybrid_wait_ms = 0: hızlı çeviri hemen gösterilir.
+    hybrid: bool = True
+    hybrid_wait_ms: int = 1200
     gemini_key: str = ""
     gemini_model: str = "gemini-3.5-flash-lite"
     quickmt_device: str = "cpu"  # "cpu" | "cuda"
     ollama_url: str = "http://127.0.0.1:11434"
-    ollama_model: str = "translategemma:4b"
-    context_lines: int = 3
-    game_context: str = ""
+    ollama_model: str = "gemma4:12b"
+    context_lines: int = 8  # LLM'e bağlam olarak giden önceki satır sayısı
+    # Oyun profili (altyazitr.game_profiles): dünya, ton, çevrilmeyecek adlar, argo sözlüğü ve üslup örnekleri
+    profile: str = "gta6"
+    game_context: str = ""  # kullanıcının ek bağlam notu; profilin üstüne eklenir
     deepl_key: str = ""
     timeout_s: float = 6.0
     # [ingilizce, türkçe]; türkçe boşsa terim çevrilmeden korunur
@@ -80,6 +86,10 @@ class StyleCfg:
     bg_color: str = "#000000"
     bg_opacity: float = 0.45
     speaker_color: str = "#FFD54A"
+    # Vurgulu kelimeler: oyunun renkli yazdığı yer, kişi ve eşya adlarının çevirideki karşılığı bu renkte çizilir
+    # (varsayılan GTA 6'nın görev yazısındaki pembe). İki görünümde de kapalıysa vurgu hiç aranmaz.
+    highlight: bool = True
+    highlight_color: str = "#EC8DC0"
     bottom_percent: float = 8.0
     max_width_percent: float = 80.0
     fade_ms: int = 180
@@ -97,6 +107,10 @@ class FlowCfg:
     mode: str = "flow"  # "flow" (son satırlar alt alta, en yenisi altta) | "single" (tek satır, eski davranış)
     max_lines: int = 3  # akışta aynı anda en fazla bu kadar satır (2-4)
     min_show_s: float = 3.0  # her satır, oyun sonrakine geçse de en az bu kadar ekranda kalır
+    # Her satır, oyundaki yazı ekranda dursa bile ilk göründüğü andan en fazla bu kadar saniye sonra kalkar
+    # (uzun satırlara okuma süresi kadar pay tanınır). Ekranda sabit kalan yazılar (tuş ipuçları, menüler)
+    # çeviriyi sonsuza dek ekranda tutmasın diye.
+    max_show_s: float = 7.0
 
 
 @dataclass
@@ -137,7 +151,8 @@ class Settings:
     tour_seen: bool = False  # tanıtım turu tamamlandı mı ("Daha sonra" denirse bir sonraki açılışta yine gösterilir)
     minimize_to_tray: bool = True
     # Ayar dosyası biçimi. 2: varsayılan OCR motoru RapidOCR oldu (eski dosyalardaki "windows" bir kez taşınır).
-    settings_version: int = 2
+    # 3: yerel LLM'in varsayılanı TranslateGemma'dan Gemma 4'e geçti, bağlam 3 satırdan 8 satıra çıktı.
+    settings_version: int = 3
 
 
 def _from_dict(cls, data: Any):
@@ -178,11 +193,21 @@ def load_settings() -> Settings:
         if isinstance(data, dict) and "screen_style" not in data:
             # tek görünümlü eski sürüm: ekrandaki kutu bugüne kadar yayınla aynı görünüyordu
             s.screen_style = replace(s.style)
-        if isinstance(data, dict) and int(data.get("settings_version", 1) or 1) < 2:
+        version = int(data.get("settings_version", 1) or 1) if isinstance(data, dict) else 1
+        if version < 2:
             # 1.0.2 ve öncesinde Windows OCR varsayılandı (çoğu kullanıcı bilerek seçmedi): RapidOCR'a geç
             if s.ocr.engine == "windows":
                 s.ocr.engine = "rapidocr"
-            s.settings_version = 2
+        if version < 3:
+            # 1.0.x varsayılanları: TranslateGemma bağlamı hiç kullanmıyordu, 3 satır bağlam azdı. Kullanıcı
+            # bunları değiştirmediyse yenilerine geç; kendi seçtiği model ve sayı korunur. Ollama'yı TranslateGemma
+            # ile zaten kullanan birinin çalışan kurulumu bozulmaz: yeni model inene kadar hata alırdı.
+            if s.translate.engine != "ollama" and s.translate.ollama_model.strip() in (
+                    "translategemma:4b", "translategemma"):
+                s.translate.ollama_model = TranslateCfg.ollama_model
+            if s.translate.context_lines == 3:
+                s.translate.context_lines = TranslateCfg.context_lines
+        s.settings_version = Settings.settings_version
         log.info("Ayarlar yüklendi: %s", SETTINGS_FILE)
         return s
     except FileNotFoundError:

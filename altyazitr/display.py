@@ -15,21 +15,32 @@ durur, en yenisi en altta. Kurallar:
   satıra geçse bile. Satırın yazısı değişirse okuma süresi o andan yeniden sayılır.
 * En yeni satır ayrıca akıştan önceki kuralı izler: oyundaki altyazı durdukça kalır; kaybolunca (on_gone)
   en az ocr.hide_delay_ms ve en az okuma süresi kadar daha görünür.
-* "Tek satır" modunda yığın tek satırdır ve her şey akıştan önceki gibidir (min_show_s kullanılmaz).
+* Üst sınır (flow.max_show_s, iki modda da): oyundaki yazı ekranda dursa bile en yeni satır dahil her satır,
+  ilk göründüğü andan en geç max_show_s sonra kalkar; yazısı yeni değiştiyse okuma süresi dolunca. Ekranda
+  sabit kalan yazı (tuş ipucu, menü) ya da OCR'ın kaçırdığı kaybolma çeviriyi sonsuza dek tutmasın diye.
+  max_show_s <= 0: sınır yok (eski davranış).
+* Oyun gösterirken üst sınırla kalkan satırın orijinali, oyun yazıyı kaldırana (on_gone) dek hatırlanır: aynı
+  yazı bu arada OCR titremesiyle yeni kimlikle gelse de gösterilmez (büyük/küçük harf, boşluk ve noktalama
+  farkı sayılmaz). Oyun yazıyı kaldırıp yeniden gösterirse (yeniden söylenen cümle) çevirisi yine görünür.
+* "Tek satır" modunda yığın tek satırdır ve akıştan önceki gibi çalışır (min_show_s kullanılmaz); üst sınır
+  bu modda da geçerlidir.
 * Süreler QTimer ile dolar (tek zamanlayıcı, her zaman bir sonraki süre dolumuna kurulur; yoklama yok).
 * OBS maskesi oyundaki altyazıya bağlı kalır: en yeni satır oyunda göründükçe ve akıştan önceki gizleme
-  süresi dolana kadar açıktır; ekranda yalnız eski satırlar kaldıysa kapanır.
+  süresi dolana kadar açıktır, en geç üst sınırda kapanır; ekranda yalnız eski satırlar kaldıysa da kapanır.
 
 İki çıktının görünümü ayrıdır: OBS sayfası ve OBS maskesi "Yayınımda" ayarlarını (Settings.style),
 ekrandaki kutu "Ekranımda" ayarlarını (Settings.screen_style) kullanır. Arayüz, iki görünümden herhangi
-biri ya da akış ayarları (Settings.flow) değişince yalnızca push_style() çağırır."""
+biri ya da akış ayarları (Settings.flow) değişince yalnızca push_style() çağırır.
+
+Vurgulu kelimeler: olayın `spans` alanı (Türkçe metindeki aralıklar) satırla birlikte iki çıktıya da gider; her
+çıktı onları kendi görünümünün vurgu rengiyle çizer (vurgu kapalıysa yazı renginde)."""
 
 from __future__ import annotations
 
 import logging
 import math
 import time
-from collections import OrderedDict
+from collections import OrderedDict, deque
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 
@@ -38,7 +49,7 @@ from altyazitr.capture import monitor_fraction
 from altyazitr.config import Settings
 from altyazitr.overlay import ScreenOverlay
 from altyazitr.render import stack_limit
-from altyazitr.server import AsyncBridge, OverlayServer, style_vars
+from altyazitr.server import AsyncBridge, OverlayServer, clean_spans, style_vars
 
 log = logging.getLogger(__name__)
 
@@ -47,21 +58,33 @@ TEST_S = 5.0  # Test düğmesinin örnek altyazısı bu kadar görünür
 _EPS = 0.005  # zamanlayıcı birkaç ms erken uyanırsa da süresi dolan satır gitsin
 _TEST_ID = -1_000_000  # örnek satırların kimlikleri (işlem hattınınkilerle ve kendi kimliklerimizle karışmaz)
 _LEFT_MAX = 32  # ekrandan çıkan satırlardan bu kadarı hatırlanır (geç gelen çeviriler için)
+_STUCK_MAX = 8  # üst sınırla kalkan yazılardan bu kadarı hatırlanır (oyun yazıyı kaldırana dek)
 
-# Test düğmesi, eskiden yeniye. Akışta ayardaki satır sayısı kadar en yenisi (varsayılan 3), tek satır
-# modunda yalnızca sonuncusu gösterilir.
+# Test düğmesi, eskiden yeniye: (çeviri, konuşmacı, orijinal, vurgulu ifade). Akışta ayardaki satır sayısı kadar
+# en yenisi (varsayılan 3), tek satır modunda yalnızca sonuncusu gösterilir. Vurgulu ifade vurgu renginde çizilir.
 TEST_LINES = (
-    ("Çabuk ol, polisler peşimizde!", "JASON", "Hurry up, the cops are on our tail!"),
-    ("Arabaya bin, Vice City'ye gidiyoruz.", "LUCIA", "Get in the car, we're going to Vice City."),
-    ("Köprüyü geçince sola dön, sonra güneye ilerle.", None, "Turn left after the bridge, then head south."),
+    ("Çabuk ol, polisler peşimizde!", "JASON", "Hurry up, the cops are on our tail!", None),
+    ("Arabaya bin, Vice City'ye gidiyoruz.", "LUCIA", "Get in the car, we're going to Vice City.", "Vice City'ye"),
+    ("Köprüyü geçince sola dön, sonra güneye ilerle.", None, "Turn left after the bridge, then head south.", None),
     ("Bu bir test altyazısıdır — ğüşıöç ĞÜŞİÖÇ. Ayarları buradan kontrol edin!", APP_NAME,
-     "This is a test subtitle. Check your settings here!"),
+     "This is a test subtitle. Check your settings here!", "test altyazısıdır"),
 )
+
+
+def _phrase_spans(text: str, phrase: str | None) -> list[list[int]]:
+    """Metindeki ifadenin vurgu aralığı (örnek satırlar için)."""
+    at = text.find(phrase) if phrase else -1
+    return [[at, at + len(phrase)]] if at >= 0 else []
 
 
 def reading_time(text: str) -> float:
     """Bir satırı okumak için gereken süre (sn): uzunluğa göre 1,2 ile 6 sn arası."""
     return max(1.2, min(6.0, len(text) / CHARS_PER_SEC))
+
+
+def _text_key(text: str) -> str:
+    """Orijinal yazıların karşılaştırma anahtarı: büyük/küçük harf, boşluk ve noktalama farkı sayılmaz."""
+    return "".join(ch for ch in text.casefold() if ch.isalnum())
 
 
 class SubtitleDisplay(QObject):
@@ -86,6 +109,8 @@ class SubtitleDisplay(QObject):
         self._max_line: int | None = None  # gösterilen en yeni işlem hattı kimliği
         self._auto_id = 0  # olayda "line" yoksa kendi kimliklerimiz (negatif)
         self._left: OrderedDict[int, None] = OrderedDict()  # ekrandan çıkan satırların kimlikleri (son birkaçı)
+        # oyun hâlâ gösterirken üst sınırla kalkan yazıların anahtarları (_text_key); oyun yazıyı kaldırınca silinir
+        self._stuck: deque[str] = deque(maxlen=_STUCK_MAX)
         self._pushed: tuple | None = None
         self._mask_key: tuple | None = None
         self._mask_frac: tuple[float, float, float, float] | None = None
@@ -108,6 +133,9 @@ class SubtitleDisplay(QObject):
         late = ln is None and known and self._max_line is not None and lid < self._max_line
         if ln is None and (lid in self._left or (late and not self._late_fits(lid))):
             return  # ekrandan çıkmış satır geri getirilmez; eski satır ancak son satırlardansa gösterilir
+        if ln is None and _text_key(original) in self._stuck:
+            self._mark_left(lid)  # oyunun hiç kaldırmadığı yazı yeni kimlikle geldi: bu okuma hiç gösterilmez
+            return
         if self._test_active:  # örnek satırlar gerçeklerle karışmasın
             self._test_active = False
             self.lines = []
@@ -128,7 +156,9 @@ class SubtitleDisplay(QObject):
         self._refresh()
 
     def on_gone(self) -> None:
-        """Oyundaki altyazı kayboldu: en yeni satır gizleme süresini saymaya başlar."""
+        """Oyundaki altyazı kayboldu: en yeni satır gizleme süresini saymaya başlar. Üst sınırla kalkan yazılar
+        da unutulur (ekranda satır olmasa da): oyun aynı yazıyı yeniden gösterirse çevirisi yine görünür."""
+        self._stuck.clear()
         if self._test_active or self._live is None:
             return
         self._live["gone"] = self.clock()
@@ -166,9 +196,10 @@ class SubtitleDisplay(QObject):
         self._live = None
         self.lines = []
         for j in range(first, len(TEST_LINES)):
-            text, speaker, original = TEST_LINES[j]
+            text, speaker, original, phrase = TEST_LINES[j]
             self.lines.append({"line": _TEST_ID - j, "text": text, "speaker": speaker, "original": original,
-                               "born": now, "changed": now, "gone": None, "until": now + TEST_S})
+                               "spans": _phrase_spans(text, phrase), "born": now, "changed": now, "gone": None,
+                               "until": now + TEST_S})
         self._refresh()
 
     def push_style(self) -> None:
@@ -201,7 +232,8 @@ class SubtitleDisplay(QObject):
     @staticmethod
     def _new_line(lid: int, ev: dict, text: str, original: str, now: float) -> dict:
         return {"line": lid, "text": text, "speaker": ev.get("speaker"), "original": original,
-                "born": now, "changed": now, "gone": None, "until": None}
+                "spans": clean_spans(ev.get("spans"), len(text)), "born": now, "changed": now, "gone": None,
+                "until": None}
 
     def _update(self, ln: dict, ev: dict, text: str, original: str, now: float) -> None:
         """Ekrandaki satırın güncellemesi: yeri ve süreleri korunur. Aynı okumanın daha iyi çevirisi (karma mod;
@@ -212,7 +244,8 @@ class SubtitleDisplay(QObject):
             if text != ln["text"]:
                 ln["changed"] = now
             ln["gone"] = None
-        ln.update(text=text, speaker=ev.get("speaker"), original=original)
+        ln.update(text=text, speaker=ev.get("speaker"), original=original,
+                  spans=clean_spans(ev.get("spans"), len(text)))
 
     def _late_fits(self, lid: int) -> bool:
         """Daha yenisinden sonra ilk kez gelen eski satır gösterilebilir mi: tek satır modunda hayır; akışta
@@ -239,20 +272,40 @@ class SubtitleDisplay(QObject):
         if ln is self._live:
             self._live = None
         if ln["until"] is None:
-            self._left[ln["line"]] = None
-            self._left.move_to_end(ln["line"])
-            while len(self._left) > _LEFT_MAX:
-                self._left.popitem(last=False)
+            self._mark_left(ln["line"])
+
+    def _mark_left(self, lid: int) -> None:
+        """Kimliği ekrandan çıkmışlara yazar: o satırın sonraki okumaları ve çevirileri ekrana gelmez."""
+        self._left[lid] = None
+        self._left.move_to_end(lid)
+        while len(self._left) > _LEFT_MAX:
+            self._left.popitem(last=False)
+
+    def _remember_stuck(self, original: str) -> None:
+        """Üst sınırla kalkan yazıyı oyun kaldırana (on_gone) dek hatırlar: yeni kimlikle gelse de gösterilmez."""
+        key = _text_key(original)
+        if key and key not in self._stuck:
+            self._stuck.append(key)
+
+    def _cap(self, ln: dict) -> float:
+        """Satırın üst sınırı: oyun yazıyı göstermeye devam etse de en geç bu anda kalkar. İlk göründüğü andan
+        flow.max_show_s sonra; yazısı yeni değiştiyse okuma süresi dolunca. max_show_s <= 0: sınır yok."""
+        limit = float(self.s.flow.max_show_s)
+        if not limit > 0:  # 0, eksi (ya da NaN): sınır yok
+            return math.inf
+        return max(ln["born"] + limit, ln["changed"] + reading_time(ln["text"]))
 
     def _game_end(self, ln: dict) -> float:
         """En yeni satırın akıştan önceki kurala göre gizleneceği an: oyunda kaybolduktan en az
-        ocr.hide_delay_ms sonra ve yazı en az okuma süresi kadar göründükten sonra (oyunda duruyorsa sonsuz)."""
-        if ln["gone"] is None:
-            return math.inf
-        return max(ln["gone"] + self.s.ocr.hide_delay_ms / 1000.0, ln["changed"] + reading_time(ln["text"]))
+        ocr.hide_delay_ms sonra ve yazı en az okuma süresi kadar göründükten sonra; oyunda duruyorsa sonsuz.
+        Her durumda en geç üst sınırda (bkz. _cap)."""
+        end = math.inf
+        if ln["gone"] is not None:
+            end = max(ln["gone"] + self.s.ocr.hide_delay_ms / 1000.0, ln["changed"] + reading_time(ln["text"]))
+        return min(end, self._cap(ln))
 
     def _deadline(self, ln: dict) -> float:
-        """Satırın ekrandan kalkacağı an (sonsuz: oyun hâlâ gösteriyor)."""
+        """Satırın ekrandan kalkacağı an (sonsuz: oyun hâlâ gösteriyor ve üst sınır kapalı)."""
         if ln["until"] is not None:
             return ln["until"]
         keep = ln["changed"] + reading_time(ln["text"])
@@ -263,7 +316,7 @@ class SubtitleDisplay(QObject):
         return keep
 
     def _mask_on(self, now: float) -> bool:
-        """OBS maskesi açık mı: oyundaki altyazıya bağlı (yayın görünümünün ayarı)."""
+        """OBS maskesi açık mı: oyundaki altyazıya bağlı (yayın görünümünün ayarı), en geç üst sınırda kapanır."""
         if not (self.visible and self.s.style.mask_original and self.lines):
             return False
         if self._test_active:
@@ -278,6 +331,8 @@ class SubtitleDisplay(QObject):
         while len(self.lines) > limit:  # akış ayarı değişmiş olabilir
             self._remove(self.lines[0])
         for ln in [x for x in self.lines if self._deadline(x) <= now + _EPS]:
+            if ln is self._live and ln["gone"] is None:  # oyun hâlâ gösterirken üst sınırla kalktı
+                self._remember_stuck(ln["original"])
             self._remove(ln)
         if self._test_active and not self.lines:
             self._test_active = False
@@ -319,8 +374,12 @@ class SubtitleDisplay(QObject):
         if now is None:
             now = self.clock()
         shown = self.lines if self.visible else []
-        out = [{"line": x["line"], "text": x["text"], "speaker": x["speaker"], "original": x["original"]}
-               for x in shown]
+        out = []
+        for x in shown:
+            item = {"line": x["line"], "text": x["text"], "speaker": x["speaker"], "original": x["original"]}
+            if x.get("spans"):  # vurgu yoksa alan hiç yazılmaz (eski tüketiciler için olay aynı kalır)
+                item["spans"] = [list(sp) for sp in x["spans"]]
+            out.append(item)
         mask = self._mask_rect() if self._mask_on(now) else None  # yayın görünümü
         if not force and (out, mask) == self._pushed:
             return

@@ -349,10 +349,36 @@ def test_default_ocr_engine_and_migration(tmp_path, monkeypatch):
     monkeypatch.setattr(cfg, "SETTINGS_FILE", path)
     path.write_text(json.dumps({"ocr": {"engine": "windows"}}), encoding="utf-8")  # 1.0.2 ve öncesi
     s = cfg.load_settings()
-    assert s.ocr.engine == "rapidocr" and s.settings_version == 2
+    assert s.ocr.engine == "rapidocr" and s.settings_version == Settings.settings_version
     s.ocr.engine = "windows"  # kullanıcı sonradan bilerek seçerse korunur
     cfg.save_settings(s)
     assert cfg.load_settings().ocr.engine == "windows"
+
+
+def test_translate_defaults_migration(tmp_path, monkeypatch):
+    """1.0.x varsayılanları (TranslateGemma, 3 satır bağlam) bir kez yenilere geçer; kullanıcının seçimi kalır."""
+    import json
+
+    from altyazitr import config as cfg
+
+    path = tmp_path / "ayarlar.json"
+    monkeypatch.setattr(cfg, "SETTINGS_FILE", path)
+    old = {"settings_version": 2, "translate": {"ollama_model": "translategemma:4b", "context_lines": 3}}
+    path.write_text(json.dumps(old), encoding="utf-8")
+    s = cfg.load_settings()
+    assert (s.translate.ollama_model, s.translate.context_lines) == ("gemma4:12b", 8)
+    assert s.translate.profile == "gta6" and s.settings_version == 3
+    mine = {"settings_version": 2, "translate": {"ollama_model": "qwen3.5:9b", "context_lines": 5}}
+    path.write_text(json.dumps(mine), encoding="utf-8")
+    s = cfg.load_settings()
+    assert (s.translate.ollama_model, s.translate.context_lines) == ("qwen3.5:9b", 5)
+    # Ollama'yı TranslateGemma ile kullanan: çalışan kurulumu bozulmaz (Gemma 4 inene kadar hata alırdı)
+    using = {"settings_version": 2, "translate": {"engine": "ollama", "ollama_model": "translategemma:4b"}}
+    path.write_text(json.dumps(using), encoding="utf-8")
+    assert cfg.load_settings().translate.ollama_model == "translategemma:4b"
+    # yeni biçimdeki dosyada 3 satır kullanıcının kendi seçimidir
+    path.write_text(json.dumps({"settings_version": 3, "translate": {"context_lines": 3}}), encoding="utf-8")
+    assert cfg.load_settings().translate.context_lines == 3
 
 
 def test_english_mass_ignores_background_words():

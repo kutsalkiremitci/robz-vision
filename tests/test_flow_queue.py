@@ -3,7 +3,8 @@
 Pencere, gerçek OCR ya da çeviri modeli yok. Sanal saatle çalışan ayrık olay benzetimi: yakalama, değişim
 kapısının koyacağı anlarda OCR kuyruğuna kare koyar; OCR, çeviri ve uzak çeviri "işçileri" işlem hattının
 gerçek adımlarını (Pipeline._ocr_item / _translate_item / _remote_item / _apply) çalıştırır, sahte
-motorların harcadığı süre kadar meşgul kalır ve sonuçlarını o süre dolunca uygular. Gerçek zaman ve iş
+motorların harcadığı süre kadar meşgul kalır ve sonuçlarını o süre dolunca uygular. İşlem hattının saati de
+sanal saattir: karma modun bekleme penceresi (hybrid_wait_ms) sanal zamanda dolar. Gerçek zaman ve iş
 parçacığı olmadığı için sonuç her çalıştırmada aynıdır.
 
 Aynı diyalog eski davranışla da çalıştırılır: tek yuvalı LatestSlot kutuları ve eski çeviri döngüsünün
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import heapq
 import logging
+import math
 import sys
 import threading
 import time
@@ -116,6 +118,7 @@ class Scenario:
     ocr_s: float = OCR_S
     flow_mode: str = "flow"
     dialogue: Dialogue = DIALOGUE
+    wait_ms: int | None = None  # karma modun bekleme penceresi; None: ayarın varsayılanı
 
     @property
     def main_label(self) -> str:
@@ -131,9 +134,16 @@ HYBRID_600_SINGLE = Scenario("karma 600 ms, tek satır kipi", 0.6, remote=True, 
 BURST_SLOW_OCR = Scenario("çatışma: 0,3 sn satırlar, OCR 450 ms", QUICK_S, remote=False, ocr_s=0.45,
                           dialogue=BURST)
 BURST_HYBRID = Scenario("çatışma: 0,3 sn satırlar, karma 600 ms", 0.6, remote=True, dialogue=BURST)
+# bekleme penceresi 0: hızlı çeviri hemen görünür, asıl çeviri aynı satırı günceller (pencereden önceki davranış)
+HYBRID_600_NOWAIT = Scenario("karma 600 ms, beklemesiz", 0.6, remote=True, wait_ms=0)
+HYBRID_1000_NOWAIT = Scenario("karma 1000 ms, beklemesiz", 1.0, remote=True, wait_ms=0)
+BURST_HYBRID_NOWAIT = Scenario("çatışma: 0,3 sn satırlar, karma 600 ms, beklemesiz", 0.6, remote=True,
+                               dialogue=BURST, wait_ms=0)
 SCENARIOS = [QUICKMT, HYBRID_600, HYBRID_1000, REMOTE_600, SLOW_OCR, HYBRID_600_SINGLE, BURST_SLOW_OCR,
-             BURST_HYBRID]
+             BURST_HYBRID, HYBRID_600_NOWAIT, HYBRID_1000_NOWAIT, BURST_HYBRID_NOWAIT]
 HYBRIDS = [sc for sc in SCENARIOS if sc.remote and sc.hybrid]
+WAITING = [sc for sc in HYBRIDS if sc.wait_ms != 0]
+NO_WAIT = [sc for sc in HYBRIDS if sc.wait_ms == 0]
 
 
 # --- benzetim altyapısı ------------------------------------------------------------------------------
@@ -224,18 +234,23 @@ def _settings(sc: Scenario) -> Settings:
     s = Settings()
     s.translate.engine = "gemini" if sc.remote else "quickmt"
     s.translate.hybrid = sc.hybrid
+    if sc.wait_ms is not None:
+        s.translate.hybrid_wait_ms = sc.wait_ms
     s.flow.mode = sc.flow_mode
     return s
 
 
 Out = list[tuple[float, str, "dict | None"]]
+TICK = ("tick", 0.0, None)  # çeviri döngüsü kuyrukta öğe olmadan uyandı: bekleyen satırın süresi doldu
 
 
 def run_new(pipe: Pipeline, sc: Scenario) -> Out:
-    """Yeni işlem hattı: FIFO kuyruklar + karma modda ayrı uzak çeviri işçisi."""
+    """Yeni işlem hattı: FIFO kuyruklar + karma modda ayrı uzak çeviri işçisi ve bekleme penceresi. Çeviri
+    işçisi gerçek döngü gibi, boştaysa bekleyen satırın süresi dolunca uyanır, meşgulse işini bitirince."""
     sim = Sim()
     out: Out = []
     pipe.cache = TranslationCache()
+    pipe.clock = lambda: sim.t
     pipe.subtitle.connect(lambda ev: out.append((sim.t, "sub", ev)))
     pipe.gone.connect(lambda: out.append((sim.t, "gone", None)))
     pipe.same.connect(lambda: out.append((sim.t, "same", None)))
@@ -243,6 +258,7 @@ def run_new(pipe: Pipeline, sc: Scenario) -> Out:
     main = FakeTr(sim, "uzak" if sc.remote else "hizli", sc.main_s)
     fast = FakeTr(sim, "hizli", QUICK_S) if sc.remote else None  # _prepare_translators ile aynı
     cx = TrContext(pipe.s.translate, main, fast)
+    cx.set_ready()  # asıl motor hazır; hazırlık sırasındaki davranış test_hybrid_wait.py'de
 
     def ocr_job(item):
         sim.cost = 0.0
@@ -251,9 +267,27 @@ def run_new(pipe: Pipeline, sc: Scenario) -> Out:
         for x in res:
             pipe._post_tr(x)
 
+    wakes: set[float] = set()
+
+    def tr_take():
+        """Gerçek döngüdeki _tr_q.get(_until_due()) gibi: kuyrukta öğe yoksa bekleyen satırın süre dolumunda
+        uyanır (o an yoklanmak üzere sanal saate bir olay konur)."""
+        item = pipe._tr_q.get(0)
+        if item is not None:
+            return item
+        dl = pipe._next_deadline()
+        if dl is None:
+            return None
+        if dl <= sim.t:
+            return TICK
+        if dl not in wakes:
+            wakes.add(dl)
+            sim.at(dl, lambda: None)
+        return None
+
     def tr_job(item):
         sim.cost = 0.0
-        acts = pipe._translate_item(item, cx)
+        acts = [] if item is TICK else pipe._translate_item(item, cx)
         yield sim.cost
         pipe._apply(acts)
 
@@ -266,7 +300,7 @@ def run_new(pipe: Pipeline, sc: Scenario) -> Out:
     for t, item in sc.dialogue.schedule():
         sim.at(t, lambda item=item: pipe._ocr_q.put(item))
     sim.worker(lambda: pipe._ocr_q.get(0), ocr_job)
-    sim.worker(lambda: pipe._tr_q.get(0), tr_job)
+    sim.worker(tr_take, tr_job)
     sim.worker(lambda: pipe._remote_q.get(0), remote_job)
     sim.run()
     return out
@@ -405,15 +439,25 @@ def test_fast_dialogue_every_line_once_in_order(make_pipe, sc):
         assert first_pos[i] < pos < first_pos.get(i + 1, len(order))
 
 
-@pytest.mark.parametrize("sc", HYBRIDS, ids=lambda sc: sc.name)
-def test_slow_remote_never_delays_new_lines(make_pipe, sc):
-    """Karma mod: yeni satır uzak motoru beklemeden hızlı çeviriyle hemen gelir; uzak motorun yanıtı geç de
-    gelse yalnız kendi satırını (aynı kimlik) günceller, yeni kimlik açmaz, yeni satırı ezmez."""
-    pipe = make_pipe(sc)
-    out = run_new(pipe, sc)
+def _main_reaches_every_line(out: Out, sc: Scenario) -> None:
+    """Karma mod: asıl motorun çevirileri satır sırasıyla gelir, en son satır da alır; uzak motor yetişiyorsa
+    her satır alır."""
     dlg = sc.dialogue
     subs = _subs(out, dlg)
+    ups = [ev["line"] for _, _, ev in subs if ev["engine"] == MAIN_REMOTE_LABEL]
+    assert ups and ups == sorted(ups)
+    last = subs[-1][2]
+    assert last["engine"] == MAIN_REMOTE_LABEL and dlg.line_of[last["original"]] == dlg.n - 1
+    if sc.flow_mode == "flow" and sc.main_s <= 0.6 and dlg is DIALOGUE:
+        assert lines_without(out, dlg, MAIN_REMOTE_LABEL) == 0
 
+
+@pytest.mark.parametrize("sc", NO_WAIT, ids=lambda sc: sc.name)
+def test_no_wait_quick_first_then_upgrade(make_pipe, sc):
+    """Bekleme penceresi 0: yeni satır uzak motoru beklemeden hızlı çeviriyle hemen gelir; uzak motorun yanıtı
+    geç de gelse yalnız kendi satırını (aynı kimlik) günceller, yeni kimlik açmaz, yeni satırı ezmez."""
+    pipe = make_pipe(sc)
+    out = run_new(pipe, sc)
     newest = 0
     for _, kind, ev in out:
         if kind != "sub":
@@ -423,14 +467,50 @@ def test_slow_remote_never_delays_new_lines(make_pipe, sc):
         else:
             assert ev["line"] >= newest  # yeni satır ya da en yeni satırın yeni okuması, hızlı çeviriyle
             newest = ev["line"]
-    assert max(first_show_delays(out, dlg)) <= sc.ocr_s + QUICK_S + 0.12  # uzak motorun süresi eklenmez
+    assert max(first_show_delays(out, sc.dialogue)) <= sc.ocr_s + QUICK_S + 0.12  # uzak motorun süresi eklenmez
+    _main_reaches_every_line(out, sc)
 
-    ups = [ev["line"] for _, _, ev in subs if ev["engine"] == MAIN_REMOTE_LABEL]
-    assert ups and ups == sorted(ups)  # güncellemeler satır sırasıyla
-    last = subs[-1][2]
-    assert last["engine"] == MAIN_REMOTE_LABEL and dlg.line_of[last["original"]] == dlg.n - 1  # en son satır da
-    if sc.flow_mode == "flow" and sc.main_s <= 0.6 and dlg is DIALOGUE:
-        assert lines_without(out, dlg, MAIN_REMOTE_LABEL) == 0  # uzak motor yetişiyorsa her satır LLM çevirisi alır
+
+@pytest.mark.parametrize("sc", WAITING, ids=lambda sc: sc.name)
+def test_wait_window_main_only_when_in_time(make_pipe, sc):
+    """Bekleme penceresiyle: asıl çevirisi satırın okunmasından sonra pencere içinde gelen satırın hızlı çevirisi
+    hiç görünmez. Gecikirse süre dolunca hızlı çeviri görünür, asıl çeviri aynı kimlikle günceller. Yavaş motor
+    hiçbir satırı pencereden (ve o an sürmekte olan bir hızlı çeviriden) uzun bekletmez."""
+    pipe = make_pipe(sc)
+    out = run_new(pipe, sc)
+    dlg = sc.dialogue
+    wait = pipe.s.translate.hybrid_wait_ms / 1000.0
+    reads = dlg.first_reads()
+    first_main: dict[int, float] = {}
+    first_quick: dict[int, float] = {}
+    for t, i, ev in _subs(out, dlg):
+        (first_main if ev["engine"] == MAIN_REMOTE_LABEL else first_quick).setdefault(i, t)
+    in_time = [i for i in first_main if first_main[i] <= reads[i] + wait]
+    assert in_time  # senaryolarda en az bir satır pencereye yetişir
+    for i in in_time:
+        assert first_quick.get(i, math.inf) > first_main[i], f"satır {i}: hızlı çeviri asıl çeviriden önce"
+    late = [i for i in range(dlg.n) if i not in in_time]
+    for i in late:  # yetişmeyen satır en geç süre dolunca hızlı çeviriyle görünür
+        assert first_quick[i] <= reads[i] + wait + QUICK_S + 1e-9
+    assert max(first_show_delays(out, dlg)) <= wait + QUICK_S + 1e-9
+    _main_reaches_every_line(out, sc)
+
+
+def test_wait_window_fewer_quick_flashes(make_pipe):
+    """Aynı diyalog, asıl motor 600 ms: pencere varken önce hızlı çevirisi görünüp sonra değişen satır sayısı
+    pencere yokken olandan az (-s ile yazdırılır)."""
+    def flashed(sc: Scenario) -> int:
+        out = run_new(make_pipe(sc), sc)
+        return len({i for _, i, ev in _subs(out, sc.dialogue) if ev["engine"] == QUICK_LABEL})
+
+    for wait_sc, no_wait_sc in ((HYBRID_600, HYBRID_600_NOWAIT), (HYBRID_1000, HYBRID_1000_NOWAIT),
+                                (BURST_HYBRID, BURST_HYBRID_NOWAIT)):
+        n = wait_sc.dialogue.n
+        before, after = flashed(no_wait_sc), flashed(wait_sc)
+        msg = f"\n[{wait_sc.name}] hızlı çevirisi görünen satır: pencere yokken {before}/{n}, pencereyle {after}/{n}"
+        enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+        print(msg.encode(enc, "replace").decode(enc))
+        assert before == n and after < before
 
 
 @pytest.mark.parametrize("sc", SCENARIOS, ids=lambda sc: sc.name)
@@ -489,11 +569,13 @@ def test_tracker_line_ids():
 
 def test_late_remote_answer_does_not_override_newer_reading(make_pipe):
     """Uzak motor bir satırın eski okumasını çevirirken aynı satırın yeni okuması (burada daktilo ile uzayan
-    metin) gösterildiyse eski okumanın geç gelen çevirisi yayınlanmaz; yeni okumanın kendi çevirisi gelir."""
-    pipe = make_pipe(HYBRID_600)
+    metin) gösterildiyse eski okumanın geç gelen çevirisi yayınlanmaz; yeni okumanın kendi çevirisi gelir.
+    (Bekleme penceresiyle aynı durum: test_hybrid_wait.py, yeni okuma eskisinin yerini alır.)"""
+    pipe = make_pipe(HYBRID_600_NOWAIT)
     sim = Sim()
     main, fast = FakeTr(sim, "uzak", 0.6), FakeTr(sim, "hizli", QUICK_S)
     cx = TrContext(pipe.s.translate, main, fast)
+    cx.set_ready()
     got = []
     pipe.subtitle.connect(got.append)
     v1 = pipe.tracker.on_text("They're watching us.", None, 1.0)
@@ -538,8 +620,9 @@ class _SleepTr(Translator):
 
 def test_threads_end_to_end_hybrid(make_pipe, monkeypatch):
     """Gerçek iş parçacıkları (_ocr_loop, _translate_loop ve uzak çeviri iş parçacığı), satırlar 150 ms
-    arayla: her satır tam bir kez yeni kimlikle ve sırayla gelir, en son satır uzak çeviriyi de alır,
-    durdurunca bütün iş parçacıkları kapanır."""
+    arayla, bekleme penceresi varsayılan: her satır tam bir kez yeni kimlikle ve sırayla ilk kez görünür (asıl
+    çeviriyle ya da süresi dolduysa hızlı çeviriyle), en son satır uzak çeviriyi de alır, durdurunca bütün iş
+    parçacıkları kapanır."""
     main, fast = _SleepTr("uzak", 0.25), _SleepTr("hizli", 0.02)
     monkeypatch.setattr(pl, "create_engine", lambda *a, **k: _SleepOcr())
     monkeypatch.setattr(pl, "create_translator", lambda tc, glossary: main)
@@ -568,11 +651,15 @@ def test_threads_end_to_end_hybrid(make_pipe, monkeypatch):
             th.join(5)
     assert not any(th.is_alive() for th in threads)
     assert not any(th.name == "ceviri-uzak" and th.is_alive() for th in threading.enumerate())
-    quick = [ev for ev in got if ev["engine"] == fast.label]
-    assert [ev["original"] for ev in quick] == texts
-    first = quick[0]["line"]
-    assert [ev["line"] for ev in quick] == list(range(first, first + len(texts)))
+    firsts: dict[int, dict] = {}
+    for ev in got:
+        firsts.setdefault(ev["line"], ev)
+    assert [ev["original"] for ev in firsts.values()] == texts  # her satır bir kez yeni, sırayla
+    first = next(iter(firsts))
+    assert list(firsts) == list(range(first, first + len(texts)))
     ups = [ev for ev in got if ev["engine"] == main.label]
-    assert ups and ups[-1]["original"] == texts[-1] and ups[-1]["line"] == quick[-1]["line"]
+    assert ups and ups[-1]["original"] == texts[-1] and ups[-1]["line"] == first + len(texts) - 1
     assert [ev["line"] for ev in ups] == sorted(ev["line"] for ev in ups)
-    assert all(ev["line"] in {q["line"] for q in quick} for ev in ups)
+    for k, ev in enumerate(got):  # hızlı çeviri yalnız asıl çevirisi henüz gösterilmemiş satırda görünür
+        if ev["engine"] == fast.label:
+            assert not any(u["line"] == ev["line"] and u["engine"] == main.label for u in got[:k])

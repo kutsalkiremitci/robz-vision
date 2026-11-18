@@ -22,6 +22,8 @@ from altyazitr.render import paint_subtitle
 SAMPLE_TEXT = "Arabaya bin, Vice City'ye gidiyoruz. Çabuk ol!"
 SAMPLE_SPEAKER = "LUCIA"
 SAMPLE_ORIGINAL = "Get in the car, we're going to Vice City. Hurry up!"
+_SAMPLE_HL = "Vice City'ye"  # önizlemede vurgu renginde çizilir
+SAMPLE_SPANS = ((SAMPLE_TEXT.index(_SAMPLE_HL), SAMPLE_TEXT.index(_SAMPLE_HL) + len(_SAMPLE_HL)),)
 
 
 # --- segmentli seçici --------------------------------------------------------
@@ -523,12 +525,13 @@ class SubtitlePreview(QWidget):
         paint_scene(p, frame, self.dark)
         p.translate(frame.topLeft())
         if self.box is None:
-            paint_subtitle(p, frame.width(), frame.height(), self.st, SAMPLE_TEXT, SAMPLE_SPEAKER, SAMPLE_ORIGINAL)
+            paint_subtitle(p, frame.width(), frame.height(), self.st, SAMPLE_TEXT, SAMPLE_SPEAKER, SAMPLE_ORIGINAL,
+                           spans=SAMPLE_SPANS)
         else:
             bw, bh = frame.width() * self.box[0], frame.height() * self.box[1]
             p.translate((frame.width() - bw) / 2, frame.height() * (1 - BOX_BOTTOM) - bh)
             paint_subtitle(p, bw, bh, self.st, SAMPLE_TEXT, SAMPLE_SPEAKER, SAMPLE_ORIGINAL, self.scale,
-                           ref_height=frame.height(), in_box=True)
+                           ref_height=frame.height(), in_box=True, spans=SAMPLE_SPANS)
         p.resetTransform()
         p.setClipping(False)
         vis = view.intersected(frame)

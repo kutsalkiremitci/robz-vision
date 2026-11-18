@@ -25,6 +25,17 @@ log = logging.getLogger(__name__)
 
 
 @dataclass
+class OcrWord:
+    """Satırdaki bir kelimenin kutusu (motor veriyorsa), kaynak görüntünün koordinatında."""
+
+    text: str
+    x: float
+    y: float
+    w: float
+    h: float
+
+
+@dataclass
 class OcrLine:
     text: str
     conf: float | None
@@ -32,6 +43,9 @@ class OcrLine:
     y: float
     w: float
     h: float
+    # Kelime kutuları, soldan sağa. Vurgulu (renkli) kelimelerin algılanması kullanır; motor vermezse boş kalır ve
+    # kelimelerin yeri harflerin arasındaki boşluklardan bulunur (bkz. detect.word_colors).
+    words: tuple[OcrWord, ...] = ()
 
 
 class OcrUnavailable(RuntimeError):
@@ -70,11 +84,20 @@ def preprocess(bgr: np.ndarray, upscale: str = "auto", mode: str = "none") -> tu
 OUTLINE_ANY_V = 160
 OUTLINE_BRIGHT_V = 200
 
+# Maskeli ön işleme kiplerinde sayfanın her kenarına eklenen boşluk (px). OCR kutuları bu sayfanın koordinatında
+# gelir; kaynak görüntünün koordinatına çevirirken çıkarılır.
+PAPER_PAD = 12
+_PAPER_MODES = ("bright", "outline", "outline_bright")
+
 
 def _ink_on_paper(mask: np.ndarray) -> np.ndarray:
     """Metin maskesini OCR'ın sevdiği biçime çevirir: beyaz zemin, siyah yazı, kenarda boşluk."""
-    inv = cv2.copyMakeBorder(255 - mask, 12, 12, 12, 12, cv2.BORDER_CONSTANT, value=255)
+    inv = cv2.copyMakeBorder(255 - mask, PAPER_PAD, PAPER_PAD, PAPER_PAD, PAPER_PAD, cv2.BORDER_CONSTANT, value=255)
     return cv2.cvtColor(inv, cv2.COLOR_GRAY2BGR)
+
+
+def _paper_pad(mode: str) -> int:
+    return PAPER_PAD if mode in _PAPER_MODES else 0
 
 
 class OcrEngine:
@@ -150,25 +173,25 @@ class WindowsOcrEngine(OcrEngine):
 
     def _recognize(self, bgr: np.ndarray, mode: str) -> list[OcrLine]:
         img, f = preprocess(bgr, self.upscale, mode)
+        pad = _paper_pad(mode)
         h, w = img.shape[:2]
         if max(h, w) > self._max_dim:
             s = self._max_dim / max(h, w)
             img = cv2.resize(img, (int(w * s), int(h * s)), interpolation=cv2.INTER_AREA)
             f *= s
+            pad *= s
         bgra = np.ascontiguousarray(cv2.cvtColor(img, cv2.COLOR_BGR2BGRA))
         res = self._loop.run_until_complete(self._run(bgra))
         out: list[OcrLine] = []
         for line in res.lines:
-            xs, ys, xe, ye = [], [], [], []
+            words = []
             for word in line.words:
                 r = word.bounding_rect
-                xs.append(r.x)
-                ys.append(r.y)
-                xe.append(r.x + r.width)
-                ye.append(r.y + r.height)
-            if xs:
-                x, y = min(xs) / f, min(ys) / f
-                out.append(OcrLine(line.text, None, x, y, max(xe) / f - x, max(ye) / f - y))
+                words.append(OcrWord(word.text, (r.x - pad) / f, (r.y - pad) / f, r.width / f, r.height / f))
+            if words:
+                x, y = min(wd.x for wd in words), min(wd.y for wd in words)
+                x1, y1 = max(wd.x + wd.w for wd in words), max(wd.y + wd.h for wd in words)
+                out.append(OcrLine(line.text, None, x, y, x1 - x, y1 - y, tuple(words)))
             else:
                 out.append(OcrLine(line.text, None, 0, 0, 0, 0))
         return out
@@ -200,6 +223,9 @@ class RapidOcrEngine(OcrEngine):
         })
         self.upscale = "1" if upscale == "auto" else upscale
         self.mode = preprocess_mode
+        # Kelime kutuları (vurgulu kelimelerin yeri için): okumayı değiştirmez, maliyeti ölçülemeyecek kadar az.
+        # Bir hata olursa bir daha istenmez; kelimelerin yeri harf boşluklarından bulunur.
+        self._word_boxes = True
 
     def recognize(self, bgr: np.ndarray) -> list[OcrLine]:
         if self.mode != "auto":
@@ -214,22 +240,48 @@ class RapidOcrEngine(OcrEngine):
             reads.append((english_mass(text), english_score(text), lines))
         return max(reads, key=lambda r: r[:2])[2]
 
+    def _read(self, img: np.ndarray):
+        if self._word_boxes:
+            try:
+                return self._ocr(img, use_cls=False, return_word_box=True)
+            except Exception:
+                log.warning("RapidOCR kelime kutuları alınamadı; kelimelerin yeri harf boşluklarından bulunacak",
+                            exc_info=True)
+                self._word_boxes = False
+        return self._ocr(img, use_cls=False, return_word_box=False)
+
     def _recognize(self, bgr: np.ndarray, mode: str) -> list[OcrLine]:
         img, f = preprocess(bgr, self.upscale, mode)
-        r = self._ocr(img, use_cls=False)
+        r = self._read(img)
         if r is None or not getattr(r, "txts", None):
             return []
+        pad = _paper_pad(mode)
+
+        def rect(box) -> tuple[float, float, float, float]:
+            b = np.asarray(box, dtype=np.float32).reshape(-1, 2)
+            x0, y0 = (b[:, 0].min() - pad) / f, (b[:, 1].min() - pad) / f
+            return x0, y0, (b[:, 0].max() - pad) / f - x0, (b[:, 1].max() - pad) / f - y0
+
+        n = len(r.txts)
+        words = getattr(r, "word_results", None) or ()
+        if not self._word_boxes or len(words) != n:  # kutusu eksik satır varsa sıralar kayar: hiçbiri kullanılmaz
+            words = [()] * n
         out = []
-        boxes = r.boxes if r.boxes is not None else [None] * len(r.txts)
-        for box, txt, sc in zip(boxes, r.txts, r.scores or [None] * len(r.txts)):
+        boxes = r.boxes if r.boxes is not None else [None] * n
+        for box, txt, sc, wl in zip(boxes, r.txts, r.scores or [None] * n, words):
             if box is None:
                 out.append(OcrLine(txt, sc, 0, 0, 0, 0))
                 continue
-            b = np.asarray(box, dtype=np.float32)
-            x0, y0 = b[:, 0].min() / f, b[:, 1].min() / f
-            x1, y1 = b[:, 0].max() / f, b[:, 1].max() / f
-            out.append(OcrLine(txt, float(sc) if sc is not None else None, x0, y0, x1 - x0, y1 - y0))
+            out.append(OcrLine(txt, float(sc) if sc is not None else None, *rect(box), _rapid_words(wl, rect)))
         return out
+
+
+def _rapid_words(items, rect) -> tuple[OcrWord, ...]:
+    """RapidOCR'ın bir satırdaki kelimeleri [(metin, güven, kutu)]; beklenmeyen biçimde boş döner."""
+    try:
+        return tuple(OcrWord(str(text), *rect(box)) for text, _score, box in items if box is not None)
+    except (TypeError, ValueError):
+        return ()
 
 
 def _rapidocr_model_dir():

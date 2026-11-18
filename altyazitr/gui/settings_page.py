@@ -37,11 +37,16 @@ FLOW_LINES_TIP = ("Aynı anda en fazla kaç çeviri alt alta dursun. Yeni satır
                   "Ekranınızdaki kutu küçükse yalnızca en yeni satırlar sığar: Ana sayfa → Konumu ayarla ile "
                   "kutuyu yukarı doğru büyütün.")
 FLOW_MIN_TIP = "Her çeviri, oyun sonraki satıra geçse de en az bu kadar ekranda kalır. Yetişemiyorsanız artırın."
+FLOW_MAX_TIP = ("Oyundaki yazı ekranda dursa bile çeviri en fazla bu kadar görünür. Uzun satırlara okuma süresi "
+                "kadar pay tanınır.")
+MIN_SHOW_RANGE = (1.5, 6.0)  # en az gösterim (sn)
+MAX_SHOW_RANGE = (3.0, 20.0)  # en uzun kalma (sn)
 
 
 class FlowCard(Card):
-    """Altyazı akışı (Settings.flow): Akış | Tek satır, en fazla satır, en az gösterim süresi.
-    Değişiklik kaydedilir ve hemen iki çıktıya uygulanır (display.push_style)."""
+    """Altyazı akışı (Settings.flow): Akış | Tek satır, en fazla satır, en az gösterim ve en uzun kalma süresi.
+    Değişiklik kaydedilir ve hemen iki çıktıya uygulanır (display.push_style). En uzun kalma iki biçimde de
+    geçerlidir; en az gösterim onu geçemez (iki sayı kutusunun aralığı birbirine bağlı)."""
 
     def __init__(self, ctx):
         super().__init__("Altyazı akışı")
@@ -59,16 +64,30 @@ class FlowCard(Card):
         self.lines = _tip(bind_spin(fl, "max_lines", 2, 4, self._changed, suffix=" satır"), FLOW_LINES_TIP)
         self.lines.setAccessibleName("En fazla satır")
         add_row(f, "En fazla satır", self.lines, tip=FLOW_LINES_TIP)
-        self.min_show = _tip(bind_spin(fl, "min_show_s", 1.5, 6.0, self._changed, step=0.5, suffix=" sn",
+        self.min_show = _tip(bind_spin(fl, "min_show_s", *MIN_SHOW_RANGE, self._changed, step=0.5, suffix=" sn",
                                        decimals=1), FLOW_MIN_TIP)
         self.min_show.setAccessibleName("En az gösterim süresi")
         add_row(f, "En az gösterim", self.min_show, tip=FLOW_MIN_TIP)
-        w = max(self.lines.sizeHint().width(), self.min_show.sizeHint().width())
-        self.lines.setFixedWidth(w)  # iki sayı kutusu aynı genişlikte
-        self.min_show.setFixedWidth(w)
+        self.max_show = _tip(bind_spin(fl, "max_show_s", *MAX_SHOW_RANGE, self._changed, step=0.5, suffix=" sn",
+                                       decimals=1), FLOW_MAX_TIP)
+        self.max_show.setAccessibleName("En uzun kalma süresi")
+        add_row(f, "En uzun kalma", self.max_show, tip=FLOW_MAX_TIP)
+        spins = (self.lines, self.min_show, self.max_show)
+        w = max(x.sizeHint().width() for x in spins)
+        for x in spins:  # sayı kutuları aynı genişlikte
+            x.setFixedWidth(w)
+        for x in (self.min_show, self.max_show):
+            x.valueChanged.connect(self._sync_limits)
+        self._sync_limits()
+        # en fazla satır ve en az gösterim yalnız akışta işe yarar; en uzun kalma iki biçimde de geçerli
         self._flow_only = [self.lines, self.min_show, f.labelForField(self.lines), f.labelForField(self.min_show)]
         self.add(layout=f)
         self._sync_enabled()
+
+    def _sync_limits(self) -> None:
+        """En az gösterim en uzun kalmayı geçemez: iki sayı kutusu birbirinin değerini sınır alır."""
+        self.max_show.setMinimum(max(MAX_SHOW_RANGE[0], self.min_show.value()))
+        self.min_show.setMaximum(min(MIN_SHOW_RANGE[1], self.max_show.value()))
 
     def _sync_enabled(self) -> None:
         on = self.ctx.s.flow.mode != "single"
