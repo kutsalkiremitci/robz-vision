@@ -367,7 +367,7 @@ def test_translate_defaults_migration(tmp_path, monkeypatch):
     path.write_text(json.dumps(old), encoding="utf-8")
     s = cfg.load_settings()
     assert (s.translate.ollama_model, s.translate.context_lines) == ("gemma4:12b", 8)
-    assert s.translate.profile == "gta6" and s.settings_version == 3
+    assert s.translate.profile == "gta6" and s.settings_version == Settings.settings_version  # geçişten sonra en yeni
     mine = {"settings_version": 2, "translate": {"ollama_model": "qwen3.5:9b", "context_lines": 5}}
     path.write_text(json.dumps(mine), encoding="utf-8")
     s = cfg.load_settings()
@@ -379,6 +379,58 @@ def test_translate_defaults_migration(tmp_path, monkeypatch):
     # yeni biçimdeki dosyada 3 satır kullanıcının kendi seçimidir
     path.write_text(json.dumps({"settings_version": 3, "translate": {"context_lines": 3}}), encoding="utf-8")
     assert cfg.load_settings().translate.context_lines == 3
+
+
+def test_ai_settings_defaults():
+    """Yerel yapay zekâ kurulumunun kalıcı durumu (settings.ai); yeni kurulumda davet yok (ilk açılış penceresi sorar).
+    Varsayılan Ollama modeli kurulumun önerdiği modelle aynı."""
+    from altyazitr.config import AiCfg, TranslateCfg
+    from altyazitr.translate import RECOMMENDED_OLLAMA_MODEL
+
+    s = Settings()
+    assert s.settings_version == 4 and isinstance(s.ai, AiCfg)
+    assert (s.ai.choice, s.ai.pending_model, s.ai.failed, s.ai.failed_kind) == ("", "", "", "")
+    assert s.ai.pause_while_running and not s.ai.installed_ollama and not s.ai.invite_pending and s.ai.speed_ms == 0
+    assert TranslateCfg().ollama_model == RECOMMENDED_OLLAMA_MODEL
+
+
+@pytest.mark.parametrize(("data", "invite"), [
+    pytest.param({"settings_version": 3, "translate": {"engine": "quickmt"}}, True, id="1.1.0, hızlı çeviri: davet"),
+    pytest.param({"settings_version": 3}, True, id="1.1.0, varsayılan motor (hızlı çeviri): davet"),
+    pytest.param({"settings_version": 2, "translate": {"engine": "quickmt"}}, True, id="1.0.x, hızlı çeviri: davet"),
+    pytest.param({"settings_version": 3, "translate": {"engine": "ollama"}}, False, id="yerel yapay zekâ: davet yok"),
+    pytest.param({"settings_version": 3, "translate": {"engine": "gemini"}}, False, id="Gemini: davet yok"),
+    pytest.param({"settings_version": 4, "translate": {"engine": "quickmt"}, "ai": {"invite_pending": False}}, False,
+                 id="v4: davet gösterildi, yeniden kurulmaz"),
+])
+def test_ai_invite_migration(tmp_path, monkeypatch, data, invite):
+    """v4 geçişi: 1.1.0 ve öncesinden güncelleyen, motoru hızlı çeviri olan kullanıcıya bir kez yapay zekâ daveti."""
+    import json
+
+    from altyazitr import config as cfg
+
+    path = tmp_path / "ayarlar.json"
+    monkeypatch.setattr(cfg, "SETTINGS_FILE", path)
+    path.write_text(json.dumps(data), encoding="utf-8")
+    s = cfg.load_settings()
+    assert s.ai.invite_pending is invite and s.settings_version == 4
+    s.ai.invite_pending = False  # arayüz daveti gösterdi
+    cfg.save_settings(s)
+    assert cfg.load_settings().ai.invite_pending is False  # bir kez
+
+
+def test_ai_settings_round_trip(tmp_path, monkeypatch):
+    """Yarım ya da hatalı kurulumun durumu (model, hata metni ve türü…) dosyada kalır; sonraki açılış okur."""
+    from altyazitr import config as cfg
+
+    monkeypatch.setattr(cfg, "SETTINGS_FILE", tmp_path / "ayarlar.json")
+    s = Settings()
+    s.ai.choice, s.ai.pending_model, s.ai.installed_ollama, s.ai.speed_ms = "ai", "gemma4:e4b", True, 410
+    s.ai.failed, s.ai.failed_kind = "Ollama kurulumu engellendi.\nAyrıntı: WinError 225", "blocked"
+    s.ai.pause_while_running = False
+    cfg.save_settings(s)
+    assert cfg.load_settings().ai == s.ai
+    assert cfg.load_settings().settings_version == 4
 
 
 def test_english_mass_ignores_background_words():

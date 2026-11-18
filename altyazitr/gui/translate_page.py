@@ -3,24 +3,34 @@
 Buradaki küçük form yardımcıları (etiket sütunu, durum satırı, ilerleme çubuğu, bağlantı ve ikon düğmesi)
 Ayarlar sayfasında da kullanılır; böylece iki sayfanın alanları aynı dikey çizgiden başlar.
 
-"Önerilen kurulum" tek tıkla: Ollama çalışıyor mu bakar, önerilen model (RECOMMENDED_OLLAMA_MODEL) yüklü
-değilse indirir (ilerleme çubuğu, iptal), sonra motoru, modeli ve varsayılan oyun profilini ayarlar. Düğme iki
-yerde durur ve ikisi aynı işi yapar: motor seçiminin altındaki davette (motor Ollama ve önerilen model seçili
-olana kadar görünür) ve Ollama bölümünde. Durum, düğmesine basılan yerde görünür.
+Yerel yapay zekâyı (Ollama + Gemma 4) uygulamanın kurulum servisi kurar (`ctx.ai`, altyazitr.ai_setup.AiSetup).
+"Önerilen kurulum" iki yerde durur ve ikisi aynı işi yapar: motor seçiminin altındaki davette ve Ollama bölümünde.
+Basınca onay penceresi açılır (ne inecek, boyutu, disk; ai_setup_view.confirm_ai_setup); "Kur" denince iş arka
+planda sürer. Davet, donanım önerisine göre (ai.advice(), arka planda okunur) yalnız uygun ekran kartında ve motor
+Ollama değilken görünür; metnindeki model de öneriden gelir. İş sürerken ya da hatayla bittiyse yerinde kısa ilerleme
+paneli durur (AiProgressPanel: İptal, Yine de sürdür, Tekrar dene). İlerleme düğmesine basılan yerde görünür; sayfa
+dışından başlayan iş (ilk açılış, yarım kalan işin sürmesi) davette. "Modeli indir" yerel adreste aynı servise gider
+(yalnız model iner, ayar değişmez); uzak sunucuda model eskisi gibi doğrudan o sunucuya iner. Kurulum bitince motor,
+model ve adres seçimleri ayarlarla eşlenir; işlem hattı yeniden başlatılmaz (çeviri çalışıyorsa yapay zekâ bir sonraki
+Başlat'ta devreye girer).
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
+from typing import Any
 
-from PySide6.QtCore import QCoreApplication, QSize, Qt, QUrl
+from PySide6.QtCore import QCoreApplication, QSize, Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFormLayout, QHBoxLayout, QHeaderView, QLabel,
-                               QLineEdit, QMessageBox, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem,
-                               QVBoxLayout, QWidget)
+                               QLineEdit, QProgressBar, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout,
+                               QWidget)
 
-from altyazitr.game_profiles import DEFAULT_PROFILE_ID, get_profile, list_profiles
+from altyazitr import APP_NAME
+from altyazitr.ai_setup import is_local_url
+from altyazitr.game_profiles import DEFAULT_PROFILE_ID, list_profiles
+from altyazitr.gui.ai_setup_view import AiProgressPanel, confirm_ai_setup, start_survey
 from altyazitr.gui.common import Worker, _form, _tip
 from altyazitr.gui.controls import Collapsible
 from altyazitr.gui.icons import icon, pixmap
@@ -28,23 +38,6 @@ from altyazitr.gui.tokens import C, F, ICON, SPACE
 from altyazitr.gui.widgets import Card, bind_check, bind_combo, bind_line, bind_spin, label, page, row
 from altyazitr.translate import (ENGINE_LABELS, GEMINI_MODELS, OLLAMA_PRESETS, QUICKMT_DIR, RECOMMENDED_OLLAMA_MODEL,
                                  download_quickmt, ollama_list, ollama_pull, quickmt_downloaded)
-
-
-# Önerilen kurulumun indireceği modellerin boyutu (Ollama kütüphanesindeki varsayılan etiketler)
-MODEL_DOWNLOAD_SIZE = {"gemma4:12b": "8,0 GB", "gemma4:e4b": "6,6 GB", "gemma4:26b": "yaklaşık 17 GB"}
-
-
-def confirm_download(parent: QWidget, model: str) -> bool:
-    """Önerilen kurulumun büyük indirmesi için onay: boyutu söylenmeden hiçbir model indirilmez."""
-    size = MODEL_DOWNLOAD_SIZE.get(model)
-    text = (f"{model_title(model)} indirilecek" + (f" ({size})." if size else ".") +
-            " İnternet hızınıza göre birkaç dakika ile bir saat arası sürebilir; bu sırada hızlı çeviri "
-            "kullanılabilir.")
-    box = QMessageBox(QMessageBox.Icon.Question, "Önerilen kurulum", text, parent=parent)
-    ok = box.addButton("İndir", QMessageBox.ButtonRole.AcceptRole)
-    box.addButton("Vazgeç", QMessageBox.ButtonRole.RejectRole)
-    box.exec()
-    return box.clickedButton() is ok
 
 
 # --- ortak form düzeni (Çeviri + Ayarlar) ---------------------------------------------
@@ -211,7 +204,7 @@ class StatusLine(QWidget):
 # --- sayfa ------------------------------------------------------------------------------
 ENGINE_DESC = {
     "quickmt": "Yerel ve ücretsiz, çok hızlı.",
-    "ollama": "En doğal çeviri; konuşmanın gidişatını ve argoyu anlar. Ollama kurulu olmalı.",
+    "ollama": "En doğal çeviri; konuşmanın gidişatını ve argoyu anlar. Ekran kartı ister.",
     "gemini": "Bağlamı anlayan çevrimiçi çeviri. Ücretsiz API anahtarı gerekir.",
     "deepl": "Çevrimiçi çeviri. Ücretsiz API anahtarı gerekir.",
     "none": "Çeviri yapılmaz; okumanın doğruluğunu test etmek içindir.",
@@ -225,8 +218,16 @@ CONTEXT_TIP = "Önceki satırlar yapay zekâya bağlam olarak gider; konuşmanı
 PROFILE_TIP = "Yapay zekâya oyunun dünyasını ve argosunu anlatır; oyundaki adlar her motorda çevrilmeden kalır"
 EXTRA_TIP = "Profilin üstüne eklenen kendi notun. Ör: hangi görevdesin, kimlerle konuşuyorsun."
 
-OLLAMA_DOWNLOAD_URL = "https://ollama.com/download"
 OLLAMA_DOWN_TIP = "Ollama'yı başlatın veya adresi kontrol edin"
+
+# Yapay zekâ daveti. Bu kademelerde (uygun ekran kartı yok; hardware.advise) davet gösterilmez.
+NO_INVITE_TIERS = frozenset({"none", "weak"})
+INVITE_TEXT = "Daha iyi çeviri: yerel yapay zekâ (Ollama + {model}), ücretsiz ve internetsiz"
+AI_JOB_STATES = ("running", "paused", "failed")  # kısa ilerleme panelinin göründüğü servis durumları
+AI_ACTIVE = ("running", "paused")
+# Kısa ilerleme panelinin çubuğu alan sütunundan kısa: duraklatılmışken yanında "Yine de sürdür" ve "İptal" de durur;
+# en küçük pencerede de (780 px) sayfa yana taşmasın.
+AI_BAR_W = 240
 
 
 def hybrid_tip(wait_ms: int) -> str:
@@ -247,28 +248,38 @@ def model_title(model: str, presets: Sequence[tuple[str, str]] = OLLAMA_PRESETS)
     return model
 
 
-def model_installed(model: str, names: Sequence[str]) -> bool:
-    """Model Ollama'da yüklü mü? Etiketsiz ad ':latest' ile de eşleşir."""
-    m = model.strip()
-    return m in names or (":" not in m and f"{m}:latest" in names)
+def setup_tip(model: str, advice: Any = None) -> str:
+    """"Önerilen kurulum" ipucu: ne kurulacağı (model öneriden) ve varsa karta özgü not ve uyarı."""
+    lines = [f"{APP_NAME}, Ollama'yı (yapay zekâyı çalıştıran ücretsiz program) ve {model_title(model)} modelini "
+             "indirip kurar; kurmadan önce indirme boyutunu gösterir. İnternetsiz çalışır, hızlı çeviri yedekte kalır."]
+    lines += [str(x) for x in (getattr(advice, "tip", ""), getattr(advice, "warn", "")) if x]
+    return "\n".join(lines)
+
+
+def invite_offered(advice: Any) -> bool:
+    """Donanım önerisine göre davet edilir mi? Kademe none/weak ise (uygun ekran kartı yok) hayır. Öneri okunamadıysa
+    (None) evet: onay penceresi ve kurulumdaki GPU kapısı yine korur."""
+    if advice is None:
+        return True
+    return bool(getattr(advice, "offer", True)) and getattr(advice, "tier", "") not in NO_INVITE_TIERS
+
+
+def _ignore_plan(*_args: Any) -> None:
+    """start_survey'in plan sinyali için (sayfa yalnız öneriyi okur)."""
 
 
 class PullStatus:
-    """Ollama indirmesinin durumu: kısa durum satırı, indirirken ilerleme çubuğu + İptal, Ollama'ya ulaşılamazsa
-    indirme bağlantısı. Ollama bölümünde ve önerilen kurulum davetinde aynı biçimde durur; iş, düğmesine basılan
-    yerin durumunu kullanır. Öğeler gizliyken yer kaplamaz (boş alt düzen aralık almaz)."""
+    """Uzak Ollama sunucusuna model indirmesinin durumu (Ollama bölümü): kısa durum satırı, indirirken ilerleme
+    çubuğu + İptal. Öğeler gizliyken yer kaplamaz (boş alt düzen aralık almaz)."""
 
-    def __init__(self, link_always: bool):
+    def __init__(self) -> None:
         self.line = StatusLine()
         self.bar = progress_bar()
         self.bar.setRange(0, 1000)
         self.cancel = with_icon(QPushButton("İptal"), "x")
         self.cancel.setToolTip("İndirmeyi durdurur")
         self.cancel.hide()
-        self.link = link_button("Ollama'yı indir", OLLAMA_DOWNLOAD_URL)
-        self.link_always = link_always
-        self.link.setVisible(link_always)
-        self.box = vbox(self.line, hbox(self.bar, self.cancel, None), hbox(self.link, None))
+        self.box = vbox(self.line, hbox(self.bar, self.cancel, None))
 
     def busy(self, on: bool) -> None:
         self.bar.setVisible(on)
@@ -278,18 +289,15 @@ class PullStatus:
             self.bar.setRange(0, 1000)
             self.bar.setValue(0)
 
-    def need_ollama(self, on: bool) -> None:
-        self.link.setVisible(on or self.link_always)
-
-    def clear(self) -> None:
-        self.line.set("")
-        self.need_ollama(False)
-
 
 class TranslatePage(QWidget):
+    advice_ready = Signal(object)  # donanım önerisi okundu (hardware.Advice; okunamadıysa None)
+    ai_progress = Signal(float)  # yapay zekâ kurulumunun toplam ilerlemesi (0..1; bkz. ai_fraction) değişti
+
     def __init__(self, win):
         super().__init__()
         self.ctx = win.ctx
+        self.ai = self.ctx.ai  # yerel yapay zekâ kurulum servisi (altyazitr.ai_setup.AiSetup)
         t = self.ctx.s.translate
         sa, lay = page("Çeviri")
         outer = row(sa)
@@ -297,14 +305,15 @@ class TranslatePage(QWidget):
         self.setLayout(outer)
         restart = self._restart
         self._workers: list[Worker] = []
-        # süren Ollama indirmesi: (işçi, model, bitince çağrılacak iş, durumun gösterildiği yer); yoksa None
-        self._pull: tuple[Worker, str, Callable[[], None] | None, PullStatus] | None = None
-        rec_title = model_title(RECOMMENDED_OLLAMA_MODEL)
-        rec_desc = dict(OLLAMA_PRESETS).get(RECOMMENDED_OLLAMA_MODEL, "")
-        setup_tip = (f"Tek tıkla hazır: {rec_title} modeli (yüklü değilse indirilir) ve "
-                     f"{get_profile(DEFAULT_PROFILE_ID).name} profili seçilir.")
-        if rec_desc:
-            setup_tip += f"\n{rec_desc}"
+        self._pull: tuple[Worker, str] | None = None  # uzak sunucuya süren model indirmesi (işçi, model)
+        self._planning: tuple[Worker, dict[str, Any]] | None = None  # "Modeli indir": servisin planı çıkarılıyor
+        self._advice: Any = None
+        self._advice_known = False
+        # Yapay zekâ işinin ilerlemesi düğmesine basılan yerde görünür: "hint" (davet) ya da "ollama" (Ollama
+        # bölümü). Sayfa dışından başlayan iş davette görünür; "Tekrar dene" yerini korur.
+        self._ai_state = str(getattr(self.ai, "state", "") or "idle")
+        self._ai_origin = "hint"
+        self._next_origin = ""
 
         # --- motor
         eng = Card("Çeviri motoru")
@@ -314,17 +323,16 @@ class TranslatePage(QWidget):
         self.engine.setAccessibleName("Çeviri motoru")
         self.engine_desc = label("", "muted")
         add_row(f, "Motor", layout=vbox(self.engine, self.engine_desc, spacing=SPACE["xs"] + 2))
-        # önerilen kurulum daveti: Ollama ve önerilen model seçili değilken motor seçiminin hemen altında durur
+        # yapay zekâ daveti motor seçiminin hemen altında; iş sürerken yerinde kısa ilerleme paneli
         self.hint_text = StatusLine(auto_hide=False)
-        self.hint_text.set(f"Daha iyi çeviri: yerel yapay zekâ (Ollama + {rec_title}), ücretsiz ve internetsiz",
-                           "info", tip=setup_tip)
         self.hint_setup = with_icon(QPushButton("Önerilen kurulum"), "check")
-        self.hint_setup.setToolTip(setup_tip)
-        self.hint_status = PullStatus(link_always=False)
-        self.hint_setup.clicked.connect(lambda: self._recommended_setup(self.hint_status))
-        self.hint_status.cancel.clicked.connect(self._cancel_pull)
+        self.hint_setup.clicked.connect(lambda: self._recommended_setup("hint"))
+        self.hint_invite = QWidget()
+        self.hint_invite.setLayout(vbox(self.hint_text, hbox(self.hint_setup, None)))
+        self.hint_progress = self._ai_panel()
+        self.hint_progress.bar.valueChanged.connect(self._emit_ai_progress)
         self.hint_box = QWidget()
-        self.hint_box.setLayout(vbox(self.hint_text, hbox(self.hint_setup, None), self.hint_status.box))
+        self.hint_box.setLayout(vbox(self.hint_invite, self.hint_progress))
         add_row(f, "", self.hint_box)
         # oyun profili: ad gösterilir, veri olarak id tutulur; ipucu profilin açıklaması. Yapay zekâ istemini
         # belirler, profilin adlarını ise her motor korur; bu yüzden yerel hızlı çeviride de görünür.
@@ -380,7 +388,8 @@ class TranslatePage(QWidget):
         # --- ollama
         ol = Card("Ollama")
         f = form()
-        add_row(f, "Adres", bind_line(t, "ollama_url", restart, "http://127.0.0.1:11434"))
+        self.ol_url = bind_line(t, "ollama_url", restart, "http://127.0.0.1:11434")
+        add_row(f, "Adres", self.ol_url)
         self.ol_model = QComboBox()
         self.ol_model.setEditable(True)
         self.ol_model.setMinimumWidth(FIELD_W - 32 - SPACE["s"])
@@ -395,17 +404,19 @@ class TranslatePage(QWidget):
         b_list = icon_button("refresh", "Yüklü modelleri yenile")
         b_list.clicked.connect(self._ollama_refresh)
         add_row(f, "Model", layout=hbox(self.ol_model, b_list, None))
-        self.ol_status = PullStatus(link_always=True)
-        self.ol_line, self.ol_bar, self.ol_cancel, self.ol_get = (self.ol_status.line, self.ol_status.bar,
-                                                                  self.ol_status.cancel, self.ol_status.link)
+        self.ol_status = PullStatus()
+        self.ol_line, self.ol_bar, self.ol_cancel = self.ol_status.line, self.ol_status.bar, self.ol_status.cancel
         self.ol_cancel.clicked.connect(self._cancel_pull)
         self.ol_setup = with_icon(QPushButton("Önerilen kurulum"), "check")
-        self.ol_setup.setToolTip(setup_tip)
-        self.ol_setup.clicked.connect(lambda: self._recommended_setup(self.ol_status))
+        self.ol_setup.clicked.connect(lambda: self._recommended_setup("ollama"))
         self.ol_pull = with_icon(QPushButton("Modeli indir"), "download")
         self.ol_pull.setToolTip("Seçili modeli Ollama'ya indirir")
         self.ol_pull.clicked.connect(self._ollama_pull)
-        add_row(f, "", layout=vbox(hbox(self.ol_setup, self.ol_pull, None), self.ol_status.box))
+        # buradan başlayan işin ilerlemesi; motor zaten Ollama olduğu için hatada "Hızlı çeviride kal" yerine "Vazgeç"
+        self.ol_progress = self._ai_panel()
+        self.ol_progress.stay_btn.setText("Vazgeç")
+        self.ol_progress.stay_btn.setToolTip("Yarım kalan işi bırakır")
+        add_row(f, "", layout=vbox(hbox(self.ol_setup, self.ol_pull, None), self.ol_status.box, self.ol_progress))
         ol.add(layout=f)
         lay.addWidget(ol)
         self.card_ol = ol
@@ -500,7 +511,12 @@ class TranslatePage(QWidget):
 
         self._update_engine_desc()
         self._update_qm_status()
+        self._apply_advice()
         self._update_visibility()
+        self.ai.changed.connect(self._on_ai_changed)
+        self.ai.finished.connect(self._on_ai_finished)
+        # donanım önerisi (ekran kartı okuması ≤ ~1 sn) arka planda: gelene dek davet gizli
+        self._survey = start_survey(self.ai, self._on_advice, _ignore_plan, models=())
         app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self._stop_workers)
@@ -518,15 +534,30 @@ class TranslatePage(QWidget):
         self._update_setup_hint()
 
     def _update_setup_hint(self) -> None:
-        """Önerilen kurulum daveti, motor Ollama olana kadar görünür (kartı küçük olduğu için bilerek başka bir
-        Ollama modeli seçen kullanıcıya davet çıkmaz). Davetten başlayan indirme sürerken de görünür kalır
-        (ilerlemesi orada)."""
-        t = self.ctx.s.translate
-        done = t.engine == "ollama"
-        show = not done or (self._pull is not None and self._pull[3] is self.hint_status)
-        self.engine_form.setRowVisible(self.hint_box, show)
-        if not show:
-            self.hint_status.clear()  # eski uyarı, davet yeniden göründüğünde kalmasın
+        """Davet alanı ve yapay zekâ işinin ilerlemesi. İş sürerken ya da hatayla bittiyse kısa ilerleme paneli
+        düğmesine basılan yerde görünür (Ollama bölümü gizliyse davette); davet metni ve düğmesi o sırada gizlidir.
+        İş yokken davet, kart uygunsa (öneri okunduysa ve kademe none/weak değilse) ve motor Ollama değilken görünür
+        (kartı küçük olduğu için bilerek başka bir Ollama modeli seçen kullanıcıya davet çıkmaz)."""
+        engine = self.ctx.s.translate.engine
+        job = self._ai_state in AI_JOB_STATES
+        in_ollama = job and self._ai_origin == "ollama" and engine == "ollama"
+        in_hint = job and not in_ollama
+        invite = engine != "ollama" and self._advice_known and invite_offered(self._advice)
+        self.hint_invite.setVisible(not in_hint)
+        self.hint_progress.setVisible(in_hint)
+        self.ol_progress.setVisible(in_ollama)
+        self.engine_form.setRowVisible(self.hint_box, in_hint or invite)
+        self._sync_buttons()
+
+    def _busy(self) -> bool:
+        """Süren indirme var mı: yapay zekâ işi, "Modeli indir"in plan hazırlığı ya da uzak sunucuya indirme."""
+        return self._ai_state in AI_ACTIVE or self._planning is not None or self._pull is not None
+
+    def _sync_buttons(self) -> None:
+        """Aynı anda tek indirme: süren indirmede iki "Önerilen kurulum" ve "Modeli indir" kapalıdır."""
+        on = not self._busy()
+        for b in (self.hint_setup, self.ol_setup, self.ol_pull):
+            b.setEnabled(on)
 
     def _restart(self) -> None:
         self.ctx.save_later()
@@ -534,11 +565,13 @@ class TranslatePage(QWidget):
 
     def _stop_workers(self) -> None:
         """Uygulama kapanırken süren indirmeyi durdurur: çalışırken yok edilen iş parçacığı süreci çökertir.
-        Ollama indirmesi iptali bir sonraki ilerleme satırında (genelde 1 sn içinde) görür."""
+        Ollama indirmesi iptali bir sonraki ilerleme satırında (genelde 1 sn içinde) görür. Donanım okuması
+        (nvidia-smi en çok 4 sn) da beklenir."""
         for w in self._workers:
             w.cancel.set()
         for w in self._workers:
             w.wait(3000)
+        self._survey.wait(5000)
 
     def _engine_changed(self) -> None:
         self._update_engine_desc()
@@ -612,7 +645,6 @@ class TranslatePage(QWidget):
     # --- ollama -------------------------------------------------------------------------
     def _ollama_model_changed(self, text: str) -> None:
         self.ctx.s.translate.ollama_model = text.strip()
-        self._update_setup_hint()
         self._restart()
 
     def _ollama_refresh(self) -> None:
@@ -628,17 +660,58 @@ class TranslatePage(QWidget):
         self.ol_line.set(f"{len(names)} model yüklü", "ok" if names else "info", tip=", ".join(names))
 
     def _ollama_pull(self) -> None:
+        """"Modeli indir": yerel Ollama'da kurulum servisine gider (yalnız model iner, ayar değişmez; ilerleme Ollama
+        bölümünde). Uzak sunucuda model eskisi gibi doğrudan o sunucuya indirilir."""
         model = self.ol_model.currentText().strip()
-        if not model or self._pull is not None:
+        if not model or self._busy():
             return
-        if ollama_list(self.ctx.s.translate.ollama_url) is None:
+        url = self.ctx.s.translate.ollama_url
+        if not url.strip() or is_local_url(url):  # boş adres: servis varsayılan yerel adresi kullanır
+            self._plan_model(model)
+            return
+        if ollama_list(url) is None:
             self.ol_line.set("Ollama çalışmıyor", "warn", tip=OLLAMA_DOWN_TIP)
             return
-        self._start_pull(model, self.ol_status)
+        self._start_pull(model)
 
-    def _start_pull(self, model: str, ui: PullStatus, then: Callable[[], None] | None = None) -> None:
-        """Modeli arka planda Ollama'ya indirir; ilerleme ve İptal `ui`'da görünür. Başarıyla biterse `then`
-        çağrılır; verilmediyse model listesi yenilenir ve işlem hattı yeniden başlar."""
+    def _plan_model(self, model: str) -> None:
+        """ai.start(ai.plan(model, apply=False)). Plan arka planda çıkarılır: Ollama'yı yoklar, Ollama kapalıyken
+        ~1,5 sn sürebilir (arayüz donmasın)."""
+        ai = self.ai
+        box: dict[str, Any] = {}
+
+        def job(_progress, _cancel) -> None:
+            box["plan"] = ai.plan(model, apply=False)
+
+        w = Worker(job, self)
+        w.done.connect(self._planned)  # sayfanın yöntemi: sonuç arayüz iş parçacığında işlenir
+        self._planning = (w, box)
+        self._workers.append(w)
+        self.ol_line.set("Hazırlanıyor…", "busy", tip="")
+        self._sync_buttons()
+        w.start()
+
+    def _planned(self, ok: bool, err: str) -> None:
+        if self._planning is None:
+            return
+        plan = self._planning[1].get("plan")
+        self._planning = None
+        if not ok or plan is None:
+            self.ol_line.set("İndirme başlatılamadı", "error", tip=err)
+        elif self._ai_state in AI_ACTIVE:  # o arada başka bir kurulum başladı (ör. yarım kalan iş sürdü)
+            self.ol_line.set("Başka bir kurulum sürüyor", "info", tip="")
+        else:
+            self.ol_line.set("")
+            self._next_origin = "ollama"
+            try:
+                self.ai.start(plan)
+            finally:
+                self._next_origin = ""
+        self._sync_buttons()
+
+    def _start_pull(self, model: str) -> None:
+        """Modeli uzak Ollama sunucusuna arka planda indirir; ilerleme ve İptal Ollama bölümünde. Bitince model
+        listesi yenilenir ve işlem hattı yeniden başlar."""
         url = self.ctx.s.translate.ollama_url
 
         def job(progress, cancel):
@@ -648,99 +721,163 @@ class TranslatePage(QWidget):
         # sinyaller sayfanın yöntemlerine bağlanır: işçi iş parçacığından gelse de arayüz iş parçacığında çalışırlar
         w.progress.connect(self._pull_progress)
         w.done.connect(self._pull_done)
-        self._pull = (w, model, then, ui)
+        self._pull = (w, model)
         self._workers.append(w)
-        self._set_pulling(ui, True)
-        ui.line.set(f"{model} indiriliyor…", "busy", tip="")
+        self.ol_status.busy(True)
+        self._sync_buttons()
+        self.ol_line.set(f"{model} indiriliyor…", "busy", tip="")
         w.start()
-
-    def _set_pulling(self, ui: PullStatus, on: bool) -> None:
-        """Aynı anda tek indirme: süren indirmede iki 'Önerilen kurulum' ve 'Modeli indir' kapalıdır."""
-        for b in (self.hint_setup, self.ol_setup, self.ol_pull):
-            b.setEnabled(not on)
-        ui.busy(on)
 
     def _pull_progress(self, msg: str, frac: float) -> None:
         if self._pull is None or self._pull[0].cancel.is_set():
             return  # iptal istendi: "İptal ediliyor…" yazısı kalsın
-        ui = self._pull[3]
         if msg:
-            ui.line.set(msg[:60], "busy")
+            self.ol_line.set(msg[:60], "busy")
         if frac >= 0:
-            ui.bar.setRange(0, 1000)
-            ui.bar.setValue(int(frac * 1000))
+            self.ol_bar.setRange(0, 1000)
+            self.ol_bar.setValue(int(frac * 1000))
         else:
-            ui.bar.setRange(0, 0)
+            self.ol_bar.setRange(0, 0)
 
     def _cancel_pull(self) -> None:
         if self._pull is None:
             return
-        w, _model, _then, ui = self._pull
-        w.cancel.set()  # ollama_pull bir sonraki ilerleme satırında durur
-        ui.cancel.setEnabled(False)
-        ui.line.set("İptal ediliyor…", "busy", tip="")
+        self._pull[0].cancel.set()  # ollama_pull bir sonraki ilerleme satırında durur
+        self.ol_cancel.setEnabled(False)
+        self.ol_line.set("İptal ediliyor…", "busy", tip="")
 
     def _pull_done(self, ok: bool, err: str) -> None:
         if self._pull is None:
             return
-        w, model, then, ui = self._pull
+        w, model = self._pull
         self._pull = None
-        self._set_pulling(ui, False)
+        self.ol_status.busy(False)
+        self._sync_buttons()
         if not ok:
             if w.cancel.is_set():
-                ui.line.set("İndirme iptal edildi", "info", tip="")
+                self.ol_line.set("İndirme iptal edildi", "info", tip="")
             else:
-                ui.line.set("İndirme başarısız", "error", tip=err)
-            self._update_setup_hint()
+                self.ol_line.set("İndirme başarısız", "error", tip=err)
             return
-        if then is not None:
-            then()
-            return
-        ui.line.set(f"{model} indirildi", "ok", tip="")
+        self.ol_line.set(f"{model} indirildi", "ok", tip="")
         self._ollama_refresh()
         self._restart()
 
-    # --- önerilen kurulum ---------------------------------------------------------------
-    def _recommended_setup(self, ui: PullStatus) -> None:
-        """Tek tıkla önerilen kurulum (davetteki ve Ollama bölümündeki düğme): Ollama'ya ulaşılamazsa kurulum
-        bağlantısını gösterir; önerilen model yüklü değilse indirir; sonra motoru, modeli ve varsayılan profili
-        ayarlar. Durum, düğmesine basılan yerde (`ui`) görünür."""
-        if self._pull is not None:
-            return
-        names = ollama_list(self.ctx.s.translate.ollama_url)
-        ui.need_ollama(names is None)
-        if names is None:
-            ui.line.set("Önce Ollama'yı kurun", "warn",
-                        tip="Ollama'ya ulaşılamadı. Kurup çalıştırın, sonra Önerilen kurulum'a yeniden basın.")
-            return
-        if model_installed(RECOMMENDED_OLLAMA_MODEL, names):
-            self._apply_recommended()
-        elif confirm_download(self, RECOMMENDED_OLLAMA_MODEL):
-            self._start_pull(RECOMMENDED_OLLAMA_MODEL, ui, then=self._apply_recommended)
+    # --- yapay zekâ kurulumu (önerilen kurulum, servis) --------------------------------------
+    @property
+    def advice(self) -> Any:
+        """Donanım önerisi (hardware.Advice); okunmadıysa ya da okunamadıysa None (bkz. advice_known)."""
+        return self._advice
 
-    def _apply_recommended(self) -> None:
+    @property
+    def advice_known(self) -> bool:
+        return self._advice_known
+
+    @property
+    def ai_fraction(self) -> float:
+        """Yapay zekâ kurulumunun toplam ilerlemesi (0..1): kısa ilerleme panelinin çubuğu. Baytsız adımlar
+        (kurulum, başlatma) beklenen süreleriyle sayılır; kenar çubuğundaki yüzde panelinkiyle aynı kalsın diye."""
+        bar = self.hint_progress.bar
+        return bar.value() / max(1, bar.maximum())
+
+    def _emit_ai_progress(self, _value: int) -> None:
+        self.ai_progress.emit(self.ai_fraction)
+
+    def _ai_panel(self) -> AiProgressPanel:
+        """Kısa ilerleme paneli: süren adım, çubuk, İptal / Yine de sürdür; hatada Tekrar dene ve vazgeçme."""
+        panel = AiProgressPanel(self.ai, compact=True)
+        panel.bar.setFixedWidth(AI_BAR_W)
+        return panel
+
+    def _on_advice(self, advice: Any) -> None:
+        """Donanım önerisi arka planda okundu: davetin metni ve modeli buna göre, kart uygunsa davet görünür."""
+        self._advice, self._advice_known = advice, True
+        self._apply_advice()
+        self._update_setup_hint()
+        self.advice_ready.emit(advice)
+
+    def _apply_advice(self) -> None:
+        """Davet metni ve iki "Önerilen kurulum" düğmesinin ipucu: model öneriden (gelene dek önerilen model)."""
+        model = str(getattr(self._advice, "model", "") or RECOMMENDED_OLLAMA_MODEL)
+        tip = setup_tip(model, self._advice)
+        self.hint_text.set(INVITE_TEXT.format(model=model_title(model)), "info", tip=tip)
+        for b in (self.hint_setup, self.ol_setup):
+            b.setToolTip(tip)
+
+    def _recommended_setup(self, origin: str) -> None:
+        """"Önerilen kurulum" (davette ve Ollama bölümünde): onay penceresi açılır (ne inecek, boyutu, disk); "Kur"
+        denince iş arka planda başlar, ilerlemesi düğmesine basılan yerde (`origin`) görünür. Ollama ve model zaten
+        kuruluysa pencere kendiliğinden kapanır, yalnız ayar yapılır. Siteye yönlendirme yok: Ollama'yı servis kurar."""
+        if self._busy():
+            return
+        self.ol_line.set("")
+        self._next_origin = origin
+        try:
+            confirm_ai_setup(self, self.ai)
+        finally:
+            self._next_origin = ""
+
+    def _on_ai_changed(self) -> None:
+        state = str(getattr(self.ai, "state", "") or "idle")
+        prev, self._ai_state = self._ai_state, state
+        if state in AI_ACTIVE and prev not in AI_ACTIVE:
+            # yeni iş: ilerleme düğmesine basılan yerde; sayfa dışından başlayan davette; "Tekrar dene" yerinde kalır
+            if self._next_origin:
+                self._ai_origin = self._next_origin
+            elif prev != "failed":
+                self._ai_origin = "hint"
+            self.ol_line.set("")  # önceki işin sonucu kalmasın
+        self._update_setup_hint()
+
+    def _on_ai_finished(self, ok: bool, message: str) -> None:
+        """İş bitti. Başarıda servis ayarları yazdı: motor, model, adres ve profil seçimleri sinyal göndermeden
+        eşlenir (yeniden başlatma istenmez; çeviri çalışıyorsa yapay zekâ bir sonraki Başlat'ta devreye girer) ve
+        sonuç Ollama bölümünde yazar. Kullanıcının iptalinde (iş Ollama bölümünden başladıysa) orada not düşülür."""
+        self._ai_state = str(getattr(self.ai, "state", "") or "idle")
+        if ok:
+            self._sync_settings()
+            self._show_result()
+        elif self._ai_state != "failed" and self._ai_origin == "ollama":
+            self.ol_line.set("İptal edildi", "info", tip="")
+        self._update_setup_hint()
+
+    def _sync_settings(self) -> None:
+        """Arayüzü ayarlarla eşler; sinyaller kapalı (ayar yazılmaz, işlem hattı yeniden başlatılmaz)."""
         t = self.ctx.s.translate
-        model = RECOMMENDED_OLLAMA_MODEL
-        if (t.profile or "").strip().casefold() != DEFAULT_PROFILE_ID.casefold():
-            self.ctx.pipeline.cache.clear()  # önceki profille yapılmış çeviriler yeniden çevrilsin
-        t.engine, t.ollama_model, t.profile = "ollama", model, DEFAULT_PROFILE_ID
-        # arayüzü ayarlarla eşle; sinyaller kapalı, yeniden başlatma aşağıda bir kez istenir
-        for w in (self.engine, self.ol_model):
+        widgets = (self.engine, self.ol_model, self.ol_url)
+        for w in widgets:
             w.blockSignals(True)
-        self.engine.setCurrentIndex(max(0, self.engine.findData("ollama")))
-        if self.ol_model.findData(model) < 0:
-            self.ol_model.addItem(model, model)
-        self.ol_model.setCurrentIndex(self.ol_model.findData(model))
-        self.ol_model.setCurrentText(model)
-        for w in (self.engine, self.ol_model):
-            w.blockSignals(False)
-        self._select_profile(DEFAULT_PROFILE_ID)
+        try:
+            self.engine.setCurrentIndex(max(0, self.engine.findData(t.engine)))
+            model = t.ollama_model.strip()
+            if model and self.ol_model.findData(model) < 0:
+                self.ol_model.addItem(model, model)
+            if self.ol_model.findData(model) >= 0:
+                self.ol_model.setCurrentIndex(self.ol_model.findData(model))
+            self.ol_model.setCurrentText(model)
+            if self.ol_url.text() != t.ollama_url:
+                self.ol_url.setText(t.ollama_url)
+        finally:
+            for w in widgets:
+                w.blockSignals(False)
+        self._select_profile(t.profile)
         self._update_engine_desc()
-        self._update_visibility()  # davet gizlenir, Ollama bölümü görünür: onay orada
-        self._restart()
-        profile = self.profile.currentText() or DEFAULT_PROFILE_ID
-        self.ol_line.set(f"Hazır: {model_title(model)} yerel çeviri", "ok",
-                         tip=f"Motor: Ollama. Model: {model}. Oyun profili: {profile}.")
+        self._update_visibility()  # motor Ollama olduysa davet gizlenir, Ollama bölümü görünür: sonuç orada
+
+    def _show_result(self) -> None:
+        t = self.ctx.s.translate
+        plan = getattr(self.ai, "active_plan", None)
+        model = str(getattr(self.ai, "model", "") or "").strip()
+        if plan is not None and not getattr(plan, "apply", True):  # "Modeli indir": yalnız model indi
+            if model and self.ol_model.findData(model) < 0:
+                self.ol_model.blockSignals(True)
+                self.ol_model.addItem(model, model)
+                self.ol_model.blockSignals(False)
+            self.ol_line.set(f"{model_title(model)} indirildi", "ok", tip="")
+        elif t.engine == "ollama":
+            profile = self.profile.currentText() or DEFAULT_PROFILE_ID
+            self.ol_line.set(f"Hazır: {model_title(t.ollama_model)} yerel çeviri", "ok",
+                             tip=f"Motor: Ollama. Model: {t.ollama_model}. Oyun profili: {profile}.")
 
     # --- sözlük -------------------------------------------------------------------------
     def _style_table(self) -> None:

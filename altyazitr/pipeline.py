@@ -14,7 +14,9 @@ okunduktan sonra bekleme penceresi (hybrid_wait_ms) içinde gelirse yalnız o g�
 hızlı çeviri gösterilir ve asıl çeviri gelince aynı satırı günceller. Bekleyen satır kendisinden sonraki satırları
 ve işaretleri de bekletir (ShowQueue): satırlar sırayla görünür, hiçbiri kaybolmaz, yavaş motor hiçbir satırı
 pencereden uzun bekletmez. Asıl motor ilk açılışta hazırlanırken (yerel LLM'de dakikayı bulabilir) satırlar
-beklemeden hızlı çeviriyle gösterilir. Sonuçlar Qt sinyalleriyle arayüze iletilir.
+beklemeden hızlı çeviriyle gösterilir. Asıl motor hazırlanamazsa hat hızlı çeviriyle sürer; yerel yapay zekânın
+bilinen hatası (Ollama kapalı, model indirilmemiş) uyarı penceresi yerine bildirimle (notice) söylenir. Sonuçlar Qt
+sinyalleriyle arayüze iletilir.
 
 Vurgulu kelimeler: OCR'dan sonra satırdaki renkli kelimeler bulunur (okumanın `spans` alanı: İngilizce metindeki
 aralıklar). Çevirmene satır [[...]] işaretleriyle gider, çeviri işaretli döner ve önbelleğe işaretli yazılır.
@@ -40,6 +42,7 @@ from PySide6.QtGui import QImage
 from rapidfuzz import fuzz
 
 from altyazitr import winutil
+from altyazitr.ai_setup import model_title
 from altyazitr.capture import CaptureError, RegionCapturer, WindowCapturer
 from altyazitr.config import Settings
 from altyazitr.detect import ChangeGate, GateParams, TextDetector, text_mask
@@ -64,6 +67,8 @@ CONTEXT_RESET_S = 90.0
 READY_STATUS = "Hazır — altyazı bekleniyor"
 PREPARING_STATUS = "Yapay zekâ hazırlanıyor… Hazır olana kadar hızlı çeviri gösterilir."
 FALLBACK_STATUS = "Yedek olarak yerel hızlı çeviri (quickmt) kullanılıyor."
+# Yerel yapay zekâ hazırlanamadı, hat hızlı çeviriyle sürüyor: notice'in 1. satırı (2. satır kısa neden)
+AI_FALLBACK_NOTICE = "{model} hazırlanamadı; hızlı çeviri kullanılıyor."
 
 
 class FifoQueue:
@@ -369,7 +374,10 @@ def _to_qimage(bgr: np.ndarray, mask: np.ndarray | None, max_w: int = 720) -> QI
 
 class Pipeline(QObject):
     status = Signal(str)
-    error = Signal(str)
+    error = Signal(str)  # ölümcül ya da kullanıcının düzeltmesi gereken hata (arayüz uyarı penceresiyle gösterir)
+    # Pencere açmayan bildirim (1. satır kısa metin, 2. satır kısa neden): hat sürüyor, yalnız haber verilir. Örnek:
+    # yerel yapay zekâ hazırlanamadı, hızlı çeviri kullanılıyor. İş parçacığından yayılır (arayüze kuyrukla gider).
+    notice = Signal(str)
     running_changed = Signal(bool)
     preview = Signal(QImage, float)
     subtitle = Signal(dict)
@@ -666,13 +674,14 @@ class Pipeline(QObject):
             except Exception as e:
                 log.warning("Hızlı ön çeviri hazırlanamadı: %s", e)
                 fast = None
+        main: Translator | None = None
         try:
             main = create_translator(tc, glossary)
             if not _two_stage(tc, fast):
                 main.prepare(self.status.emit)
             return main, fast
         except Exception as e:
-            self._report_prepare_error(e)
+            self._report_prepare_error(e, main, quick=fast is not None)  # hızlı çeviri hazırsa hat onunla sürer
         if tc.engine == "quickmt":
             return None, None
         self.status.emit(FALLBACK_STATUS)
@@ -686,9 +695,20 @@ class Pipeline(QObject):
             self.error.emit(f"Yedek çeviri de hazırlanamadı: {e}")
             return None, None
 
-    def _report_prepare_error(self, e: Exception) -> None:
-        """Asıl çeviri motoru hazırlanamadı: kullanıcıya hata olarak bildirilir (except bloğunda çağrılır)."""
-        if isinstance(e, TranslatorError):
+    def _report_prepare_error(self, e: Exception, main: Translator | None = None, *, quick: bool = False) -> None:
+        """Asıl çeviri motoru hazırlanamadı (except bloğunda çağrılır). quick: hat hızlı çeviriyle sürüyor.
+
+        Yerel yapay zekânın bilinen hatası (TranslatorError: Ollama kapalı ve başlatılamadı, model indirilmemiş) hat
+        hızlı çeviriyle sürerken notice ile söylenir: her Başlat'ta uyarı penceresi açılmaz. Beklenmeyen hatalar ve
+        çevrimiçi motorların hataları (ör. API anahtarı girilmemiş: kullanıcı düzeltmeli) error ile bildirilir."""
+        if quick and isinstance(e, TranslatorError) and getattr(main, "key", "") == "ollama":
+            text = str(e).strip()
+            name = model_title(str(getattr(main, "model", "") or "")) or "Yerel yapay zekâ"
+            log.warning("%s hazırlanamadı, hızlı çeviri kullanılıyor: %s", name, text.replace("\n", " | "))
+            head = AI_FALLBACK_NOTICE.format(model=name)
+            reason = text.splitlines()[0] if text else ""  # kısa neden; ayrıntı satırı günlükte
+            self.notice.emit(f"{head}\n{reason}" if reason else head)
+        elif isinstance(e, TranslatorError):
             self.error.emit(str(e))
         else:
             log.exception("Çeviri motoru hazırlanamadı")
@@ -740,13 +760,14 @@ class Pipeline(QObject):
 
     def _prepare_main(self, cx: TrContext) -> bool:
         """Karma modda asıl motoru hazırlar. Bu sürede çeviri döngüsü satırları asıl motor hata vermiş gibi
-        beklemeden hızlı çeviriyle gösterir. Hazırlanamazsa kullanıcıya bildirilir, hat hızlı çeviriyle sürer."""
+        beklemeden hızlı çeviriyle gösterir. Hazırlanamazsa kullanıcıya bildirilir (yerel yapay zekânın bilinen
+        hatası notice ile, bkz. _report_prepare_error), hat hızlı çeviriyle sürer."""
         self.status.emit(PREPARING_STATUS)
         try:
             cx.main.prepare(self.status.emit)
         except Exception as e:
             if self._run.is_set() and not cx.stop.is_set():  # durdurulurken çıkan hata kullanıcıya gösterilmez
-                self._report_prepare_error(e)
+                self._report_prepare_error(e, cx.main, quick=True)
                 self.status.emit(FALLBACK_STATUS)
             return False
         if not self._run.is_set() or cx.stop.is_set():

@@ -1,4 +1,8 @@
-"""Uygulama giriş noktası ve tüm bileşenleri birbirine bağlayan AppContext."""
+"""Uygulama giriş noktası ve tüm bileşenleri birbirine bağlayan AppContext.
+
+Açılış sırası (main): tek örnek denetimi → ayarlar → yerel yapay zekâ kurulum servisi (AiSetup) → ilk açılış penceresi
+(hızlı çeviri modeli yoksa; uygun ekran kartında yapay zekâyı da kurar) → AppContext → ana pencere.
+"""
 
 from __future__ import annotations
 
@@ -6,10 +10,11 @@ import logging
 import os
 import sys
 
-from PySide6.QtCore import QLibraryInfo, QLocale, QObject, QTimer, QTranslator, Signal
+from PySide6.QtCore import QLibraryInfo, QLocale, QObject, QTimer, QTranslator, Signal, Slot
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from altyazitr import APP_NAME, __version__, winutil
+from altyazitr.ai_setup import AiSetup
 from altyazitr.config import Settings, load_settings, save_settings
 from altyazitr.display import SubtitleDisplay
 from altyazitr.hotkeys import HotkeyManager
@@ -21,14 +26,33 @@ from altyazitr.server import AsyncBridge, OverlayServer
 
 log = logging.getLogger("altyazitr")
 
+# Önceki açılışta yarıda kalan yapay zekâ kurulumu açılıştan bu kadar sonra kendiliğinden sürer (açılış ağırlaşmasın)
+AI_RESUME_DELAY_MS = 3000
+
 
 class AppContext(QObject):
+    """Uygulamanın bileşenleri (OBS sunucusu, işlem hattı, ekran katmanı, kısayollar, yerel yapay zekâ kurulumu) ve
+    aralarındaki bağlar. Arayüz (gui/main_window.py) bunlara buradan ulaşır.
+
+    `ai` (altyazitr.ai_setup.AiSetup) yerel yapay zekâ kurulum servisidir: main() onu ilk açılış penceresinden önce
+    oluşturur ve buraya verir. Arayüz ilerlemeyi `ai.changed`, sonucu `ai.finished(başarılı, ileti)` ile alır. Burada
+    bağlı olanlar: çeviri çalışırken kurulumun indirmesi duraklar (pipeline.running_changed → ai.on_pipeline_running),
+    yarıda kalan kurulum açılıştan biraz sonra kendiliğinden sürer (ai.resume_pending), kapanışta iş durur
+    (ai.shutdown; süren Ollama kurulum süreci öldürülmez, yarım iş sonraki açılışta sürer).
+
+    Pencere açmayan bildirimler tek kanaldan geçer: notify() → notified(kısa metin, ayrıntı, düzey). İşlem hattının
+    notice'i (yerel yapay zekâ hazırlanamadı, hızlı çeviri kullanılıyor) burada bağlıdır; arayüz notified'ı tepsi
+    balonu / durum satırıyla gösterir ve yapay zekâ kurulumunun sonucunu (ai.finished) da notify() ile verir."""
+
     obs_clients = Signal(int)
     needs_region = Signal()
+    notified = Signal(str, str, str)  # (kısa metin, ayrıntı, düzey: "info" | "warn"); bkz. notify()
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, ai: AiSetup | None = None):
         super().__init__()
         self.s = settings
+        # main() verir (ilk açılış penceresi yapay zekâyı aynı servisle kurar); verilmezse (araçlar) burada oluşur
+        self.ai = ai if ai is not None else AiSetup(settings, save=self.save_now)
         self.bridge = AsyncBridge()
         self.bridge.start()
         self.server = OverlayServer(settings.server.port)
@@ -50,6 +74,8 @@ class AppContext(QObject):
         self.pipeline.gone.connect(self.display.on_gone)
         self.pipeline.same.connect(self.display.on_same)
         self.pipeline.running_changed.connect(self._on_running)
+        self.pipeline.running_changed.connect(self.ai.on_pipeline_running)  # çeviri çalışırken indirme duraklar
+        self.pipeline.notice.connect(self._on_pipeline_notice)
 
         self.hotkeys = HotkeyManager()
         self.hotkeys.triggered.connect(self._on_hotkey)
@@ -58,6 +84,11 @@ class AppContext(QObject):
         self._save_timer = QTimer(self, singleShot=True, interval=600, timeout=self.save_now)
         self._restart_timer = QTimer(self, singleShot=True, interval=800, timeout=self._do_restart)
         self._restart_pending = False
+        # Yarıda kalan yapay zekâ kurulumu (hatayla bitmediyse) biraz sonra sürer; --start ile çeviri başladıysa iş
+        # duraklamış başlar. Plan arka planda çıkarılır: arayüz donmaz.
+        self._ai_resume_timer = QTimer(self, singleShot=True, interval=AI_RESUME_DELAY_MS,
+                                       timeout=self.ai.resume_pending)
+        self._ai_resume_timer.start()
 
         self.overlay.start()
         self.display.push_style()
@@ -71,6 +102,23 @@ class AppContext(QObject):
             save_settings(self.s)
         except Exception:
             log.exception("Ayarlar kaydedilemedi")
+
+    # --- bildirimler ----------------------------------------------------------
+    def notify(self, text: str, level: str = "info") -> None:
+        """Kullanıcıya pencere açmadan bildirir (tepsi balonu, durum satırı; uyarı penceresi yok): notified yayılır.
+        text: 1. satır kısa metin, sonraki satırlar ayrıntı (modüllerin hata biçimi; "Ayrıntı: " öneki atılır).
+        level: "info" | "warn". Arayüz iş parçacığında çağrılır; boş metin yok sayılır."""
+        head, _, rest = (text or "").strip().partition("\n")
+        head, detail = head.strip(), rest.strip().removeprefix("Ayrıntı:").strip()
+        if not head:
+            return
+        log.info("Bildirim: %s%s", head, f" ({detail})" if detail else "")
+        self.notified.emit(head, detail, level)
+
+    @Slot(str)
+    def _on_pipeline_notice(self, text: str) -> None:
+        """İşlem hattının bildirimi (iş parçacığından kuyrukla gelir): hat sürüyor, yalnız haber verilir."""
+        self.notify(text, "warn")
 
     # --- işlem hattı ----------------------------------------------------------
     def toggle_running(self) -> None:
@@ -124,6 +172,10 @@ class AppContext(QObject):
     def shutdown(self) -> None:
         log.info("Kapatılıyor…")
         self.save_now()
+        self._ai_resume_timer.stop()
+        # Yapay zekâ kurulumu durur: indirme isteği kesilir, süren Ollama kurulum süreci öldürülmez, yarım iş sonraki
+        # açılışta sürer. Hattan önce: hattın durması duraklamış işi yeniden başlatmasın.
+        self.ai.shutdown()
         self.pipeline.stop_and_wait(3.0)
         self.overlay.stop()
         self.hotkeys.unregister_all()
@@ -195,8 +247,10 @@ def self_test() -> int:
     return 0 if ok else 1
 
 
-def _require_translation_model() -> bool:
-    """Yerel çeviri modeli (quickmt) zorunludur: yoksa ilk kurulum penceresinde indirilir.
+def _first_setup(settings: Settings, ai: AiSetup) -> bool:
+    """Yerel hızlı çeviri modeli (quickmt) zorunludur: yoksa ilk açılış penceresi açılır, model orada iner; uygun
+    ekran kartında yerel yapay zekâ da önerilir ve `ai` ile kurulur (iş ana pencere açıldıktan sonra arka planda
+    sürer). Model varsa (1.0.x / 1.1.0'dan güncelleyen kullanıcı) pencere açılmaz, hiçbir şey inmez.
     False → kullanıcı kurulumu tamamlamadan çıktı; ana pencere açılmamalı."""
     from altyazitr.translate import quickmt_downloaded
 
@@ -205,16 +259,28 @@ def _require_translation_model() -> bool:
     log.info("Çeviri modeli bulunamadı; ilk kurulum penceresi açılıyor.")
     from altyazitr.gui import setup_dialog
 
-    if setup_dialog.ensure_translation_model():
+    if setup_dialog.run_first_setup(settings, ai):
         log.info("İlk kurulum tamamlandı.")
         return True
     log.info("İlk kurulum tamamlanmadan çıkıldı.")
+    ai.shutdown()  # pencerenin başlattığı yapay zekâ işi durur; yarım iş sonraki açılışta sürer
     if setup_dialog.download_running():
         # snapshot_download yarıda durdurulamıyor; indirme iş parçacıkları çıkışı bekletmesin.
         # Yarım dosyalar bir sonraki açılışta kaldığı yerden tamamlanır.
         logging.shutdown()
         os._exit(0)
     return False
+
+
+def _open_context() -> AppContext | None:
+    """Ayarlar → yerel yapay zekâ kurulum servisi → ilk açılış penceresi → AppContext. Servis ilk açılış
+    penceresinden önce oluşur (pencere yapay zekâyı onunla kurar) ve AppContext'e geçer (arayüz ilerlemeyi ve sonucu
+    ondan okur). None: kullanıcı ilk kurulumu tamamlamadan çıktı; ana pencere açılmamalı."""
+    settings = load_settings()
+    ai = AiSetup(settings, save=lambda: save_settings(settings))
+    if not _first_setup(settings, ai):
+        return None
+    return AppContext(settings, ai)
 
 
 def main() -> int:
@@ -241,11 +307,9 @@ def main() -> int:
         QMessageBox.information(None, APP_NAME, f"{APP_NAME} zaten çalışıyor. Sistem tepsisindeki simgeye bakın.")
         return 0
 
-    if not _require_translation_model():
+    ctx = _open_context()
+    if ctx is None:
         return 0
-
-    settings = load_settings()
-    ctx = AppContext(settings)
 
     from altyazitr.gui.main_window import MainWindow
 

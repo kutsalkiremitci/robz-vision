@@ -1,8 +1,17 @@
-"""Ana pencere: sol kenar çubuğu + 4 sayfa, pencere içi bildirimler, sistem tepsisi, bölge seçimi akışı."""
+"""Ana pencere: sol kenar çubuğu + 4 sayfa, pencere içi bildirimler, sistem tepsisi, bölge seçimi akışı.
+
+Yerel yapay zekâ kurulumu (`ctx.ai`, altyazitr.ai_setup.AiSetup) arka planda sürerken kenar çubuğunda tıklanabilir bir
+durum satırı görünür ("Yapay zekâ %34", "Yapay zekâ duraklatıldı", "Yapay zekâ kurulamadı"; tıklanınca Çeviri
+sayfası). Pencere açmayan bildirimler tek kanaldan gelir (`ctx.notify()` → `ctx.notified`; işlem hattının notice'i
+oraya AppContext'te bağlı): pencere görünürken sağ altta kısa bildirim (gui/toast.py), tepsideyken tepsi balonu.
+Kurulumun sonucu (`ai.finished`) ve güncelleyen kullanıcıya bir kezlik yapay zekâ daveti (`settings.ai.invite_pending`)
+de bu kanaldan verilir.
+"""
 
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (
@@ -18,6 +27,7 @@ from PySide6.QtGui import (
     QPixmap,
 )
 from PySide6.QtWidgets import (
+    QAbstractButton,
     QApplication,
     QHBoxLayout,
     QLabel,
@@ -35,7 +45,9 @@ from PySide6.QtWidgets import (
 )
 
 from altyazitr import APP_NAME, __version__, winutil
+from altyazitr.ai_setup import TEXT_READY, TEXT_READY_LATER, Step, step_title
 from altyazitr.capture import snapshot_window
+from altyazitr.gui.ai_setup_view import PAUSED, error_note, fmt_eta, fmt_pair, fmt_percent
 from altyazitr.gui.dialogs import OBS_NOT_CONNECTED_TIP
 from altyazitr.gui.home_page import HomePage
 from altyazitr.gui.icons import icon, pixmap
@@ -46,7 +58,7 @@ from altyazitr.gui.style_page import StylePage
 from altyazitr.gui.theme import app_icon
 from altyazitr.gui.toast import ToastHost
 from altyazitr.gui.tokens import RADIUS, SPACE, C, F
-from altyazitr.gui.translate_page import TranslatePage
+from altyazitr.gui.translate_page import TranslatePage, invite_offered
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +75,12 @@ SIDEBAR_COMPACT_W = 64   # yalnız ikon
 COMPACT_BELOW = 900      # pencere bundan darsa kenar çubuğu daralır
 NAV_ITEM_H = 40
 ICON_COL = 20            # ikon sütunu: marka, menü ve durum ikonları aynı eksende hizalanır
+AI_ROW_H = 32            # yapay zekâ durum satırı (tıklanabilir)
+
+# Yapay zekâ kurulumunun bildirimleri (başarı metinleri servisle ortak: ai_setup.TEXT_READY / TEXT_READY_LATER)
+AI_FAILED = "Yapay zekâ kurulamadı; ayrıntı Çeviri sayfasında"
+AI_INVITE = "Yeni: yapay zekâ çevirisi. Çeviri sayfasından kurabilirsiniz."
+NOTICE_MS = 6000         # pencere açmayan bildirim, bir eyleme anlık yanıttan ("Bölge kaydedildi") uzun kalır
 
 
 # --- küçük yardımcılar ------------------------------------------------------------------
@@ -271,6 +289,132 @@ class _StatusRow(QWidget):
         self.tx.setVisible(not compact)
 
 
+def ai_status(ai: Any, fraction: float | None = None) -> tuple[str, str, str] | None:
+    """Kenar çubuğundaki yapay zekâ satırı: (durum, kısa yazı, ipucu); iş yoksa None (satır gizli).
+    Durum: running ("Yapay zekâ %34"; ipucu "Gemma 4 12B indiriliyor: 2,7 / 8,0 GB, kalan ~9 dk"), paused, failed.
+    fraction: toplam ilerleme (Çeviri sayfasındaki panelinkiyle aynı olsun diye oradan); verilmezse servisinki."""
+    state = str(getattr(ai, "state", "") or "")
+    message = str(getattr(ai, "message", "") or "")
+    if state == "running":
+        if fraction is None:
+            fraction = float(getattr(ai, "fraction", 0.0) or 0.0)
+        text = f"Yapay zekâ {fmt_percent(fraction)}"
+        step = getattr(ai, "step", None)
+        done, total = int(getattr(ai, "done_bytes", 0) or 0), int(getattr(ai, "total_bytes", 0) or 0)
+        if total > 0 and isinstance(step, Step):  # indirme adımı: adı ve miktarı
+            head = f"{step_title(step, str(getattr(ai, 'model', '') or ''))}: {fmt_pair(done, total)}"
+        else:
+            head = message or "Hazırlanıyor…"
+        eta = fmt_eta(getattr(ai, "eta_s", None))  # "Kalan ~9 dk"
+        tip = f"{head}, {eta[:1].lower()}{eta[1:]}" if eta else head
+        if message and not head.startswith(message):  # ağ beklemesi, hafif modele geçiş, iptal ediliyor
+            tip += f"\n{message}"
+        return "running", text, tip
+    if state == "paused":
+        return "paused", "Yapay zekâ duraklatıldı", f"{PAUSED}. Çeviri durunca kaldığı yerden sürer."
+    if state == "failed":
+        return "failed", "Yapay zekâ kurulamadı", error_note(str(getattr(ai, "error", "") or ""))
+    return None
+
+
+class _AiRow(QAbstractButton):
+    """Kenar çubuğundaki yapay zekâ kurulum satırı: ikon + kısa durum (durum satırlarıyla aynı eksenlerde; dar kenar
+    çubuğunda yalnız ikon, yazı ipucuna geçer). Düğmedir: tıklanınca, odaktayken Enter ya da Boşluk ile `clicked`.
+    Üzerine gelince menü öğeleri gibi yarı saydam RAISED zemin, klavye odağında camgöbeği halka."""
+
+    LOOK = {  # durum → (ikon, ikon rengi, yazı rengi)
+        "running": ("download", C.CYAN, C.TEXT),
+        "paused": ("download", C.TEXT_3, C.TEXT_2),
+        "failed": ("circle-alert", C.ORANGE, C.TEXT),
+    }
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setObjectName("aiStatus")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover)
+        self.setFixedHeight(AI_ROW_H)
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(SPACE["m"])
+        self.ic = QLabel()
+        self.ic.setFixedSize(ICON_COL, ICON_COL)
+        self.ic.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.tx = QLabel()
+        self.tx.setMinimumWidth(1)
+        for w in (self.ic, self.tx):
+            w.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        h.addWidget(self.ic)
+        h.addWidget(self.tx, 1)
+        self._look: tuple[str, str, str] | None = None
+        self._tip = ""
+        self._compact = False
+        self.setAccessibleDescription("Çeviri sayfasını açar")
+
+    def set_status(self, state: str, text: str, tip: str) -> None:
+        look = self.LOOK.get(state, self.LOOK["running"])
+        if look != self._look:  # ikon yalnız durum değişince çizilir (ilerleme sık güncellenir)
+            self._look = look
+            name, icon_color, text_color = look
+            self.ic.setPixmap(pixmap(name, 16, icon_color, dpr=max(2.0, _dpr(self))))
+            self.tx.setStyleSheet(_qss_font(F.DISPLAY, 13, text_color))
+        self.tx.setText(text)
+        self._tip = tip
+        self.setAccessibleName(text)
+        self._sync_tip()
+
+    def set_compact(self, compact: bool) -> None:
+        self._compact = compact
+        self.tx.setVisible(not compact)
+        self._sync_tip()
+
+    def _sync_tip(self) -> None:
+        text = self.tx.text()
+        if self._compact:
+            self.setToolTip(f"{text}\n{self._tip}" if self._tip else text)
+        else:
+            self.setToolTip(self._tip or text)
+
+    def keyPressEvent(self, e) -> None:  # noqa: N802
+        if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not e.isAutoRepeat():
+            self.click()
+            e.accept()
+            return
+        super().keyPressEvent(e)
+
+    def enterEvent(self, e) -> None:  # noqa: N802
+        self.update()
+        super().enterEvent(e)
+
+    def leaveEvent(self, e) -> None:  # noqa: N802
+        self.update()
+        super().leaveEvent(e)
+
+    def sizeHint(self) -> QSize:  # noqa: N802
+        return QSize(SIDEBAR_COMPACT_W, AI_ROW_H)
+
+    def paintEvent(self, _e) -> None:  # noqa: N802
+        hover = self.underMouse() or self.isDown()
+        focus = self.hasFocus() and bool(self.property("kbfocus"))
+        if not (hover or focus):
+            return
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        if hover:
+            bg = QColor(C.RAISED)
+            bg.setAlphaF(1.0 if self.isDown() else 0.55)
+            path = QPainterPath()
+            path.addRoundedRect(r, RADIUS["m"], RADIUS["m"])
+            p.fillPath(path, bg)
+        if focus:
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.setPen(QPen(QColor(C.CYAN), 1.5))
+            p.drawRoundedRect(r.adjusted(0.75, 0.75, -0.75, -0.75), RADIUS["m"], RADIUS["m"])
+        p.end()
+
+
 class _Sidebar(QWidget):
     """PANEL zeminli kenar çubuğu; sağda 1 px LINE ayırıcı. Kendini çizer (QSS'e bağlı değil)."""
 
@@ -298,6 +442,9 @@ class MainWindow(QMainWindow):
         self._quitting = False
         self._picker: ScreenRegionPicker | None = None
         self._compact: bool | None = None
+        self._startup_done = False  # açılıştaki tur kararı verildi (davet bildirimi ondan sonra)
+        self._advice: Any = None  # donanım önerisi (Çeviri sayfası arka planda okur)
+        self._advice_known = False
 
         central = QWidget()
         h = QHBoxLayout(central)
@@ -326,6 +473,18 @@ class MainWindow(QMainWindow):
         self.nav = _NavList()
         sv.addWidget(self.nav, 1)
 
+        # yapay zekâ kurulumu: yalnız iş sürerken ya da hata varken; tıklanınca Çeviri sayfası. Menü öğeleri gibi
+        # kenarlardan 8 px içeride durur (üzerine gelince zemini onlarınkiyle aynı genişlikte), ikonu ve yazısı
+        # durum satırlarıyla aynı eksende (bkz. _apply_compact).
+        self._ai_row = _AiRow()
+        self._ai_row.clicked.connect(self._open_translate)
+        self._ai_box = QWidget()
+        ab = QHBoxLayout(self._ai_box)
+        ab.setContentsMargins(SPACE["s"], 0, SPACE["s"], SPACE["xs"])
+        ab.addWidget(self._ai_row)
+        self._ai_box.hide()
+        sv.addWidget(self._ai_box)
+
         # alt bilgi: canlı durum, OBS bağlantısı, sürüm
         self._footer = QWidget()
         fv = QVBoxLayout(self._footer)
@@ -348,6 +507,10 @@ class MainWindow(QMainWindow):
             self.pages[key] = pg
             self.stack.addWidget(pg)
             self.nav.add_page(title, NAV_ICONS.get(key, "help"))
+        # donanım önerisini Çeviri sayfası arka planda okur (davet için); sonuç burada da kullanılır. Kurulumun
+        # yüzdesi de oradan: kenar çubuğu ile sayfadaki ilerleme paneli aynı sayıyı göstersin.
+        self.pages["translate"].advice_ready.connect(self._on_advice)
+        self.pages["translate"].ai_progress.connect(self._update_ai_row)
         self.nav.currentRowChanged.connect(self._on_nav)
         self.nav.setCurrentRow(0)
         h.addWidget(side)
@@ -356,12 +519,16 @@ class MainWindow(QMainWindow):
         self._toasts = ToastHost(self)
 
         ctx.pipeline.error.connect(self._show_error)
+        ctx.notified.connect(self._on_notified)  # pipeline.notice da buradan gelir (AppContext'te bağlı)
         ctx.pipeline.running_changed.connect(self._update_tray)
         ctx.pipeline.running_changed.connect(self._set_live)
         ctx.obs_clients.connect(self._set_obs)
         ctx.needs_region.connect(self.select_region)
+        ctx.ai.changed.connect(self._update_ai_row)
+        ctx.ai.finished.connect(self._on_ai_finished)
         self._set_live(bool(getattr(ctx.pipeline, "running", False)))
         self._set_obs(len(getattr(getattr(ctx, "server", None), "obs_clients", ()) or ()))
+        self._update_ai_row()
         self._apply_compact(self.width() < COMPACT_BELOW)
         self._build_tray()
         if ctx.server_error:
@@ -380,6 +547,10 @@ class MainWindow(QMainWindow):
                 self.nav.setCurrentRow(i)
                 return
 
+    def _open_translate(self) -> None:
+        """Yapay zekâ durum satırı: ilerleme, İptal ve hatanın ayrıntısı Çeviri sayfasında."""
+        self.goto("translate")
+
     def refresh_all(self) -> None:
         self.pages["home"].refresh()  # type: ignore[attr-defined]
 
@@ -396,7 +567,7 @@ class MainWindow(QMainWindow):
         self._wordmark.setVisible(not compact)
         self._ver.setVisible(not compact)
         self.nav.set_compact(compact)
-        for row in (self._live, self._obs):
+        for row in (self._live, self._obs, self._ai_row):
             row.set_compact(compact)
         # İki hizalama ekseni: ikonlar (genişte x = 30, menü ikonlarıyla aynı; darda kenar çubuğunun ortası)
         # ve yazılar (x = 52: marka adı, menü etiketleri, durum yazıları ve sürüm aynı sol kenarda).
@@ -412,6 +583,8 @@ class MainWindow(QMainWindow):
         self._brand.layout().setSpacing(max(SPACE["xs"], text_x - logo_x - self._logo.width()))
         self._footer.layout().setContentsMargins(icon_x, 0, SPACE["l"], 0)
         self._ver.setContentsMargins(ICON_COL + SPACE["m"], 0, 0, 0)
+        # yapay zekâ satırı kenarlardan SPACE["s"] içeride başlar (bkz. _ai_box): ikonu yine icon_x'te
+        self._ai_row.layout().setContentsMargins(icon_x - SPACE["s"], 0, SPACE["s"], 0)
 
     def _set_live(self, running: bool) -> None:
         if running:
@@ -427,13 +600,78 @@ class MainWindow(QMainWindow):
         else:
             self._obs.set_state(False, "OBS bağlı değil", OBS_NOT_CONNECTED_TIP)
 
+    def _update_ai_row(self, *_args) -> None:
+        """Yapay zekâ durum satırı: yalnız iş sürerken ya da hata varken görünür."""
+        status = ai_status(self.ctx.ai, self.pages["translate"].ai_fraction)
+        if status is not None:
+            self._ai_row.set_status(*status)
+        self._ai_box.setVisible(status is not None)
+
     # --- bildirim --------------------------------------------------------------------
-    def toast(self, msg: str, kind: str = "info") -> None:
+    def toast(self, msg: str, kind: str = "info", timeout_ms: int | None = None) -> None:
         """Sağ altta kısa, kendiliğinden kaybolan bildirim. kind: info / success / warn / error."""
         try:
-            self._toasts.show(msg, kind)
+            self._toasts.show(msg, kind, timeout_ms)
         except Exception:
             log.exception("Bildirim gösterilemedi")
+
+    def _on_notified(self, text: str, detail: str, level: str) -> None:
+        """Pencere açmayan bildirimlerin tek kanalı (AppContext.notified: kısa metin, ayrıntı, "info" | "warn").
+        Pencere görünürken sağ altta kısa bildirim (yalnız kısa metin); tepsideyken ya da simge durumundayken tepsi
+        balonu, ayrıntısıyla (uzun işin sonucu kaçmasın). Çeviri çalışırken tepsi balonu çıkmaz: yayıncı ekranını
+        yakalıyorsa Windows bildirimi yayına düşer. Yedek çeviriye geçildiğini Ana sayfadaki durum satırı zaten
+        gösterir (pipeline.status)."""
+        if self.isVisible() and not self.isMinimized():
+            self.toast(text, level, NOTICE_MS)
+        elif self.tray.isVisible() and not self.ctx.pipeline.running:
+            warn = level in ("warn", "error")
+            icon_kind = QSystemTrayIcon.MessageIcon.Warning if warn else QSystemTrayIcon.MessageIcon.Information
+            self.tray.showMessage(APP_NAME, f"{text}\n{detail}" if detail else text, icon_kind, 8000)
+
+    def _on_ai_finished(self, ok: bool, message: str) -> None:
+        """Yapay zekâ kurulumu bitti: sonuç ctx.notify ile (başarı "info", hata "warn"). Başarıda motor zaten yapay
+        zekâya geçti (servis); çeviri çalışıyorsa yeniden başlatılmaz, bir sonraki Başlat'ta devreye girer. Kullanıcı
+        iptal ettiyse bildirim yok (iptalden sonra servisin durumu "idle", hatadan sonra "failed")."""
+        ai = self.ctx.ai
+        if ok:
+            plan = getattr(ai, "active_plan", None)
+            if plan is not None and not getattr(plan, "apply", True):  # "Modeli indir": yalnız model indi
+                self.ctx.notify(message or "Model indirildi", "info")
+            elif getattr(ai, "speed_verdict", "") == "slow":  # hız testi (Faz 2): motor değişmedi, ileti açıklar
+                self.ctx.notify(message, "warn")
+            else:
+                running = bool(getattr(self.ctx.pipeline, "running", False))
+                self.ctx.notify(TEXT_READY_LATER if running else TEXT_READY, "info")
+        elif str(getattr(ai, "state", "") or "") == "failed":
+            self.ctx.notify(f"{AI_FAILED}\n{error_note(message)}", "warn")  # ayrıntı: hatanın kısa metni
+
+    def _on_advice(self, advice: Any) -> None:
+        self._advice, self._advice_known = advice, True
+        self._maybe_invite()
+
+    def _maybe_invite(self) -> None:
+        """1.1.0 ve öncesinden güncelleyen kullanıcıya bir kez "Yeni: yapay zekâ çevirisi" (settings.ai.invite_pending).
+        Açılıştaki tur kararından sonra, pencere görünürken ve tur açık değilken gösterilir; sonra işaret kalkar ve
+        kaydedilir. Kart uygun değilse (kademe none/weak) ya da kurulum zaten başladıysa bildirim gösterilmeden
+        kalkar. Donanım önerisi okunamadıysa sonraki açılışa kalır."""
+        cfg = self.ctx.s.ai
+        if not cfg.invite_pending or not self._startup_done or not self._advice_known or self._advice is None:
+            return
+        if not self.isVisible():
+            return  # tepsiden açılınca (showEvent)
+        from altyazitr.gui import tour
+
+        if tour.active_tour(self) is not None:
+            return  # tur karartması altında kaybolmasın: sonraki açılışta
+        idle = str(getattr(self.ctx.ai, "state", "") or "idle") == "idle"
+        if invite_offered(self._advice) and idle and self.ctx.s.translate.engine == "quickmt":
+            self.ctx.notify(AI_INVITE, "info")
+        cfg.invite_pending = False
+        self.ctx.save_later()
+
+    def showEvent(self, e) -> None:  # noqa: N802
+        super().showEvent(e)
+        self._maybe_invite()
 
     # --- bölge seçimi --------------------------------------------------------
     def select_region(self) -> None:
@@ -507,7 +745,8 @@ class MainWindow(QMainWindow):
             self.tray.showMessage(APP_NAME, msg[:250], QSystemTrayIcon.MessageIcon.Warning, 8000)
 
     def _maybe_tour(self) -> None:
-        """Açılıştan kısa süre sonra: tur daha önce görülmediyse başlatır. Tur hatası açılışı asla bozmaz."""
+        """Açılıştan kısa süre sonra: tur daha önce görülmediyse başlatır. Tur hatası açılışı asla bozmaz. Ardından
+        (tur yoksa) güncelleyen kullanıcıya yapay zekâ daveti."""
         try:
             if self.isVisible():  # tepsiden başlatıldıysa tur bir sonraki görünür açılışa kalır
                 from altyazitr.gui import tour
@@ -516,6 +755,8 @@ class MainWindow(QMainWindow):
         except Exception:
             log.exception("Tanıtım turu başlatılamadı")
         self._first_run()
+        self._startup_done = True
+        self._maybe_invite()
 
     def _first_run(self) -> None:
         if self.ctx.s.first_run:

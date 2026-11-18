@@ -134,6 +134,24 @@ class HotkeyCfg:
 
 
 @dataclass
+class AiCfg:
+    """Yerel yapay zekâ kurulumunun (Ollama + Gemma 4; bkz. altyazitr.ai_setup) kalıcı durumu.
+
+    Yarıda kalan iş (pending_model dolu, failed boş) sonraki açılışta kendiliğinden sürer; hatayla biten iş (failed
+    dolu) sürmez, "Tekrar dene" bekler. Motor ve model ayarı (translate.engine, translate.ollama_model) kurulum
+    başarıyla bitince yazılır."""
+
+    choice: str = ""  # ilk açılıştaki seçim: "" (sorulmadı) | "ai" (yapay zekâ ile) | "quickmt" (yalnız hızlı çeviri)
+    pending_model: str = ""  # süren ya da yarım kalan kurulumun modeli; boşsa iş yok
+    failed: str = ""  # son kurulumun hata metni (1. satır kısa, sonrası ayrıntı); boşsa hata yok
+    failed_kind: str = ""  # hatanın türü (ai_setup: network, disk, signature…): "Tekrar dene" ve "Elle kur" buna göre
+    pause_while_running: bool = True  # çeviri çalışırken indirme duraklar (yayın bağlantısı bozulmasın)
+    installed_ollama: bool = False  # Ollama'yı Robz Vision kurdu
+    invite_pending: bool = False  # "Yeni: yapay zekâ çevirisi" bildirimi bir kez gösterilecek (güncelleyen kullanıcı)
+    speed_ms: int = 0  # son hız testinde satır başına ortanca süre (ms); 0: ölçülmedi
+
+
+@dataclass
 class Settings:
     capture: CaptureCfg = field(default_factory=CaptureCfg)
     ocr: OcrCfg = field(default_factory=OcrCfg)
@@ -147,12 +165,14 @@ class Settings:
     overlay: OverlayCfg = field(default_factory=OverlayCfg)
     server: ServerCfg = field(default_factory=ServerCfg)
     hotkeys: HotkeyCfg = field(default_factory=HotkeyCfg)
+    ai: AiCfg = field(default_factory=AiCfg)  # yerel yapay zekâ kurulumu
     first_run: bool = True
     tour_seen: bool = False  # tanıtım turu tamamlandı mı ("Daha sonra" denirse bir sonraki açılışta yine gösterilir)
     minimize_to_tray: bool = True
     # Ayar dosyası biçimi. 2: varsayılan OCR motoru RapidOCR oldu (eski dosyalardaki "windows" bir kez taşınır).
     # 3: yerel LLM'in varsayılanı TranslateGemma'dan Gemma 4'e geçti, bağlam 3 satırdan 8 satıra çıktı.
-    settings_version: int = 3
+    # 4: yerel yapay zekâ kurulumu (ai); hızlı çeviriyle güncelleyen kullanıcıya bir kez yapay zekâ daveti.
+    settings_version: int = 4
 
 
 def _from_dict(cls, data: Any):
@@ -207,6 +227,10 @@ def load_settings() -> Settings:
                 s.translate.ollama_model = TranslateCfg.ollama_model
             if s.translate.context_lines == 3:
                 s.translate.context_lines = TranslateCfg.context_lines
+        if version < 4:
+            # 1.1.0 ve öncesinden güncelleyen: ilk açılış penceresi açılmaz (hızlı çeviri modeli zaten var). Motoru
+            # hızlı çeviri olana bir kez "Yeni: yapay zekâ çevirisi" bildirimi gösterilir (kartı uygunsa; arayüz bakar).
+            s.ai.invite_pending = s.translate.engine == "quickmt"
         s.settings_version = Settings.settings_version
         log.info("Ayarlar yüklendi: %s", SETTINGS_FILE)
         return s

@@ -34,6 +34,9 @@ from typing import TYPE_CHECKING
 
 from rapidfuzz import fuzz, process
 
+# Yerel model kataloğu (ad, başlık, boyut, ekran kartı eşiği) tek kaynakta: ai_setup.MODEL_INFO. ai_setup bu modülü
+# yalnız işlev içinde içe aktarır (is_network_error): içe aktarma döngüsü yok.
+from altyazitr.ai_setup import LIGHT_MODEL, MODEL_INFO, RECOMMENDED_MODEL, model_title
 from altyazitr.paths import MODEL_DIR
 from altyazitr.textproc import Spans, clean_marks, mark, snap_spans, split_sentences, unmark
 
@@ -511,14 +514,45 @@ TG_TEMPLATE = (
     "Please translate the following English text into Turkish:\n\n\n{text}"
 )
 
-# Önerilen yerel model ve hazır listeler (ilk öğe önerilen). Ölçümler: RTX 4070, Ollama 0.40, GTA 6 profili.
-RECOMMENDED_OLLAMA_MODEL = "gemma4:12b"
+# Önerilen yerel model ve hazır listeler (ilk öğe önerilen). Ölçümler: RTX 4070, Ollama 0.40, GTA 6 profili. Model
+# adları, başlıkları ve boyutları model kataloğundan (MODEL_INFO) gelir: ilk açılış ve Çeviri sayfası aynı bilgiyi
+# gösterir.
+RECOMMENDED_OLLAMA_MODEL = RECOMMENDED_MODEL  # Gemma 4 12B: 12 GB+ ekran kartı
+LIGHT_OLLAMA_MODEL = LIGHT_MODEL  # Gemma 4 E4B: 8 GB ekran kartı ya da oyun da bu bilgisayarda
+
+
+def _size_text(n: int) -> str:
+    """Ondalık GB, Türkçe yazımla: 8_000_000_000 → "8 GB", 6_600_000_000 → "6,6 GB"."""
+    return f"{n / 1e9:.1f}".replace(".", ",").removesuffix(",0") + " GB"
+
+
+def _preset(model: str, note: str) -> tuple[str, str]:
+    """Hazır listedeki satır: başlık ve boyut model kataloğundan; note'taki "{size}" boyutla dolar."""
+    info = MODEL_INFO[model]
+    return model, f"{info.title} — {note.format(size=_size_text(info.size))}"
+
+
 OLLAMA_PRESETS = [
-    ("gemma4:12b", "Gemma 4 12B — önerilen: en iyi bağlam ve Türkçe, ~8 GB, 12 GB+ ekran kartı"),
-    ("gemma4:e4b", "Gemma 4 E4B — en hızlı, ~6,6 GB, 8 GB ekran kartı ya da yayın + oyun aynı kartta"),
-    ("gemma4:26b", "Gemma 4 26B — en yüksek kalite, ~17 GB, 24 GB ekran kartı"),
+    _preset(RECOMMENDED_OLLAMA_MODEL, "önerilen: en iyi bağlam ve Türkçe, ~{size}, 12 GB+ ekran kartı"),
+    _preset(LIGHT_OLLAMA_MODEL, "en hızlı, ~{size}, 8 GB ekran kartı ya da yayın + oyun aynı kartta"),
+    _preset("gemma4:26b", "en yüksek kalite, ~{size}, 24 GB ekran kartı"),
     ("translategemma:12b", "TranslateGemma 12B — yalnız çeviri modeli; bağlam ve profil kullanmaz"),
 ]
+
+# Yerel yapay zekânın hazırlık hataları (TranslatorError): 1. satır kısa ve ne yapılacağını söyler, 2. satır ayrıntı.
+TEXT_OLLAMA_DOWN = "Ollama çalışmıyor ve başlatılamadı. Çeviri sayfasındaki Önerilen kurulum'a basın."
+
+
+def missing_model_text(model: str) -> str:
+    """Model Ollama'da yok. Önerilen kurulumun kurduğu modellerde (Gemma 4 12B / E4B) o düğme, ötekilerde "Modeli
+    indir" söylenir; bilinen modelin adı kataloğdan gelir ("Gemma 4 12B")."""
+    m = model.strip()
+    if m in (RECOMMENDED_OLLAMA_MODEL, LIGHT_OLLAMA_MODEL):
+        head = f"{model_title(m)} indirilmedi; Çeviri sayfasındaki Önerilen kurulum'a basın."
+    else:
+        name = model_title(m) if m in MODEL_INFO else f"'{m}' modeli"
+        head = f"{name} indirilmedi; Çeviri sayfasındaki Modeli indir'e basın."
+    return f"{head}\nAyrıntı: '{m}' modeli Ollama'da yüklü değil."
 
 # Her oyun profilinin kurallarına eklenen, istemin biçimine bağlı ortak kurallar
 LLM_BASE_RULES = (
@@ -624,30 +658,29 @@ class OllamaTranslator(Translator):
 
     def __init__(self, url: str, model: str, glossary: Glossary, game_context: str = "",
                  timeout: float = 6.0, profile: GameProfile | None = None):
-        import requests
-
         self.url = url.rstrip("/")
         self.model = model.strip()
         self.glossary = glossary
         self.game_context = game_context.strip()
         self.timeout = timeout
         self.profile = profile
-        self._s = requests.Session()
+        self._s = _ollama_session()
         self._think_ok = True
         self.is_tg = self.model.lower().startswith("translategemma")
         self.system = build_system_prompt(profile, glossary, self.game_context)
 
     def prepare(self, status: StatusCb) -> None:
+        """Ollama açık mı ve model yüklü mü; kurulu ama kapalı Ollama'yı başlatır, sonra modeli belleğe yükleyip
+        ısıtır. Ollama'ya ulaşılamazsa ya da model yoksa TranslatorError (1. satır kısa ve ne yapılacağını söyler):
+        karma modda hat hızlı çeviriyle sürer, kullanıcıya pencere açmayan bildirim gider (Pipeline.notice)."""
         status(f"Ollama'ya bağlanılıyor ({self.url})…")
         names = ollama_list(self.url)
+        if names is None:  # kurulu ama kapalı olabilir (Windows açılışında başlamadı ya da kapatıldı)
+            names = self._start_ollama(status)
         if names is None:
-            raise TranslatorError(
-                "Ollama'ya ulaşılamadı. Ollama'yı https://ollama.com/download adresinden kurup çalıştırın "
-                "veya çeviri motorunu 'Yerel hızlı çeviri' olarak değiştirin.")
+            raise TranslatorError(f"{TEXT_OLLAMA_DOWN}\nAyrıntı: {self.url} yanıt vermiyor.")
         if not _model_in(self.model, names):
-            raise TranslatorError(
-                f"'{self.model}' modeli Ollama'da yüklü değil. Çeviri sayfasındaki "
-                "'Önerilen kurulum' ya da 'Modeli indir' düğmesiyle indirebilirsiniz.")
+            raise TranslatorError(missing_model_text(self.model))
         status(f"{self.model} belleğe yükleniyor ve ısınıyor (ilk seferde biraz sürebilir)…")
         ctx: list[tuple[str, str]] = []
         for i, line in enumerate(WARMUP_LINES):
@@ -657,6 +690,21 @@ class OllamaTranslator(Translator):
             except Exception as e:  # ısınma başarısız olsa da çeviri denensin; hata orada görünür
                 log.warning("Ollama ısınması başarısız: %s", e)
                 break
+
+    def _start_ollama(self, status: StatusCb) -> list[str] | None:
+        """Kurulu ama kapalı Ollama'yı penceresiz başlatır (ollama_runtime.ensure_running; açılışı en çok ~25 sn
+        beklenir) ve yüklü modelleri yeniden okur. Ollama kurulu değilse, adres bu bilgisayarda değilse, portta başka
+        bir program varsa ya da Ollama açılmazsa None."""
+        status("Ollama başlatılıyor…")
+        try:
+            from altyazitr import ollama_runtime  # tembel: yalnız Ollama kapalıyken gerekir
+
+            if not ollama_runtime.ensure_running(self.url):
+                return None
+        except Exception:  # ensure_running hata fırlatmaz; yine de hazırlık bilinen hatayla (TranslatorError) bitsin
+            log.warning("Ollama başlatılamadı", exc_info=True)
+            return None
+        return ollama_list(self.url)
 
     def _body(self, text: str, context: Context) -> dict:
         if self.is_tg:  # TranslateGemma yalnız kendi şablonuyla çalışır: bağlam ve profil gitmez
@@ -713,14 +761,23 @@ def _model_in(model: str, names: Sequence[str]) -> bool:
     return any(n in cands for n in names)
 
 
-def ollama_list(url: str) -> list[str] | None:
-    """Yüklü modellerin adları; Ollama çalışmıyorsa None."""
+def _ollama_session():
+    """Ollama istekleri için oturum. Sistemin vekil sunucusu (proxy: HTTP_PROXY vb.) kullanılmaz: Ollama bu
+    bilgisayardadır (ya da yerel ağda) ve vekil sunucu 127.0.0.1 isteklerini yanlış yere götürebilir."""
     import requests
 
+    s = requests.Session()
+    s.trust_env = False
+    return s
+
+
+def ollama_list(url: str) -> list[str] | None:
+    """Yüklü modellerin adları; Ollama çalışmıyorsa None."""
     try:
-        r = requests.get(f"{url.rstrip('/')}/api/tags", timeout=2.5)
-        r.raise_for_status()
-        return [m.get("name", "") for m in r.json().get("models", [])]
+        with _ollama_session() as s:
+            r = s.get(f"{url.rstrip('/')}/api/tags", timeout=2.5)
+            r.raise_for_status()
+            return [m.get("name", "") for m in r.json().get("models", [])]
     except Exception:
         return None
 
@@ -728,10 +785,8 @@ def ollama_list(url: str) -> list[str] | None:
 def ollama_pull(url: str, model: str, progress: Callable[[str, float], None],
                 cancel: threading.Event) -> None:
     """Modeli indirir; progress(durum_metni, oran 0..1 veya -1)."""
-    import requests
-
-    with requests.post(f"{url.rstrip('/')}/api/pull", json={"model": model, "stream": True},
-                       stream=True, timeout=(5, 600)) as r:
+    with _ollama_session() as s, s.post(f"{url.rstrip('/')}/api/pull", json={"model": model, "stream": True},
+                                        stream=True, timeout=(5, 600)) as r:
         if r.status_code != 200:
             raise TranslatorError(f"Model indirilemedi ({r.status_code}): {r.text[:200]}")
         for raw in r.iter_lines():
