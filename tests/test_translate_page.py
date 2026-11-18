@@ -484,10 +484,12 @@ def test_recommended_setup_opens_confirm_window(qapp, monkeypatch, where):
     before = (t.engine, t.ollama_model, t.profile)
     button = page.hint_setup if where == "hint" else page.ol_setup
     assert _vis(page, button) and button.isEnabled()
+    assert _wait(qapp, lambda: not page._ol_reading)  # Ollama bölümü yüklü modelleri arka planda okur
+    listed = len(fake.lists)
     button.click()
     ai = page.ai
     assert ai.confirms == [page] and ai.started == [] and ai.plans == []
-    assert fake.lists == [] and fake.pulls == [] and page._workers == []
+    assert len(fake.lists) == listed and fake.pulls == [] and page._workers == []  # Ollama'ya doğrudan sorulmaz
     assert (t.engine, t.ollama_model, t.profile) == before and calls == {"save": 0, "restart": 0, "clear": 0}
     assert not _vis(page, page.hint_progress) and not _vis(page, page.ol_progress) and not _vis(page, page.ol_line)
     assert all(_enabled(page))
@@ -604,7 +606,8 @@ def test_finished_job_syncs_selections_without_signals(qapp, monkeypatch):
     assert not _vis(page, page.hint_box) and _vis(page, page.card_ol) and not _vis(page, page.card_qm)
     assert page.ol_line.text.text() == f"Hazır: {model_title(LIGHT)} yerel çeviri" and _vis(page, page.ol_line)
     assert not _vis(page, page.hint_progress) and not _vis(page, page.ol_progress) and all(_enabled(page))
-    assert fake.lists == [] and fake.pulls == []
+    assert fake.pulls == []  # model servisle indi; yüklü modeller yalnız "Modeli indir" düğmesi için okunur
+    assert _wait(qapp, lambda: not page._ol_reading) and page.ol_line.text.text().startswith("Hazır: ")
     # sonra kullanıcı modeli değiştirirse her zamanki gibi kaydedilir ve hat yeniden başlar
     page.ol_model.setCurrentText(RECOMMENDED_OLLAMA_MODEL)
     assert t.ollama_model == RECOMMENDED_OLLAMA_MODEL and calls == {"save": 1, "restart": 1, "clear": 0}
@@ -617,14 +620,16 @@ def test_manual_model_download_goes_to_service_on_local_address(qapp, monkeypatc
     s = Settings()
     s.translate.engine = "ollama"
     page, t, calls, fake = _page(qapp, monkeypatch, s, names=["llama3.2:3b"])
+    assert _wait(qapp, lambda: page._ol_installed is not None)  # yüklü modeller arka planda okundu
+    listed = len(fake.lists)
     page.ol_model.setCurrentText("qwen3:8b")
-    assert t.ollama_model == "qwen3:8b" and calls["restart"] == 1
+    assert t.ollama_model == "qwen3:8b" and calls["restart"] == 1 and _vis(page, page.ol_pull)  # yüklü değil
     ai = page.ai
     page.ol_pull.click()
     assert _enabled(page) == [False, False, False]  # plan hazırlanırken de tek indirme
     assert _wait(qapp, lambda: ai.started)
     assert ai.plans == [("qwen3:8b", False)] and [p.apply for p in ai.started] == [False]
-    assert fake.lists == [] and fake.pulls == []  # Ollama'ya doğrudan gidilmez
+    assert len(fake.lists) == listed and fake.pulls == []  # Ollama'ya doğrudan gidilmez
     assert _vis(page, page.ol_progress) and not _vis(page, page.hint_box) and not _vis(page, page.ol_line)
     assert _enabled(page) == [False, False, False]
     ai.succeed()
@@ -656,8 +661,9 @@ def test_manual_model_download_on_remote_server_uses_ollama_directly(qapp, monke
     page.ol_pull.click()
     assert _wait(qapp, lambda: page._pull is None)
     assert fake.pulls == [(REMOTE, "qwen3:8b")] and page.ai.plans == [] and page.ai.started == []
-    assert page.ol_model.findData("qwen3:8b") >= 0  # yüklü modeller listeye eklenir
-    assert page.ol_line.text.text() == "2 model yüklü"
+    # yüklü modeller arka planda yeniden okunup listeye eklenir; inen model artık yüklü, "Modeli indir" gizlenir
+    assert _wait(qapp, lambda: page.ol_model.findData("qwen3:8b") >= 0)
+    assert page.ol_line.text.text() == "qwen3:8b indirildi" and not _vis(page, page.ol_pull)
     assert t.engine == "ollama" and t.ollama_model == "qwen3:8b" and t.profile == DEFAULT_PROFILE_ID
     assert calls["restart"] == 2 and all(_enabled(page))
 
@@ -727,3 +733,67 @@ def test_helpers():
         "Hafif.", "6 GB ekran kartı: yayın açıkken gecikebilir"]
     assert setup_tip(RECOMMENDED_OLLAMA_MODEL).count("\n") == 0
     assert "ollama.com" not in tip and "elle" not in tip  # siteye ya da elle kurmaya yönlendirme yok
+
+
+# --- yüklü model ve oyun profili ipucu ----------------------------------------------------------------
+def test_has_model_matches_ollama_names():
+    from altyazitr.gui.translate_page import has_model
+
+    names = ["gemma4:12b", "llama3:latest"]
+    assert has_model("gemma4:12b", names) and has_model(" Gemma4:12B ", names)
+    assert has_model("llama3", names)  # etiketsiz ad Ollama'da ":latest" olarak görünür
+    assert not has_model("gemma4:e4b", names) and not has_model("gemma4", names) and not has_model("", names)
+
+
+def test_pull_button_hidden_for_installed_model(qapp, monkeypatch):
+    """Seçili model Ollama'da yüklüyse "Modeli indir" görünmez; yüklü olmayan modelde görünür. Yüklü modeller
+    arka planda okunur (arayüz donmaz)."""
+    page, t, calls, fake = _page(qapp, monkeypatch, _settings(), names=["translategemma:12b", "llama3:latest"])
+    assert _wait(qapp, lambda: page._ol_installed is not None) and fake.lists
+    assert t.ollama_model == "translategemma:12b" and not _vis(page, page.ol_pull)
+    assert "yüklü" in page.ol_model.toolTip()
+    page.ol_model.setCurrentText("gemma4:e4b")  # yüklü değil
+    assert _vis(page, page.ol_pull)
+    page.ol_model.setCurrentText("llama3")  # Ollama'da "llama3:latest"
+    assert not _vis(page, page.ol_pull)
+    assert page.ol_model.findData("llama3:latest") >= 0  # yüklü modeller seçime eklendi
+
+
+def test_pull_button_stays_when_models_unknown(qapp, monkeypatch):
+    """Ollama'ya ulaşılamıyorsa hangi modelin yüklü olduğu bilinmez: "Modeli indir" görünür kalır. Yenile düğmesi
+    sonucu durum satırına yazar."""
+    page, t, calls, fake = _page(qapp, monkeypatch, _settings(), names=None)
+    assert _wait(qapp, lambda: fake.lists and not page._ol_reading)
+    assert page._ol_installed is None and _vis(page, page.ol_pull)
+    page._ollama_refresh()
+    assert _wait(qapp, lambda: page.ol_line.text.text() == "Ollama çalışmıyor")
+    fake.names = ["translategemma:12b"]
+    page._ollama_refresh()
+    assert _wait(qapp, lambda: page.ol_line.text.text() == "1 model yüklü")
+    assert not _vis(page, page.ol_pull)
+
+
+def test_models_read_when_switching_to_ollama(qapp, monkeypatch):
+    """Motor Ollama değilken yüklü modeller okunmaz; Ollama'ya geçince okunur."""
+    page, t, calls, fake = _page(qapp, monkeypatch, _settings(engine="quickmt"), names=["translategemma:12b"])
+    qapp.processEvents()
+    assert fake.lists == []
+    page.engine.setCurrentIndex(page.engine.findData("ollama"))
+    assert _wait(qapp, lambda: page._ol_installed is not None)
+    assert not _vis(page, page.ol_pull)
+
+
+def test_profile_info_icon_explains_profile(qapp, monkeypatch):
+    """"Oyun profili"nin yanında bilgi simgesi: üzerine gelince profilin ne olduğu ve neyi değiştirdiği görünür."""
+    from altyazitr.gui.translate_page import PROFILE_INFO
+
+    page, *_ = _page(qapp, monkeypatch, _settings(engine="quickmt"))
+    tip = page.profile_info.toolTip()
+    assert tip == PROFILE_INFO
+    for part in ("Oyun profili", "Çevrilmeyecek adlar", "Argo sözlüğü", "Genel"):
+        assert part in tip
+    assert page.profile_info.pixmap() is not None and not page.profile_info.pixmap().isNull()
+    assert _vis(page, page.profile_info) and _vis(page, page.profile)
+    assert "<" not in page.profile_info.accessibleDescription()  # ekran okuyucuya düz metin
+    page.engine.setCurrentIndex(page.engine.findData("none"))
+    assert not _vis(page, page.profile_info) and not _vis(page, page.profile)

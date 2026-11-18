@@ -18,6 +18,7 @@ Başlat'ta devreye girer).
 from __future__ import annotations
 
 import re
+import threading
 from collections.abc import Sequence
 from typing import Any
 
@@ -216,6 +217,19 @@ GLOSSARY_TIP = ("Oyundaki adlar ve terimler. Türkçe karşılığı boş bırak
                 "(Vice City, Lucia). İsterseniz karşılık da yazabilirsiniz: cop → polis, bro → kanka.")
 CONTEXT_TIP = "Önceki satırlar yapay zekâya bağlam olarak gider; konuşmanın gidişatını anlar."
 PROFILE_TIP = "Yapay zekâya oyunun dünyasını ve argosunu anlatır; oyundaki adlar her motorda çevrilmeden kalır"
+# "Oyun profili"nin yanındaki bilgi simgesinin ipucu: profilin ne olduğu ve neyi değiştirdiği
+PROFILE_INFO = (
+    "<b>Oyun profili</b> yapay zekâya hangi oyunu çevirdiğini anlatır; her satır bu bilgiyle çevrilir:"
+    "<ul style='margin-left:-24px'>"
+    "<li><b>Dünya ve ton:</b> oyunun geçtiği yer ve konusu (GTA 6: Leonida, Vice City, suç dünyası).</li>"
+    "<li><b>Çevrilmeyecek adlar:</b> karakter, yer, marka ve silah adları (Lucia, Vice City, Ammu-Nation…); "
+    "Türkçe ekleri doğru alır: Lucia'yı, Vice City'de.</li>"
+    "<li><b>Argo sözlüğü:</b> heist → soygun, stash → zula, snitch → ispiyoncu…</li>"
+    "<li><b>Üslup:</b> sokak ağzı, küfrün şiddeti, tuş adları (L2, R2) aynen kalır.</li>"
+    "</ul>"
+    "Yerel yapay zekâ ve Gemini profilin tamamını kullanır; hızlı çeviri ve DeepL yalnız adları korur. "
+    "Başka bir oyun oynarken <b>Genel</b>'i seçin."
+)
 EXTRA_TIP = "Profilin üstüne eklenen kendi notun. Ör: hangi görevdesin, kimlerle konuşuyorsun."
 
 OLLAMA_DOWN_TIP = "Ollama'yı başlatın veya adresi kontrol edin"
@@ -290,9 +304,17 @@ class PullStatus:
             self.bar.setValue(0)
 
 
+def has_model(model: str, names: Sequence[str]) -> bool:
+    """Model Ollama'da yüklü mü. Etiketsiz ad ("llama3") Ollama'nın listesinde "llama3:latest" olarak görünür."""
+    m = model.strip().casefold()
+    want = {m} if ":" in m else {m, f"{m}:latest"}
+    return bool(m) and any(n.strip().casefold() in want for n in names)
+
+
 class TranslatePage(QWidget):
     advice_ready = Signal(object)  # donanım önerisi okundu (hardware.Advice; okunamadıysa None)
     ai_progress = Signal(float)  # yapay zekâ kurulumunun toplam ilerlemesi (0..1; bkz. ai_fraction) değişti
+    _ollama_models_read = Signal(object)  # arka planda okunan yüklü Ollama modelleri (list; Ollama kapalıysa None)
 
     def __init__(self, win):
         super().__init__()
@@ -309,6 +331,12 @@ class TranslatePage(QWidget):
         self._planning: tuple[Worker, dict[str, Any]] | None = None  # "Modeli indir": servisin planı çıkarılıyor
         self._advice: Any = None
         self._advice_known = False
+        # Ollama'daki yüklü modeller: arka planda okunur (Ollama kapalıyken yanıt ~2,5 sn sürer; arayüz donmasın).
+        # None = bilinmiyor; o zaman "Modeli indir" görünür kalır.
+        self._ol_installed: list[str] | None = None
+        self._ol_reading = False
+        self._ol_report = False  # okuma bitince sonuç Ollama bölümünün durum satırına yazılsın mı (yenile düğmesi)
+        self._ollama_models_read.connect(self._on_ollama_models)
         # Yapay zekâ işinin ilerlemesi düğmesine basılan yerde görünür: "hint" (davet) ya da "ollama" (Ollama
         # bölümü). Sayfa dışından başlayan iş davette görünür; "Tekrar dene" yerini korur.
         self._ai_state = str(getattr(self.ai, "state", "") or "idle")
@@ -347,7 +375,16 @@ class TranslatePage(QWidget):
             # kayıtlı profil listede yok: get_profile genel profile düşerdi; çeviri ekrandaki profille yapılsın
             t.profile = shown
         self.profile.currentIndexChanged.connect(self._profile_changed)
-        add_row(f, "Oyun profili", self.profile, tip=PROFILE_TIP)
+        # yanında bilgi simgesi: üzerine gelince profilin ne olduğu ve neyi değiştirdiği görünür
+        self.profile_info = QLabel()
+        self.profile_info.setPixmap(pixmap("info", ICON["s"], C.TEXT_2))
+        self.profile_info.setToolTip(PROFILE_INFO)
+        self.profile_info.setAccessibleName("Oyun profili nedir")
+        self.profile_info.setAccessibleDescription(re.sub(r"<[^>]+>", " ", PROFILE_INFO))
+        self.profile_info.setCursor(Qt.CursorShape.WhatsThisCursor)
+        self.profile_row = QWidget()
+        self.profile_row.setLayout(hbox(self.profile, self.profile_info, None))
+        add_row(f, "Oyun profili", self.profile_row, tip=PROFILE_INFO)
         self.engine_form = f
         eng.add(layout=f)
         self.remote_box = QWidget()
@@ -517,6 +554,8 @@ class TranslatePage(QWidget):
         self.ai.finished.connect(self._on_ai_finished)
         # donanım önerisi (ekran kartı okuması ≤ ~1 sn) arka planda: gelene dek davet gizli
         self._survey = start_survey(self.ai, self._on_advice, _ignore_plan, models=())
+        if t.engine == "ollama":
+            self._read_ollama_models()  # "Modeli indir" yalnız seçili model yüklü değilse görünsün
         app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self._stop_workers)
@@ -529,7 +568,7 @@ class TranslatePage(QWidget):
         self.card_gm.setVisible(e == "gemini")
         self.card_dl.setVisible(e == "deepl")
         self.remote_box.setVisible(e in ("ollama", "gemini", "deepl"))
-        self.engine_form.setRowVisible(self.profile, e != "none")
+        self.engine_form.setRowVisible(self.profile_row, e != "none")
         self.remote_form.setRowVisible(self.extra, e in ("ollama", "gemini"))  # DeepL istem kullanmaz
         self._update_setup_hint()
 
@@ -576,6 +615,8 @@ class TranslatePage(QWidget):
     def _engine_changed(self) -> None:
         self._update_engine_desc()
         self._update_visibility()
+        if self.ctx.s.translate.engine == "ollama":
+            self._read_ollama_models()
         self._restart()
 
     def _update_engine_desc(self) -> None:
@@ -645,19 +686,60 @@ class TranslatePage(QWidget):
     # --- ollama -------------------------------------------------------------------------
     def _ollama_model_changed(self, text: str) -> None:
         self.ctx.s.translate.ollama_model = text.strip()
+        self._update_pull_button()
         self._restart()
 
     def _ollama_refresh(self) -> None:
-        names = ollama_list(self.ctx.s.translate.ollama_url)
-        if names is None:
-            self.ol_line.set("Ollama çalışmıyor", "warn", tip=OLLAMA_DOWN_TIP)
+        """Yenile düğmesi: yüklü modeller yeniden okunur, sonuç durum satırında yazar."""
+        self._read_ollama_models(report=True)
+
+    def _read_ollama_models(self, report: bool = False) -> None:
+        """Yüklü Ollama modellerini arka planda okur; sonuç _on_ollama_models'e gelir. Okuma sürerken yeni istek
+        yalnız "sonucu yaz" isteğini ekler (ikinci okuma başlamaz)."""
+        self._ol_report = self._ol_report or report
+        if self._ol_reading:
             return
-        cur = self.ol_model.currentText()
-        for n in names:
-            if self.ol_model.findData(n) < 0:
-                self.ol_model.addItem(n, n)
-        self.ol_model.setCurrentText(cur)
-        self.ol_line.set(f"{len(names)} model yüklü", "ok" if names else "info", tip=", ".join(names))
+        self._ol_reading = True
+        url = self.ctx.s.translate.ollama_url
+
+        def job() -> None:
+            names = None
+            try:
+                names = ollama_list(url)
+            finally:
+                try:
+                    self._ollama_models_read.emit(names)
+                except RuntimeError:  # sayfa kapanırken silindi
+                    pass
+
+        threading.Thread(target=job, name="ollama-modelleri", daemon=True).start()
+
+    def _on_ollama_models(self, names: list[str] | None) -> None:
+        """Yüklü modeller okundu: listede olmayanlar seçime eklenir, "Modeli indir" seçili modele göre gizlenir."""
+        self._ol_reading = False
+        report, self._ol_report = self._ol_report, False
+        self._ol_installed = None if names is None else list(names)
+        if names is not None:
+            cur = self.ol_model.currentText()
+            for n in names:
+                if self.ol_model.findData(n) < 0:
+                    self.ol_model.addItem(n, n)
+            self.ol_model.setCurrentText(cur)
+        if report:
+            if names is None:
+                self.ol_line.set("Ollama çalışmıyor", "warn", tip=OLLAMA_DOWN_TIP)
+            else:
+                self.ol_line.set(f"{len(names)} model yüklü", "ok" if names else "info", tip=", ".join(names))
+        self._update_pull_button()
+
+    def _update_pull_button(self) -> None:
+        """"Modeli indir" yalnız seçili model Ollama'da yüklü değilse görünür. Yüklü modeller okunamadıysa (Ollama
+        kapalı ya da henüz okunmadı) düğme görünür kalır."""
+        installed = self._ol_installed is not None and has_model(self.ol_model.currentText(), self._ol_installed)
+        self.ol_pull.setVisible(not installed)
+        self.ol_model.setToolTip(
+            (f"{self.ol_model.currentText().strip()} yüklü. " if installed else "")
+            + f"Önerilen: {RECOMMENDED_OLLAMA_MODEL}. Listede olmayan bir modelin adını da yazabilirsiniz.")
 
     def _ollama_pull(self) -> None:
         """"Modeli indir": yerel Ollama'da kurulum servisine gider (yalnız model iner, ayar değişmez; ilerleme Ollama
@@ -760,7 +842,7 @@ class TranslatePage(QWidget):
                 self.ol_line.set("İndirme başarısız", "error", tip=err)
             return
         self.ol_line.set(f"{model} indirildi", "ok", tip="")
-        self._ollama_refresh()
+        self._read_ollama_models()  # artık yüklü: "Modeli indir" gizlenir
         self._restart()
 
     # --- yapay zekâ kurulumu (önerilen kurulum, servis) --------------------------------------
@@ -837,6 +919,7 @@ class TranslatePage(QWidget):
         if ok:
             self._sync_settings()
             self._show_result()
+            self._read_ollama_models()  # model indi: "Modeli indir" seçili modele göre gizlenir
         elif self._ai_state != "failed" and self._ai_origin == "ollama":
             self.ol_line.set("İptal edildi", "info", tip="")
         self._update_setup_hint()
