@@ -16,7 +16,7 @@ body:
     attributes:
       label: Robz Vision sürümü
       description: Ayarlar → Uygulama → Sürüm, ya da kenar çubuğunun altı.
-      placeholder: "1.0.4"
+      placeholder: "1.1.0"
     validations:
       required: true
 

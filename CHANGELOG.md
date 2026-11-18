@@ -6,6 +6,51 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.1.0] - 2026-11-18
+
+### Eklendi
+
+- **Vurgulu kelimeler:** oyun görev yazısında bir yeri, kişiyi ya da eşyayı renkli yazarsa (GTA 6'da pembe,
+  eskilerde mavi, sarı, yeşil) çeviride de karşılığı renkli görünür: "Drive to the **radar station**" →
+  "**Radar istasyonuna** sür". Ekranınızdaki kutuda da OBS'te de. Renk Görünüm sayfasındaki *Vurgu rengi* ile
+  değişir (varsayılan GTA 6'nın pembesi); *Vurgulu kelimeler* ile kapatılır. Renkli kelimeyi en iyi yerel yapay
+  zekâ ve Gemini taşır; hızlı yerel çeviri en iyi çabayla bulur, DeepL vurgusuz çevirir.
+
+- **Yerel yapay zekâ çevirisi (önerilen):** Ollama ile Gemma 4 (`gemma4:12b`). Ücretsiz, internetsiz ve
+  kotasız çalışır. Önceki 8 satırı görür, konuşmanın gidişatına göre çevirir; OCR'ın yanlış okuduğu harfleri
+  düzeltir, tuş ipuçlarını ("Hold L2 to …") ayırır. Yaklaşık 8 GB indirilir; 12 GB ekran kartında satır başına
+  ~1 sn sürer. Daha zayıf kartlar için `gemma4:e4b`. [Ollama](https://ollama.com/download) kurulduktan sonra
+  Çeviri sayfasının Ollama bölümündeki **Önerilen kurulum** düğmesi modeli indirir, motoru ayarlar ve GTA 6
+  profilini seçer.
+- **Oyun profilleri:** yapay zekâya oyunun dünyası ve tonu, çevrilmeyecek adlar (karakter, yer, silah, araç,
+  marka), suç dünyası argo sözlüğü ve üslup örnekleri verilir. Çeviriler GTA 6'nın suç dünyasına uyar,
+  kelimesi kelimesine saçma çeviriler azalır. Varsayılan profil "GTA 6"; diğer oyunlar için "Genel".
+  *Ek bağlam* kutusu kendi notunuzu profile ekler. Profildeki adlar her motorda, hızlı yerel çeviride de
+  çevrilmeden kalır. Profiller `altyazitr/data/oyun_profilleri/` altındaki JSON dosyalarıdır; yeni oyun
+  profili eklemek için CONTRIBUTING.md'ye bakın.
+- Katkıcılar için `tools/ceviri_testi.py`: hazır sahne metinlerini (`tools/ceviri_testi_seti.json`) gerçek
+  çeviri motoruyla çevirir, çeviri ve gecikme raporu üretir, iki modelin sonucunu yan yana karşılaştırır.
+
+### Değişti
+
+- **Hibrit mod:** yapay zekânın çevirisi ~1,2 sn içinde gelirse yalnız o görünür; gecikirse önce hızlı yerel
+  çeviri (quickmt) görünür, yapay zekânınki gelince üstüne yazılır. Önceden her satırda önce hızlı çeviri
+  görünüyor, ardından değişiyordu. Ayar: Çeviri sayfasında "Yapay zekâ gecikirse hızlı çeviriyi göster".
+- Ollama'nın varsayılan modeli TranslateGemma (`translategemma:4b`) yerine Gemma 4 (`gemma4:12b`);
+  TranslateGemma bağlamı ve oyun profilini kullanmadığı için artık önerilmiyor. Bağlam 3 satırdan 8 satıra
+  çıktı. Bu iki ayarı değiştirmemiş kullanıcılarda yeni değerlere geçilir; kendi seçtiğiniz model ve satır
+  sayısı korunur. Yeni model indirilene kadar hızlı yerel çeviri kullanılır.
+- *Oyun bağlamı* alanının yerini *Ek bağlam* aldı; yazdığınız not korunur ve profile eklenir.
+- Gemini'de önerilen model Gemini 3.5 Flash-Lite: daha güçlü Flash modellerinin ücretsiz kotası canlı yayında
+  birkaç dakikada doluyor. Ücretsiz katman sınırları Google AI Studio'da görülür.
+
+### Düzeltildi
+
+- Oyunda sabit duran bir yazı (tuş ipucu, menü) son çeviriyi ekranda sonsuza dek tutabiliyordu. Artık her
+  satır en fazla *En uzun kalma* süresi kadar görünür (varsayılan 7 sn; uzun satırlara okuma süresi kadar
+  pay). Süresi dolup kalkan satır, yazı oyunda dursa da geri gelmez. Ayar:
+  *Ayarlar → Altyazı akışı → En uzun kalma* (3–20 sn).
+
 ## [1.0.4] - 2026-11-17
 
 ### Eklendi
@@ -115,7 +160,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.0.4...HEAD
+[Yayımlanmadı]: ../../compare/v1.1.0...HEAD
+[1.1.0]: ../../releases/tag/v1.1.0
 [1.0.4]: ../../releases/tag/v1.0.4
 [1.0.3]: ../../releases/tag/v1.0.3
 [1.0.2]: ../../releases/tag/v1.0.2
