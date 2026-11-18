@@ -5,10 +5,11 @@
 ; Tek adımda:                   kurulum_paketi.bat
 ;
 ; Not: Ücretsiz çeviri modeli (~400 MB) kurulum dosyasına eklenmez; program ilk açılışta bir kez indirir.
+; Ollama ve Gemma 4 de eklenmez: kullanıcı isterse program ilk açılışta ya da Çeviri sayfasından indirip kurar.
 
 #define AppName "Robz Vision"
 #ifndef AppVersion
-  #define AppVersion "1.1.0"
+  #define AppVersion "1.2.0"
 #endif
 #define AppExe "RobzVision.exe"
 #define AppPublisher "Robz Vision"
@@ -64,7 +65,7 @@ UninstallShortcut=Robz Vision'ı kaldır
 
 [Messages]
 ; Not: [Messages] içinde {cm:...} gibi sabitler açılmaz; metin doğrudan buraya yazılmalı.
-WelcomeLabel2=[name/ver] bilgisayarınıza kurulacak.%n%nRobz Vision, oyunlardaki İngilizce altyazıları canlı olarak Türkçeye çevirir; çeviriyi ekranınızda ve OBS yayınınızda gösterir.%n%nİlk açılışta ücretsiz çeviri modeli (yaklaşık 400 MB) bir kez indirilir.
+WelcomeLabel2=[name/ver] bilgisayarınıza kurulacak.%n%nRobz Vision, oyunlardaki İngilizce altyazıları canlı olarak Türkçeye çevirir; çeviriyi ekranınızda ve OBS yayınınızda gösterir.%n%nİlk açılışta ücretsiz hızlı çeviri modeli (yaklaşık 400 MB) bir kez indirilir. İsterseniz yapay zekâ çevirisini de (Ollama ve Gemma 4, yaklaşık 10 GB) kurabilirsiniz.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
@@ -83,5 +84,9 @@ Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchApp}"; Flags: nowait postin
 [UninstallDelete]
 ; Program klasöründe çalışma sırasında oluşabilecek önbellek dosyaları
 Type: filesandordirs; Name: "{app}\__pycache__"
-; Not: Ayarlar (%APPDATA%\RobzVision) ve indirilen model (%LOCALAPPDATA%\RobzVision) kaldırmada silinmez;
-; program yeniden kurulursa model tekrar indirilmez.
+; Programın indirdiği Ollama kurulum dosyası ve yarım indirmesi (ollama_install.DOWNLOAD_DIR). Kurulum başarılı
+; olunca dosya zaten silinir; burada kalan, yarıda kalmış ya da başarısız kurulumdan artandır.
+Type: filesandordirs; Name: "{localappdata}\RobzVision\indirilenler"
+; Not: Ayarlar (%APPDATA%\RobzVision) ve indirilen hızlı çeviri modeli (%LOCALAPPDATA%\RobzVision\modeller)
+; kaldırmada silinmez; program yeniden kurulursa model tekrar indirilmez. Ollama ayrı bir programdır: o ve
+; modelleri (%USERPROFILE%\.ollama\models) kalır, Ollama kendi kaldırıcısıyla kaldırılır.

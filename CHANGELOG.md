@@ -6,6 +6,44 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.2.0] - 2026-11-18
+
+### Eklendi
+
+- **İlk açılışta "Çeviri nasıl yapılsın?" seçimi:** *Yapay zekâ ile* ya da *Yalnız hızlı çeviri*. Robz
+  Vision ekran kartını okuyup öneri yapar ve kartın adını gösterir: uygun kartta *Yapay zekâ ile* önceden
+  seçili gelir; 12 GB'lık kartta Gemma 4 12B, 8 GB'lık kartta daha hafif Gemma 4 E4B önerilir. 6 GB'lık kartta
+  seçilebilir ama uyarı çıkar; uygun kart yoksa seçenek kapalıdır ve nedeni yazar. Seçim sonra Çeviri
+  sayfasından değişir.
+- **Yapay zekâyı uygulamanın kendisi kurar.** Ollama'nın resmî ve imzalı kurulum dosyası GitHub'daki sürüm
+  sayfasından iner; sürüm sabittir (0.40.16). Dosya çalıştırılmadan önce boyutu, SHA256 özeti ve dijital
+  imzası (Ollama Inc.) denetlenir; tutmazsa silinir, kurulmaz. Kurulum sessizdir, yönetici izni gerekmez.
+  Ardından Gemma 4 modeli iner. Toplam yaklaşık 10 GB (Ollama 1,9 GB + Gemma 4 12B 8,0 GB); bunlardan hiçbiri
+  **Kur**'a basılmadan inmez. Ollama ekran kartını kullanamıyorsa model indirilmez. Ollama ve model zaten
+  kuruluysa yalnız ayar yapılır.
+- Kurulumun her adımı (indirme, imza ve bütünlük denetimi, kurulum, başlatma, ekran kartı denetimi, model
+  indirme) kendi satırında görünür; altta ilerleme çubuğu, indirme hızı ve kalan süre.
+- **Arka planda iner:** hızlı çeviri modeli inince **Şimdi başla** ile programı açarsınız; yapay zekâ arka
+  planda iner, hazır olunca devreye girer. Çeviri çalışırken indirme durur (yayın bağlantısı ve Wi-Fi'deki
+  Remote Play görüntüsü bozulmasın), durdurunca kaldığı yerden sürer; **Yine de sürdür** ile durmaz. Program
+  yarıda kapanırsa iş sonraki açılışta kaldığı yerden sürer.
+- Kenar çubuğunda yapay zekâ durum satırı: ilerleme, duraklama ya da hata; tıklayınca Çeviri sayfası açılır.
+  Kurulum bitince ya da yapılamayınca bildirim çıkar.
+
+### Değişti
+
+- Çeviri sayfasındaki **Önerilen kurulum** artık her şeyi kurar: Ollama yoksa onu da indirip kurar, sonra modeli
+  indirir ve motoru ayarlar. Ollama'nın sitesine yönlendirme yok; önce indirilecekleri, boyutlarını ve boş disk
+  alanını gösteren onay penceresi açılır.
+- Ollama kapalıysa Robz Vision onu arka planda kendisi başlatır.
+- Yapay zekâ hazırlanamazsa (Ollama başlatılamadı ya da model indirilmemiş) her Başlat'ta çıkan hata penceresi
+  yerine bildirim çıkar; çeviri hızlı yerel çeviriyle sürer.
+- Yerel Ollama istekleri sistemin vekil sunucusunu (proxy) kullanmaz: vekil sunucu `127.0.0.1` isteklerini
+  yanlış yere götürebiliyordu.
+- 1.1.0 ve öncesinden güncelleyenlerde ilk açılış penceresi açılmaz, hiçbir şey kendiliğinden inmez. Motoru
+  hızlı çeviri olan ve ekran kartı uygun olan kullanıcıya bir kez "Yeni: yapay zekâ çevirisi. Çeviri sayfasından
+  kurabilirsiniz." bildirimi çıkar.
+
 ## [1.1.0] - 2026-11-18
 
 ### Eklendi
@@ -160,7 +198,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.1.0...HEAD
+[Yayımlanmadı]: ../../compare/v1.2.0...HEAD
+[1.2.0]: ../../releases/tag/v1.2.0
 [1.1.0]: ../../releases/tag/v1.1.0
 [1.0.4]: ../../releases/tag/v1.0.4
 [1.0.3]: ../../releases/tag/v1.0.3
