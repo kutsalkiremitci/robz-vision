@@ -79,25 +79,32 @@ PC oyunları, PS Remote Play ve Xbox uygulaması gibi uzaktan oynatma pencereler
 
 ## Özellikler
 
-- **Ücretsiz ve yerel.** OCR (Windows'un kendi OCR'ı) ve çeviri modeli (quickmt) bilgisayarınızda çalışır.
-  Hesap, API anahtarı ya da abonelik gerekmez. Varsayılan ayarlarla internet yalnızca ilk açılışta modeli
-  indirmek için kullanılır.
-- **Hızlı.** OCR yaklaşık 10 ms, çeviri işlemcide 20–60 ms sürer. Altyazı belirdikten kısa süre sonra
-  Türkçesi ekranda olur.
+- **Yerel yapay zekâ çevirisi (önerilen).** Ollama ile bilgisayarınızda çalışan Gemma 4 (`gemma4:12b`),
+  konuşmanın önceki 8 satırını görerek çevirir. OCR'ın yanlış okuduğu harfleri düzeltir, tuş ipuçlarını
+  ("Hold L2 to …") ayırır. Ücretsizdir; internetsiz ve kotasız çalışır.
+  [Kurulumu](#yerel-yapay-zekâ-çevirisi-önerilen) iki adımdır.
+- **Oyun profilleri.** Varsayılan *GTA 6* profili modele oyunun dünyasını ve tonunu, çevrilmeyecek adları
+  (karakter, yer, silah, araç, marka), suç dünyası argosunu ve üslup örneklerini verir. Kelimesi kelimesine
+  saçma çeviriler azalır. Diğer oyunlar için *Genel* profil var; kendi notunuzu da ekleyebilirsiniz.
+- **Ücretsiz ve yerel.** OCR ve hızlı çeviri modeli (quickmt) bilgisayarınızda çalışır. Hesap, API anahtarı
+  ya da abonelik gerekmez. Varsayılan ayarlarla internet yalnızca ilk açılışta modeli indirmek için kullanılır.
+- **Hızlı.** OCR yaklaşık 10 ms, hızlı çeviri işlemcide 20–60 ms, yapay zekâ çevirisi satır başına yaklaşık
+  1 sn sürer. Yapay zekâ gecikirse önce hızlı çeviri görünür, yapay zekânınki gelince yerine geçer.
 - **İki ayrı çıktı.** Kendi ekranınızda taşıyıp boyutlandırabileceğiniz bir altyazı kutusu, izleyicileriniz
   için de bir OBS Tarayıcı Kaynağı. İkisinin konumu birbirinden bağımsızdır.
 - **Bölge ya da pencere.** Altyazının çıktığı alanı fareyle seçersiniz. İsterseniz belirli bir uygulama
   penceresinden okursunuz; pencere başka pencerelerin arkasında kalsa da çalışır.
-- **Satır kaçmaz.** Hızlı konuşmada son çeviriler ekranda ve OBS'te alt alta kalır. Ana sayfadaki
-  *Son çeviriler* listesinden kaçırdığınız satırı yeniden okuyup kopyalayabilirsiniz.
+- **Satır kaçmaz, takılı kalmaz.** Hızlı konuşmada son çeviriler ekranda ve OBS'te alt alta kalır. Oyunda
+  sabit duran bir yazı (tuş ipucu, menü) çeviriyi ekranda tutmaz. Ana sayfadaki *Son çeviriler* listesinden
+  kaçırdığınız satırı yeniden okuyup kopyalayabilirsiniz.
 - **Gereksiz iş yapmaz.** Altyazı değişmedikçe OCR çalışmaz. Titreyen okumaları ayıklar, daha temiz bir okuma
   gelirse çeviriyi düzeltir. Konuşmacı adları (`LUCIA: …`) çevrilmez, ayrı renkte gösterilir.
 - **Sözlük.** Karakter ve yer adlarını olduğu gibi bırakır ya da sizin verdiğiniz karşılığı kullanır.
 - **Görünüm.** Hazır stiller (Klasik, Sinema, Kutulu, Sarı, Minimal), yazı tipi, boyut, renk, kenar, gölge ve
   arka plan. Ekranınızdaki kutu ile yayındaki altyazı ayrı ayarlanır: örneğin ekranda küçük yazı, yayında arka
   planlı büyük yazı. Canlı önizleme vardır; değişiklik anında yansır.
-- **İsteğe bağlı motorlar.** Ollama ile yerel bir dil modeli, kendi anahtarınızla Google Gemini ya da DeepL.
-  Önce yerel çeviri görünür, daha iyi sonuç gelince yerine geçer. Hata olursa yerel çeviriyle devam eder.
+- **Çevrimiçi seçenekler.** Kendi anahtarınızla Google Gemini ya da DeepL. Hata ya da kota sınırında hızlı
+  yerel çeviriyle devam eder.
 - Global kısayollar, sistem tepsisi, çeviri önbelleği ve baştan sona Türkçe arayüz.
 
 <table>
@@ -120,7 +127,7 @@ flowchart LR
     A["Ekran bölgesi<br/>ya da uygulama penceresi"] --> B["Değişim algılama"]
     B -- "altyazı değişti" --> C["OCR<br/>Windows OCR / RapidOCR"]
     C --> D["Temizleme<br/>ve tekilleştirme"]
-    D --> E["Çeviri<br/>quickmt / Ollama / Gemini / DeepL"]
+    D --> E["Çeviri<br/>quickmt / Ollama (Gemma 4) / Gemini / DeepL"]
     E --> F["Ekranımda<br/>taşınabilir kutu"]
     E --> G["OBS Tarayıcı Kaynağı<br/>yerel WebSocket"]
 ```
@@ -136,11 +143,16 @@ flowchart LR
 4. **Temizleme.** Satırlar birleştirilir, konuşmacı adı ayrılır. Okuma, İngilizce kelime listesine göre
    puanlanır; bozuk okumalar elenir. Aynı cümle ikinci kez çevrilmez, önbellekten gelir.
 5. **Çeviri.** Varsayılan model [quickmt-en-tr](https://huggingface.co/quickmt/quickmt-en-tr)'dir ve
-   CTranslate2 ile işlemcide çalışır. Yakalama, OCR ve çeviri ayrı iş parçacıklarındadır; her biri yalnızca
-   en son veriyi alır. Yavaş bir çeviri sırasında gecikme birikmez, eskiyen altyazılar atlanır.
+   CTranslate2 ile işlemcide çalışır. Önerilen yerel yapay zekâ (Ollama ile Gemma 4) her satırı oyun
+   profiliyle ve önceki 8 satırla birlikte çevirir. Çevirisi yaklaşık 1,2 sn içinde gelirse yalnız o
+   görünür; gecikirse önce quickmt'nin çevirisi görünür, yapay zekânınki gelince aynı satırın üstüne yazılır.
+   Yakalama, OCR ve çeviri ayrı iş parçacıklarındadır ve satırları sırayla işler; hızlı konuşmada satır
+   kaybolmaz.
 6. **Gösterim.** Ekrandaki kutu ve OBS sayfası aynı zamanlayıcıya bağlıdır; birlikte belirir, birlikte
-   kaybolur. Kısa süren bir altyazının çevirisi okunabilecek kadar ekranda kalır. Ekrandaki kutu varsayılan
-   olarak ekran yakalamaya girmez: OCR kendi Türkçe yazısını okumaz, yayında da iki kez görünmez.
+   kaybolur. Kısa süren bir altyazının çevirisi okunabilecek kadar ekranda kalır. Her satır en fazla
+   *En uzun kalma* süresi kadar görünür (varsayılan 7 sn); oyunda sabit duran bir yazı (tuş ipucu, menü)
+   çeviriyi ekranda tutmaz. Ekrandaki kutu varsayılan olarak ekran yakalamaya girmez: OCR kendi Türkçe
+   yazısını okumaz, yayında da iki kez görünmez.
 
 ## Kimler, nasıl kullanır
 
@@ -184,6 +196,19 @@ Yoksa *Ayarlar → Saat ve dil → Dil ve bölge → English (United States)* ek
 Add-WindowsCapability -Online -Name "Language.OCR~~~en-US~0.0.1.0"
 ```
 
+### Yerel yapay zekâ çevirisi (önerilen)
+
+Robz Vision kurulunca hızlı yerel çeviriyle hemen çalışır. Daha doğal çeviri için Ollama ile Gemma 4'ü
+(`gemma4:12b`) kurun. Ücretsizdir; internetsiz ve kotasız çalışır.
+
+1. [ollama.com/download](https://ollama.com/download) adresinden Ollama'yı indirip kurun.
+2. Robz Vision'da **Çeviri** sayfasında *Motor*'u *Yerel yapay zekâ — Ollama* yapın ve açılan *Ollama*
+   bölümünde **Önerilen kurulum**'a basın. Düğme modeli indirir (yaklaşık 8 GB), çeviri motorunu ayarlar ve
+   GTA 6 profilini seçer.
+
+Model 12 GB bellekli bir ekran kartında rahat çalışır; satır başına yaklaşık 1 sn sürer. Daha zayıf kartlar
+için `gemma4:e4b` var. Ayrıntılar: [kullanım kılavuzu](docs/KULLANIM.md#7-çeviriyi-iyileştirin).
+
 ## İlk kullanım
 
 <p align="center">
@@ -200,6 +225,8 @@ Add-WindowsCapability -Online -Name "Language.OCR~~~en-US~0.0.1.0"
 5. **OBS (isteğe bağlı).** Ana sayfadaki adresi kopyalayın, OBS'te **Tarayıcı** kaynağı olarak ekleyin:
    *Yerel dosya* işaretsiz, genişlik ve yükseklik tuvalle aynı (ör. 1920 × 1080), kaynak oyun görüntüsünün
    üstünde.
+6. **Daha iyi çeviri (önerilen).** Ollama'yı kurup *Çeviri* sayfasının *Ollama* bölümünde
+   **Önerilen kurulum**'a basın: [Yerel yapay zekâ çevirisi](#yerel-yapay-zekâ-çevirisi-önerilen).
 
 Kısayollar: `Ctrl+Alt+T` başlat/durdur, `Ctrl+Alt+H` gizle/göster, `Ctrl+Alt+C` temizle.
 Ayarlar sayfasından değiştirilebilir.
@@ -210,15 +237,24 @@ Adım adım anlatım, ekran görüntüleri ve senaryolara göre ipuçları: **[d
 
 | Motor | Maliyet | Yaklaşık süre | Gereken |
 |---|---|---|---|
-| **Yerel, quickmt** (varsayılan) | Ücretsiz | 20–60 ms | Hiçbir şey |
-| **Ollama:** TranslateGemma 4B / 12B | Ücretsiz, yerel | 0,2–1,3 sn | [Ollama](https://ollama.com/download), 3–8 GB model |
-| **Ollama:** Gemma 4, Qwen 3.5, Hy-MT2 | Ücretsiz, yerel | 0,3–1 sn | Ollama |
-| **Google Gemini** | Ücretsiz katman | 0,3–0,8 sn | Kendi API anahtarınız |
+| **Hızlı yerel çeviri, quickmt** (varsayılan) | Ücretsiz | 20–60 ms | Hiçbir şey |
+| **Yerel yapay zekâ: Ollama + Gemma 4** (önerilen) | Ücretsiz, internetsiz, kotasız | ~1 sn | [Ollama](https://ollama.com/download), `gemma4:12b` (~8 GB), 12 GB ekran kartı; daha zayıf kartlarda `gemma4:e4b` |
+| **Google Gemini** | Ücretsiz katman, kotalı | 0,3–0,8 sn | Kendi API anahtarınız |
 | **DeepL API Free** | Ayda 500 bin karaktere kadar ücretsiz | ~0,3 sn | Kendi API anahtarınız |
 
-Süreler donanıma ve bağlantıya göre değişir. Dil modeli ve çevrimiçi motorlarda önce yerel çeviri görünür,
-sonuç gelince yerine geçer. Ticari olmayan lisanslı modeller (ör. NLLB) para kazanılan yayınlarla çeliştiği
-için kullanılmadı.
+Süreler donanıma ve bağlantıya göre değişir.
+
+- **Yerel yapay zekâ** oyun profilini ve önceki 8 satırı görür: konuşmanın gidişatına göre çevirir, OCR'ın
+  yanlış okuduğu harfleri düzeltir, tuş ipuçlarını ayırır. Ollama'daki başka modeller de seçilebilir.
+  TranslateGemma artık önerilmiyor: önceki satırları (bağlamı) ve oyun profilini kullanmıyor.
+- **Ollama, Gemini ve DeepL'de** çeviri yaklaşık 1,2 sn içinde gelirse yalnız o görünür. Gecikirse önce
+  hızlı yerel çeviri görünür, asıl çeviri gelince yerine geçer. Hata ya da kota sınırında hızlı yerel
+  çeviriyle devam eder.
+- **Gemini'de** önerilen model Gemini 3.5 Flash-Lite. Daha güçlü Flash modellerinin ücretsiz kotası canlı
+  yayında birkaç dakikada dolar; ücretsiz katmanın sınırları
+  [Google AI Studio](https://aistudio.google.com/rate-limit)'da görülür.
+
+Ticari olmayan lisanslı modeller (ör. NLLB) para kazanılan yayınlarla çeliştiği için kullanılmadı.
 
 ## Gizlilik
 
@@ -226,13 +262,14 @@ için kullanılmadı.
   uygulama kullanım verisi toplamaz.
 - Ana sayfadaki *Son çeviriler* listesi yalnız bellekte tutulur, diske yazılmaz; uygulama kapanınca silinir.
 - İnternet bağlantısı yalnızca ilk açılışta çeviri modelini Hugging Face'ten indirmek için kullanılır.
-  OCR modelleri programla birlikte gelir.
+  OCR modelleri programla birlikte gelir. Yerel yapay zekâyı kurarsanız Ollama modeli bir kez indirir;
+  çeviri sonra internetsiz çalışır, altyazılar bilgisayarınızdan çıkmaz.
 - OBS sunucusu yalnızca `127.0.0.1` adresini dinler; ağdaki başka cihazlar erişemez.
 - Çeviri önbelleği (İngilizce–Türkçe metin çiftleri) ve günlük dosyaları `%LOCALAPPDATA%\RobzVision`
   altında, ayarlar ve API anahtarları `%APPDATA%\RobzVision\ayarlar.json` dosyasında tutulur.
 - Gemini ya da DeepL'i seçerseniz altyazı metni ve bağlam için önceki birkaç satır o hizmete gönderilir;
-  görüntü gönderilmez. **Gemini'nin ücretsiz katmanında Google, gönderilen metinleri ürünlerini geliştirmek
-  için kullanabilir.**
+  Gemini'ye oyun profili ve ek bağlam notunuz da gider. Görüntü gönderilmez. **Gemini'nin ücretsiz
+  katmanında Google, gönderilen metinleri ürünlerini geliştirmek için kullanabilir.**
 
 ## SSS ve sorun giderme
 
@@ -248,6 +285,23 @@ düşürün ya da *Algılama*'yı *Sabit aralık* yapın. Harf harf beliren alty
 
 Bölgeyi yalnızca altyazı satırlarını kapsayacak kadar daraltın. Okuma yine bozuksa *Ayarlar → Metin okuma*'da
 diğer motoru deneyin (RapidOCR ↔ Windows OCR).
+</details>
+
+<details>
+<summary><b>Yapay zekâ çevirisi gelmiyor ya da gecikiyor</b></summary>
+
+Ollama'nın açık olduğunu ve *Çeviri* sayfasındaki adresin `http://127.0.0.1:11434` olduğunu kontrol edin.
+Ollama'ya ulaşılamazsa Robz Vision hızlı yerel çeviriyle devam eder. Çeviri sık sık gecikiyorsa ya da ekran
+kartının belleği yetmiyorsa `gemma4:e4b`'yi seçin. Ayrıntılar:
+[kullanım kılavuzu, Sorun giderme](docs/KULLANIM.md#10-sorun-giderme).
+</details>
+
+<details>
+<summary><b>Çeviri, İngilizce altyazı ekrandayken kayboluyor</b></summary>
+
+Her satır en fazla *En uzun kalma* süresi kadar görünür (varsayılan 7 sn); oyunda sabit duran yazılar
+çeviriyi ekranda tutmasın diye. Uzun altyazılı sahnelerde *Ayarlar → Altyazı akışı → En uzun kalma*'yı
+artırın (3–20 sn).
 </details>
 
 <details>
@@ -324,6 +378,7 @@ python -m venv .venv
 | Araç | Ne işe yarar |
 |---|---|
 | `tools/test_penceresi.py` | Oyun olmadan denemek için İngilizce altyazılı sahte bir oyun penceresi |
+| `tools/ceviri_testi.py` | Hazır sahne metinlerini (`tools/ceviri_testi_seti.json`) gerçek çeviri motoruyla çevirir; çeviri ve gecikme raporu üretir, iki modeli yan yana karşılaştırır |
 | `tools/arayuz_goruntusu.py` | Arayüzün tüm ekranlarını pencere açmadan PNG olarak kaydeder |
 | `tools/readme_gorselleri.py` | Bu sayfadaki görselleri (banner dahil) `docs/gorseller/` altında yeniden üretir |
 | `tools/kurulum_gorselleri.py`, `tools/logo_hazirla.py` | Kurulum sihirbazı görselleri, logo ve simge |
@@ -342,6 +397,7 @@ ekler (`.github/workflows/release.yml`). Etiket, `altyazitr/__init__.py`'deki s�
 | `altyazitr/detect.py` | Değişim algılama (metin maskesi) |
 | `altyazitr/ocr.py`, `textproc.py`, `english.py` | OCR motorları, metin temizleme, okuma kalite puanı |
 | `altyazitr/translate.py` | quickmt, Ollama, Gemini, DeepL; sözlük ve önbellek |
+| `altyazitr/data/oyun_profilleri/` | Oyun profilleri (JSON): yapay zekâya giden dünya, ton, adlar, argo ve üslup örnekleri; yeni profil için [CONTRIBUTING.md](CONTRIBUTING.md#oyun-profili-ekleme) |
 | `altyazitr/pipeline.py` | Yakalama → OCR → çeviri iş parçacıkları |
 | `altyazitr/display.py`, `server.py`, `web/overlay.html` | Zamanlama ve OBS Tarayıcı Kaynağı |
 | `altyazitr/overlay.py`, `render.py` | Ekrandaki altyazı kutusu ve ortak çizim kodu |
@@ -358,11 +414,12 @@ Değişiklik geçmişi [CHANGELOG.md](CHANGELOG.md)'de.
 
 Kaynak kod [MIT](LICENSE) lisanslıdır. Kullanılan bileşenlerin ve çeviri modelinin lisansları
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)'de. Varsayılan çeviri modeli quickmt-en-tr,
-CC BY 4.0 lisanslıdır ve programla birlikte dağıtılmaz, ilk açılışta indirilir.
+CC BY 4.0 lisanslıdır ve programla birlikte dağıtılmaz, ilk açılışta indirilir. Önerilen yerel yapay zekâda
+Ollama MIT, Gemma 4 Apache-2.0 lisanslıdır; ikisi de programla birlikte dağıtılmaz, siz indirirsiniz.
 
 Robz Vision bağımsız, gönüllü bir açık kaynak projedir. Rockstar Games, Take-Two Interactive, Sony
-Interactive Entertainment, Microsoft, OBS Project, Kick, Twitch, YouTube, Google veya DeepL ile bağlantılı
-değildir ve bu şirketlerce desteklenmez. Grand Theft Auto, GTA ve Rockstar Games, Take-Two Interactive
+Interactive Entertainment, Microsoft, OBS Project, Kick, Twitch, YouTube, Google, Ollama veya DeepL ile
+bağlantılı değildir ve bu şirketlerce desteklenmez. Grand Theft Auto, GTA ve Rockstar Games, Take-Two Interactive
 Software, Inc.'in ticari markalarıdır; adı geçen diğer markalar da sahiplerine aittir. Bu depoda hiçbir oyuna
 ait logo veya görsel yoktur; demo görüntüleri depodaki sahte test sahnesinden üretilmiştir, tanıtım görseli
 (gün batımı, deniz ve palmiyeler) `tools/readme_gorselleri.py` içinde kodla çizilir.

@@ -25,15 +25,28 @@ olarak yer alır ve her biri kendi lisansına tabidir.
 | platformdirs | MIT | https://github.com/tox-dev/platformdirs |
 | huggingface_hub | Apache-2.0 | https://github.com/huggingface/huggingface_hub |
 
-## Programla birlikte dağıtılmayan, isteğe bağlı hizmetler
+## Programla birlikte dağıtılmayan, isteğe bağlı bileşenler ve hizmetler
 
-- **Ollama** ve indirdiğiniz LLM modelleri ayrı kurulan bağımsız yazılımlardır; her modelin kendi
-  lisansı geçerlidir (ör. TranslateGemma: Gemma Kullanım Şartları; Gemma 4 / Qwen 3.5 / Hy-MT2: Apache-2.0).
+Aşağıdakiler Robz Vision'la birlikte dağıtılmaz; kullanmak isterseniz kendiniz kurar ya da indirirsiniz.
+Her biri kendi lisansına ve şartlarına tabidir.
+
+| Bileşen | Lisans | Not |
+|---|---|---|
+| Ollama | MIT | © Ollama — https://github.com/ollama/ollama . Yerel yapay zekâ çevirisi için ayrı kurulur; Robz Vision ona yerel adresinden (varsayılan `http://127.0.0.1:11434`) bağlanır. |
+| Gemma 4 dil modelleri (`gemma4:12b`, `gemma4:e4b`, `gemma4:26b`) | Apache-2.0 | Google DeepMind — https://gemma.ai/models/gemma-4/ , lisans: https://gemma.ai/resources/apache-2/ . Önerilen yerel yapay zekâ modeli; Ollama üzerinden indirilir: https://ollama.com/library/gemma4 |
+
+- Ollama'dan indirdiğiniz diğer modellerde model sayfasındaki lisans koşulları geçerlidir. Örneğin
+  TranslateGemma, Gemma 4'ten farklı olarak Gemma Kullanım Şartları'na tabidir:
+  https://gemma.ai/resources/terms/
 - **Google Gemini API** ve **DeepL API** üçüncü taraf çevrimiçi hizmetlerdir; kullanımları ilgili
   hizmetin şartlarına tabidir. Gemini'nin ücretsiz katmanında gönderilen metinler Google tarafından
   ürün geliştirme amacıyla kullanılabilir.
 - **NLLB-200** gibi ticari olmayan (CC BY-NC) lisanslı modeller bilinçli olarak kullanılmamıştır;
   para kazanılan yayınlarda kullanımı lisansa aykırı olabilir.
 
+Oyun profillerinde (`altyazitr/data/oyun_profilleri/`) geçen oyun, karakter, yer, silah, araç ve marka
+adları yalnızca çeviride korunsun diye listelenir; sahiplerine aittir. Profillerdeki üslup örnekleri projeye
+özgüdür, oyun metninden alıntı değildir.
+
 Robz Vision; Rockstar Games, Take-Two, Sony Interactive Entertainment, OBS Project,
-Kick, Google veya DeepL ile bağlantılı değildir. Adı geçen markalar sahiplerine aittir.
+Kick, Google, Ollama veya DeepL ile bağlantılı değildir. Adı geçen markalar sahiplerine aittir.

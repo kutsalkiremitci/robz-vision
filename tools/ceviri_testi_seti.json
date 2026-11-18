@@ -1,0 +1,435 @@
+{
+  "aciklama": "Robz Vision çeviri testi veri seti (tools/ceviri_testi.py). GTA 6 tarzı bir suç dünyasında geçen, bu proje için özgün yazılmış sahneler; oyunun senaryosundan ya da başka eserlerden alıntı yoktur. Sahne içindeki sıra anlamlıdır: her satır, aynı sahnede önceki satırlar bağlam olarak verilerek çevrilir. 'beklenen', iyi bir çevirinin mutlaka taşıması gereken anlamı ya da terimi kısaca söyler.",
+  "sahneler": [
+    {
+      "id": "silah_dukkani",
+      "ad": "Silah dükkânı",
+      "aciklama": "Satıcı müşteriye silah gösteriyor. Mecazlar, çevrilmeyecek silah ve üretici adları, diyaloğun arasına giren tuş ipuçları.",
+      "satirlar": [
+        {
+          "en": "Hold L2 to interact with Andrew",
+          "beklenen": "tuş adı L2 aynen kalır; Andrew çevrilmez"
+        },
+        {
+          "en": "These babies shoot true, every single time.",
+          "beklenen": "babies = silahlar ('bebekler' değil), 'tam isabet'"
+        },
+        {
+          "en": "This here's the Mediator. Hell of a carbine.",
+          "beklenen": "Mediator çevrilmez; hell of a = müthiş/acayip bir karabina"
+        },
+        {
+          "en": "Got a mean kick, though. Brace your shoulder.",
+          "beklenen": "kick = geri tepme ('tekme' değil); omzunu sağlam daya"
+        },
+        {
+          "en": "Press X to browse the shop menu",
+          "beklenen": "tuş adı X aynen kalır; mağaza menüsü"
+        },
+        {
+          "en": "Hawk & Little builds 'em. Won't jam on you, rain or shine.",
+          "beklenen": "Hawk & Little çevrilmez; jam = tutukluk yapmak; rain or shine = her koşulda"
+        },
+        {
+          "en": "You want loud? The Marauder's your girl.",
+          "beklenen": "Marauder çevrilmez; your girl = tam sana göre ('kızın' değil)"
+        },
+        {
+          "en": "Cash only. And you didn't get it from me.",
+          "beklenen": "yalnız nakit; 'benden almadın' = kimseye söyleme imâsı"
+        }
+      ]
+    },
+    {
+      "id": "soygun_plani",
+      "ad": "Soygun planı",
+      "aciklama": "Jason ve Lucia motel odasında işi konuşuyor. Kısa cevapların anlamı yalnız önceki satırlardan çıkar; bağlamı en çok bu sahne sınar.",
+      "satirlar": [
+        {
+          "en": "Did you call your guy at the bank?",
+          "beklenen": "your guy = bankadaki adamın/tanıdığın"
+        },
+        {
+          "en": "Handled.",
+          "beklenen": "bağlama göre 'hallettim/aradım'; tek başına 'işlendi' zayıf"
+        },
+        {
+          "en": "And? Is he in or not?",
+          "beklenen": "in = işe var mı/katılıyor mu ('içeride' değil)"
+        },
+        {
+          "en": "Outside. These walls are paper-thin.",
+          "beklenen": "'dışarıda konuşalım'; duvarlar ince = konuşulan duyulur"
+        },
+        {
+          "en": "Okay. Car's clean. Talk.",
+          "beklenen": "clean = dinleme cihazı yok ('araba temiz' kabul); 'anlat'"
+        },
+        {
+          "en": "He's in. Wants twenty percent, cash up front.",
+          "beklenen": "'varmış/katılıyor'; yüzde yirmi, peşin nakit"
+        },
+        {
+          "en": "Twenty? Just to open one door?",
+          "beklenen": "yüzde yirmiye itiraz; 'sadece bir kapı için mi'"
+        },
+        {
+          "en": "One door. The vault door.",
+          "beklenen": "vault = kasa dairesi; vurgu korunmalı"
+        },
+        {
+          "en": "Bet. Saturday night, then.",
+          "beklenen": "Bet = tamam/anlaştık ('bahis' değil)"
+        },
+        {
+          "en": "You good?",
+          "beklenen": "'iyi misin/bir sorun mu var'"
+        },
+        {
+          "en": "Just thinking about after. Boat to the Keys, no phones.",
+          "beklenen": "after = işten sonrası; the Keys = adalar (Leonida Keys), 'anahtarlar' değil"
+        },
+        {
+          "en": "Say no more.",
+          "beklenen": "'tamam, anladım' ('daha fazla söyleme' değil)"
+        }
+      ]
+    },
+    {
+      "id": "polis_kovalamacasi",
+      "ad": "Polis kovalamacası",
+      "aciklama": "Arabayla polisten kaçış. Kısa, acil, bağırarak söylenen satırlar; argo ve sürüş jargonu.",
+      "satirlar": [
+        {
+          "en": "Cops on our tail!",
+          "beklenen": "tail = peşimizde ('kuyruk' değil)"
+        },
+        {
+          "en": "Floor it! Floor it!",
+          "beklenen": "floor it = gaza kökle ('zemin' değil)"
+        },
+        {
+          "en": "They put a chopper up!",
+          "beklenen": "chopper = helikopter; 'helikopter kaldırdılar'"
+        },
+        {
+          "en": "Kill the lights, cut through the trailer park.",
+          "beklenen": "kill the lights = farları söndür; trailer park = karavan parkı"
+        },
+        {
+          "en": "Lose 'em in the swamp!",
+          "beklenen": "lose 'em = ekmek/atlatmak ('kaybetmek' değil); swamp = bataklık"
+        },
+        {
+          "en": "Spike strip! Hold on!",
+          "beklenen": "spike strip = çivili şerit/kapan; 'sıkı tutun'"
+        },
+        {
+          "en": "We're cooked!",
+          "beklenen": "cooked = yandık/bittik ('pişmek' değil)"
+        },
+        {
+          "en": "Not yet we ain't.",
+          "beklenen": "önceki satıra cevap: 'daha yanmadık'; bağlam şart"
+        },
+        {
+          "en": "I think we lost 'em.",
+          "beklenen": "'galiba ektik/atlattık'"
+        }
+      ]
+    },
+    {
+      "id": "tedarikci_telefonu",
+      "ad": "Telefonda tedarikçi",
+      "aciklama": "Telefonda uyuşturucu tedarikçisiyle konuşma. Sokak argosu ve üstü kapalı anlatım korunmalı.",
+      "satirlar": [
+        {
+          "en": "Yo, it's me. You alone?",
+          "beklenen": "samimi açılış; 'yalnız mısın'"
+        },
+        {
+          "en": "I need to re-up. Same as last time.",
+          "beklenen": "re-up = mal yenilemek/stok tazelemek; 'geçen seferki gibi'"
+        },
+        {
+          "en": "The plug's nervous. Feds been sniffing around the marina.",
+          "beklenen": "plug = tedarikçi/bağlantı ('fiş' değil); feds = federaller; sniffing around = kolaçan etmek"
+        },
+        {
+          "en": "Product's clean, though. Best in Leonida.",
+          "beklenen": "product = mal; clean = saf/kaliteli; Leonida çevrilmez"
+        },
+        {
+          "en": "Half now, half when it moves.",
+          "beklenen": "moves = satılınca/elden çıkınca ('hareket edince' değil)"
+        },
+        {
+          "en": "Keep it on the down-low. No texts.",
+          "beklenen": "down-low = gizli/sessiz; mesaj yok"
+        },
+        {
+          "en": "Burn this phone when we hang up.",
+          "beklenen": "burn = imha et/at; hang up = telefonu kapatmak"
+        },
+        {
+          "en": "If this goes sideways, you never knew me.",
+          "beklenen": "goes sideways = ters giderse; 'beni hiç tanımadın'"
+        }
+      ]
+    },
+    {
+      "id": "cete_gerginligi",
+      "ad": "Çete gerginliği",
+      "aciklama": "Eksik çıkan para yüzünden çete içinde gerilim. Tehdit ve ağır küfür: küfrün şiddeti yumuşatılmadan korunmalı. Bir satırda n-word arkadaş arası hitap olarak geçer; çeviriye hakaret olarak taşınmamalı.",
+      "satirlar": [
+        {
+          "en": "Count's short. Two grand short.",
+          "beklenen": "count = sayım; short = eksik; two grand = iki bin (dolar)"
+        },
+        {
+          "en": "You think we fucking stupid?",
+          "beklenen": "fucking = ağır küfür, şiddeti korunmalı; yumuşatılmamalı"
+        },
+        {
+          "en": "Nigga, I counted it twice myself.",
+          "beklenen": "kanka ya da at, hakaret taşınmaz"
+        },
+        {
+          "en": "Then somebody's skimming, and it ain't me.",
+          "beklenen": "skimming = araklamak/kaymağını yemek; 'ben değilim'"
+        },
+        {
+          "en": "Say that again. Say it to my face.",
+          "beklenen": "tehdit tonu; 'yüzüme söyle'"
+        },
+        {
+          "en": "Put the piece down before you do something stupid.",
+          "beklenen": "piece = silah/tabanca ('parça' değil)"
+        },
+        {
+          "en": "Back the fuck up, you two-faced motherfucker.",
+          "beklenen": "küfür şiddeti korunmalı ('orospu çocuğu' düzeyi); two-faced = iki yüzlü"
+        },
+        {
+          "en": "Dead Palms don't forgive, and we don't forget.",
+          "beklenen": "Dead Palms çevrilmez (çete adı); tehdit tonu"
+        },
+        {
+          "en": "Find my money by Friday, or you're done.",
+          "beklenen": "you're done = işin biter (tehdit); Cuma'ya kadar"
+        }
+      ]
+    },
+    {
+      "id": "gorev_arayuz",
+      "ad": "Görev ve arayüz ipuçları",
+      "aciklama": "Görev hedefleri, tuş ipuçları ve oyun ekranı yazıları. Kısa emir kipi; tuş adları aynen kalır.",
+      "satirlar": [
+        {
+          "en": "Get in Lucia's car.",
+          "beklenen": "Lucia çevrilmez; kısa emir"
+        },
+        {
+          "en": "Hold R2 to accelerate",
+          "beklenen": "tuş adı R2 aynen kalır; 'hızlanmak için R2'yi basılı tut'"
+        },
+        {
+          "en": "Lose the cops.",
+          "beklenen": "polisleri ek/atlat ('kaybet' değil)"
+        },
+        {
+          "en": "Mission failed. Lucia got busted.",
+          "beklenen": "busted = yakalandı/enselendi ('bozuldu' değil)"
+        },
+        {
+          "en": "Retry from last checkpoint?",
+          "beklenen": "checkpoint = kontrol noktası; soru korunur"
+        },
+        {
+          "en": "Stay out of sight to lower your wanted level.",
+          "beklenen": "wanted level = aranma seviyesi"
+        },
+        {
+          "en": "Go to the safehouse.",
+          "beklenen": "safehouse = güvenli ev/sığınak"
+        },
+        {
+          "en": "Mission passed",
+          "beklenen": "'Görev tamamlandı/başarılı'"
+        },
+        {
+          "en": "Reward: $8,500",
+          "beklenen": "tutar ve para birimi korunur ($8,500 ya da 8.500 $)"
+        }
+      ]
+    },
+    {
+      "id": "radyo_tv_reklami",
+      "ad": "Radyo ve TV reklamı",
+      "aciklama": "Oyun içi radyo ve televizyon reklamı parodisi: abartılı reklam dili, espriler, hızlı okunan yasal uyarı.",
+      "satirlar": [
+        {
+          "en": "Arrested? Sued? Mildly embarrassed in public?",
+          "beklenen": "reklam dili; 'hafiften rezil olmak' esprisi korunmalı"
+        },
+        {
+          "en": "Call Rick Delgado, Leonida's most aggressive lawyer!",
+          "beklenen": "Rick Delgado ve Leonida çevrilmez; aggressive = azılı/saldırgan"
+        },
+        {
+          "en": "I don't win cases. I make them disappear.",
+          "beklenen": "davaları 'ortadan kaldırmak/yok etmek' imâsı"
+        },
+        {
+          "en": "Results not guaranteed. Results not even likely.",
+          "beklenen": "yasal uyarı esprisi; 'olası bile değil'"
+        },
+        {
+          "en": "Glow Rush Energy: taste the lightning!",
+          "beklenen": "Glow Rush Energy çevrilmez (marka); şimşek/yıldırım"
+        },
+        {
+          "en": "Side effects include sweating, yelling and hearing colors.",
+          "beklenen": "yan etki listesi; 'renkleri duymak' saçmalığı korunmalı"
+        },
+        {
+          "en": "You're locked in to Flamingo 104.7, Vice City's hottest hits!",
+          "beklenen": "locked in = bizi dinliyorsun; Flamingo 104.7 ve Vice City aynen"
+        },
+        {
+          "en": "Traffic on the causeway? Worse than your ex.",
+          "beklenen": "causeway = deniz üstü yol; 'eski sevgilinden beter'"
+        }
+      ]
+    },
+    {
+      "id": "ocr_gurultusu",
+      "ad": "OCR gürültüsü",
+      "aciklama": "Ekrandan okumanın tipik hataları: harf karışmaları (l/I, rn/m, 0/o), büyük harfle bağırma, diyalogla birleşen tuş ipucu, okunamayan tuş simgesi, eksik kesme işareti. Satırlar uygulamadaki gibi önce OCR düzeltmesinden geçer.",
+      "satirlar": [
+        {
+          "en": "Theres pienty of time, just cnoose trom the menu.",
+          "beklenen": "Theres = There's, pienty = plenty, cnoose trom = choose from"
+        },
+        {
+          "en": "Y0u owe me five hundred bucks, Jas0n.",
+          "beklenen": "0 = o (You, Jason); bucks = dolar; Jason çevrilmez"
+        },
+        {
+          "en": "Hey, l need a ride to the docks, rnan.",
+          "beklenen": "l = I, rnan = man; docks = liman/rıhtım"
+        },
+        {
+          "en": "Hold to call Lucia",
+          "beklenen": "tuş simgesi okunamamış: tuş uydurulmamalı; 'Lucia'yı aramak için basılı tut'"
+        },
+        {
+          "en": "lt's not safe here, we gotta rnove.",
+          "beklenen": "lt's = It's, rnove = move: 'burası güvenli değil, gitmeliyiz'"
+        },
+        {
+          "en": "GET IN THE CAR NOW",
+          "beklenen": "bağırma: acil emir korunmalı ('HEMEN ARABAYA BİN')"
+        },
+        {
+          "en": "Press X to skip The money's in the trunk",
+          "beklenen": "tuş ipucu + diyalog birleşmiş: ikisi de anlaşılmalı; X aynen; trunk = bagaj"
+        },
+        {
+          "en": "dont move, were almost there",
+          "beklenen": "dont = don't, were = we're ('idik' değil)"
+        },
+        {
+          "en": "Don't let him get away Hold L2 to aim",
+          "beklenen": "diyalog + tuş ipucu birleşmiş; L2 aynen kalır"
+        },
+        {
+          "en": "STOP! POLICE! HANDS WHERE I CAN SEE THEM!",
+          "beklenen": "bağırma: 'Dur! Polis! Ellerini göreyim!'"
+        }
+      ]
+    },
+    {
+      "id": "deyim_tuzaklari",
+      "ad": "Deyim tuzakları",
+      "aciklama": "Kelimesi kelimesine çevrilince saçmalayan deyimler ve argo. Lucia arkadaşıyla dedikodu yapıyor.",
+      "satirlar": [
+        {
+          "en": "Big night tomorrow. Break a leg, okay?",
+          "beklenen": "break a leg = bol şans ('bacak kır' değil)"
+        },
+        {
+          "en": "Did you see Marco's new ride? That's sick.",
+          "beklenen": "ride = araba; sick = efsane/çok iyi ('hasta' değil)"
+        },
+        {
+          "en": "He tried to drift it and hit a mailbox. I'm dead.",
+          "beklenen": "I'm dead = gülmekten öldüm/kırıldım (gerçek ölüm değil)"
+        },
+        {
+          "en": "Cops ran his plates. He's toast.",
+          "beklenen": "ran his plates = plakasını sorguladı; toast = işi bitti/yandı ('tost' değil)"
+        },
+        {
+          "en": "We've got heat on us too, so lay low.",
+          "beklenen": "heat = polis baskısı/takip ('sıcak' değil); lay low = ortalıkta görünme"
+        },
+        {
+          "en": "Spill the tea. Who snitched?",
+          "beklenen": "spill the tea = anlat/dök ('çay' değil); snitch = ötmek/ispiyonlamak"
+        },
+        {
+          "en": "Don't look at me. Ride or die, remember?",
+          "beklenen": "ride or die = sonuna kadar sadık ('bin ya da öl' değil)"
+        },
+        {
+          "en": "Quit beating around the bush.",
+          "beklenen": "lafı dolandırma ('çalı' değil)"
+        },
+        {
+          "en": "It was Marco. On God.",
+          "beklenen": "on God = vallahi/yemin ederim"
+        }
+      ]
+    },
+    {
+      "id": "sosyal_medya",
+      "ad": "Sosyal medya hicvi",
+      "aciklama": "Canlı yayın yapan bir influencer, arkasında soygun olurken yayını sürdürüyor. Yayın jargonu, marka ve kullanıcı adları.",
+      "satirlar": [
+        {
+          "en": "Hey besties, it's your girl Brinley, live from Vice City!",
+          "beklenen": "besties = canlarım/kızlar; your girl = 'ben'; Brinley ve Vice City çevrilmez"
+        },
+        {
+          "en": "Smash that like button and drop a gator emoji.",
+          "beklenen": "smash = hemen bas ('parçala' değil); gator = timsah"
+        },
+        {
+          "en": "Wait, is that a real robbery behind me?",
+          "beklenen": "'arkamda gerçek bir soygun mu oluyor'"
+        },
+        {
+          "en": "Chat, this is about to go so viral.",
+          "beklenen": "chat = yayın sohbeti/izleyiciler; go viral = patlamak/viral olmak"
+        },
+        {
+          "en": "Sir! Sir! Say hi to my followers!",
+          "beklenen": "followers = takipçiler"
+        },
+        {
+          "en": "Get that phone out of my face!",
+          "beklenen": "'telefonu yüzümden çek'"
+        },
+        {
+          "en": "He's giving main character energy, honestly.",
+          "beklenen": "main character energy = başrol havası ('ana karakter enerjisi' zayıf)"
+        },
+        {
+          "en": "Use code BRINLEY for ten percent off!",
+          "beklenen": "kod BRINLEY aynen kalır; yüzde on indirim"
+        }
+      ]
+    }
+  ]
+}

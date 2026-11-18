@@ -22,6 +22,7 @@ Kurulum için [README'deki Kurulum bölümüne](../README.md#kurulum) bakın.
 7. [Çeviriyi iyileştirin](#7-çeviriyi-iyileştirin)
 8. [Senaryolar](#8-senaryolar)
 9. [Kısayollar](#9-kısayollar)
+10. [Sorun giderme](#10-sorun-giderme)
 
 ## 1. Başlamadan önce
 
@@ -39,6 +40,9 @@ Altyazı ne kadar okunaklıysa (büyük, kenarlı ya da arka planlı) sonuç o k
 **İlk açılış.** Program ilk açıldığında ücretsiz çeviri modelini (yaklaşık 400 MB) bir kez indirir. Sonra
 kısa bir tanıtım turu arayüzün bölümlerini gösterir. Turu atlarsanız *Ayarlar → Tanıtım turunu başlat* ile
 istediğiniz zaman yeniden açabilirsiniz.
+
+**Daha doğal çeviri.** Ekran kartınız varsa yerel yapay zekâyı da kurun; iki adımdır:
+[Yerel yapay zekâ](#yerel-yapay-zekâ-önerilen).
 
 ## 2. Bölgeyi seçin
 
@@ -77,6 +81,9 @@ OBS'te görünür.
 - **Altyazı akışı** (*Ayarlar → Altyazı akışı*): *Akış*'ta son çeviriler ekranda ve OBS'te alt alta kalır,
   hızlı konuşmada satır kaybolmaz. Ekranda en fazla kaç satır duracağını (2–4) ve her satırın en az kaç saniye
   kalacağını buradan seçersiniz. Yalnız son çeviriyi görmek isterseniz *Tek satır*'ı seçin.
+- **En uzun kalma** (*Ayarlar → Altyazı akışı*): her satır en fazla bu kadar ekranda kalır (varsayılan 7 sn,
+  3–20 sn arası; uzun satırlara okuma süresi kadar pay eklenir). Böylece oyunda sabit duran bir yazı (tuş
+  ipucu, menü) çeviriyi ekranda tutmaz: süresi dolup kalkan satır, yazı oyunda dursa da geri gelmez.
 
 **Son çeviriler** listesi bu oturumda okunan satırları Türkçesi ve İngilizcesiyle gösterir, en yenisi üstte.
 Başlığın yanında en son satırın OCR ve çeviri süreleri durur. Kaçırdığınız bir satırı buradan okuyabilirsiniz:
@@ -163,6 +170,10 @@ görünümüyle gösterir.
 
 - **Hazır stiller:** Klasik, Sinema, Kutulu, Sarı, Minimal. Birini seçip üzerinde ince ayar yapabilirsiniz.
 - **Yazı:** yazı tipi, kalınlık, boyut, renk.
+- **Vurgulu kelimeler** ve **Vurgu rengi:** oyun görev yazısında bir yeri, kişiyi ya da eşyayı renkli yazarsa
+  ("Drive to the **radar station**") çeviride de karşılığı renkli görünür ("**Radar istasyonuna** sür").
+  Varsayılan renk GTA 6'nın pembesidir; dilediğiniz rengi seçebilirsiniz. Renkli kelimeyi en iyi yerel yapay
+  zekâ ve Gemini taşır; hızlı yerel çeviride en iyi çabayla bulunur, DeepL'de vurgu yoktur.
 - **Kenar ve gölge:** açık renkli sahnelerde kenarı kalınlaştırmak okumayı kolaylaştırır.
 - **Arka plan:** *Yok*, *Yarı saydam* ya da *Opak* kutu.
 - **Ölçek** (yalnız *Ekranımda*): kutudaki yazıyı kenarı ve arka planıyla birlikte büyütür ya da küçültür.
@@ -177,21 +188,62 @@ zaten aynıysa düğme soluk görünür. **Varsayılana dön** yalnız seçili t
 
 ## 7. Çeviriyi iyileştirin
 
-**Çeviri** sayfasında motoru ve sözlüğü ayarlarsınız.
+**Çeviri** sayfasında çeviri motorunu, oyun profilini ve sözlüğü ayarlarsınız.
 
 ![Çeviri sayfası: motor seçimi, yerel model durumu ve sözlük](gorseller/ceviri.png)
 
+Varsayılan hızlı yerel çeviri (quickmt) her bilgisayarda çalışır ama satırları tek tek çevirir; bazen düz
+ya da yanlış çevirir. Ekran kartınız varsa yerel yapay zekâyı kurun.
+
+### Yerel yapay zekâ (önerilen)
+
+Gemma 4 (`gemma4:12b`), Ollama ile bilgisayarınızda çalışan bir dil modelidir.
+
+- Ücretsizdir; internetsiz ve kotasız çalışır. Altyazılar bilgisayarınızdan çıkmaz.
+- Önceki 8 satırı görür, cümleyi konuşmanın gidişatına göre çevirir.
+- OCR'ın yanlış okuduğu harfleri düzeltir, tuş ipuçlarını ("Hold L2 to …") ayırır.
+- Yaklaşık 8 GB indirilir. 12 GB bellekli ekran kartında rahat çalışır; satır başına yaklaşık 1 sn sürer.
+
+Kurulum:
+
+1. [ollama.com/download](https://ollama.com/download) adresinden Ollama'yı indirip kurun.
+2. Robz Vision'da **Çeviri** sayfasını açın. *Motor* listesinden *Yerel yapay zekâ — Ollama*'yı seçin;
+   açılan *Ollama* bölümünde **Önerilen kurulum**'a basın. Düğme modeli indirir, çeviri motorunu ayarlar ve
+   *GTA 6* profilini seçer. İndirme sürerken ilerleme çubuğu görünür; **İptal** ile durdurabilirsiniz.
+
+Ekran kartınız daha zayıfsa (ör. 8 GB) ya da oyun ve yayın aynı ekran kartında çalışıyorsa *Ollama*
+bölümünde modeli `gemma4:e4b` yapıp **Modeli indir**'e basın. Listede olmayan bir Ollama modelinin adını da
+yazabilirsiniz.
+
+TranslateGemma artık önerilmiyor: önceki satırları (bağlamı) ve oyun profilini kullanmıyor. Kullanıyorsanız
+Gemma 4'e geçin.
+
+### Çeviri ayarları
+
+- **Oyun profili.** Modele oyunun dünyasını ve tonunu, çevrilmeyecek adları (karakter, yer, silah, araç,
+  marka), suç dünyası argosunu ve üslup örneklerini verir. Böylece çeviri oyunun diline uyar, kelimesi
+  kelimesine saçma çeviriler azalır. Varsayılan profil *GTA 6*'dır; başka bir oyun oynuyorsanız *Genel*'i
+  seçin.
+- **Ek bağlam.** Profile kendi notunuzu ekler: hangi görevde olduğunuz, kimlerle konuştuğunuz
+  (ör. "Lucia ile soygun planı"). *Genel* profilde oyunun türünü ve üslubunu da yazabilirsiniz.
+- **Hibrit mod** (*Yapay zekâ gecikirse hızlı çeviriyi göster*). Yapay zekânın çevirisi yaklaşık 1,2 sn
+  içinde gelirse yalnız o görünür. Gecikirse önce hızlı yerel çeviri görünür, yapay zekânınki gelince aynı
+  satırın üstüne yazılır. Kapalıyken her satırda yapay zekâ beklenir.
+- **Bağlam.** Modelin gördüğü önceki satır sayısı; varsayılan 8.
 - **Sözlük.** Çevrilmemesi gereken adları ekleyin: karakterler, mekânlar, çeteler, araç markaları. Türkçe
   sütunu boş bırakırsanız terim olduğu gibi kalır; doldurursanız o karşılık kullanılır. Varsayılan sözlükte
   Vice City, Leonida, Lucia ve Jason vardır.
-- **Daha iyi çeviri.** Yerel model hızlıdır ama bazen düz çevirir. Ekran kartınız varsa Ollama ile
-  TranslateGemma'yı deneyin. Kendi anahtarınızla Gemini ya da DeepL de seçebilirsiniz. Bu motorlarda önce
-  yerel çeviri görünür, daha iyi sonuç gelince yerine geçer (*Hibrit mod*).
-- **Oyun bağlamı.** Dil modeli motorlarında *Oyun bağlamı* alanına kısa bir not yazın
-  (ör. "GTA VI, suç dünyası, argo"). Model üslubu buna göre seçer.
 
-*Hibrit mod*, *Bağlam* ve *Oyun bağlamı* yalnızca Ollama, Gemini ya da DeepL seçiliyken motor seçiminin
-altında görünür.
+Profilin dünya, argo ve üslup bilgisi ile ek bağlam yalnız yapay zekâ motorlarına (Ollama, Gemini) gider.
+Profildeki adlar ise her motorda, hızlı yerel çeviride de çevrilmeden kalır. Ollama'ya ulaşılamazsa ya da
+bir hata olursa Robz Vision hızlı yerel çeviriyle devam eder.
+
+### Çevrimiçi motorlar
+
+Kendi API anahtarınızla Google Gemini ya da DeepL'i de seçebilirsiniz. Gemini'de önerilen model
+*Gemini 3.5 Flash-Lite*. Daha güçlü Flash modellerinin ücretsiz kotası canlı yayında birkaç dakikada dolar.
+Ücretsiz katmanın sınırlarını [Google AI Studio](https://aistudio.google.com/rate-limit)'da görebilirsiniz.
+Kota dolunca hızlı yerel çeviri devam eder.
 
 Gemini'nin ücretsiz katmanında gönderilen altyazı metinleri Google tarafından ürün geliştirmede
 kullanılabilir. Bunu istemiyorsanız yerel motorlarda kalın.
@@ -258,8 +310,32 @@ Hiçbir şey kurmanız gerekmez; altyazı yayının parçasıdır. Yazı küçü
 Kısayollar oyun ön plandayken de çalışır. Başka bir programla çakışırsa *Ayarlar → Kısayollar*'dan
 değiştirip **Kaydet**'e basın.
 
+## 10. Sorun giderme
+
+**Ollama'ya ulaşılamıyor ya da model yüklü değil.** Robz Vision bu sırada hızlı yerel çeviriyle devam eder.
+
+- Ollama kurulu ve açık olmalı. Ollama, Windows açılınca kendiliğinden başlar; kapattıysanız Başlat
+  menüsünden yeniden açın.
+- *Çeviri* sayfasının *Ollama* bölümündeki adres `http://127.0.0.1:11434` olmalı.
+- Model indirilmemişse ya da indirme yarıda kaldıysa **Önerilen kurulum**'a yeniden basın.
+
+**Çeviri gecikiyor.** Ekranda önce hızlı çeviri görünüp sık sık sonradan değişiyorsa yapay zekâ yetişemiyor
+demektir. Daha küçük bir model seçin: *Ollama* bölümünde modeli `gemma4:e4b` yapıp **Modeli indir**'e basın.
+
+**Ekran kartının belleği (VRAM) yetmiyor.** `gemma4:12b` 12 GB bellekli kartta rahat çalışır. Bellek
+yetmezse Ollama modelin bir kısmını işlemcide çalıştırır ve çeviri yavaşlar.
+
+- `gemma4:e4b`'yi seçin.
+- Ekran kartını kullanan diğer programları kapatın. PC'de oynuyorsanız oyun da ekran kartının belleğini
+  kullanır.
+- Modelin nerede çalıştığını görmek için komut isteminde `ollama ps` yazın. *PROCESSOR* sütununda
+  `100% GPU` görmelisiniz; CPU payı varsa bellek yetmiyordur.
+
+**Çeviri, İngilizce altyazı ekrandayken kayboluyor.** Her satır en fazla *En uzun kalma* süresi kadar
+görünür (varsayılan 7 sn). Uzun altyazılı sahnelerde *Ayarlar → Altyazı akışı → En uzun kalma*'yı artırın.
+
 ---
 
-Sorun mu yaşıyorsunuz? Önce [README'deki SSS](../README.md#sss-ve-sorun-giderme) bölümüne bakın. Çözülmezse
-günlük dosyasıyla birlikte (`%LOCALAPPDATA%\RobzVision\Logs`) bir hata kaydı açın:
+Başka bir sorun mu yaşıyorsunuz? Önce [README'deki SSS](../README.md#sss-ve-sorun-giderme) bölümüne bakın.
+Çözülmezse günlük dosyasıyla birlikte (`%LOCALAPPDATA%\RobzVision\Logs`) bir hata kaydı açın:
 [CONTRIBUTING.md](../CONTRIBUTING.md#hata-bildirmek).
