@@ -6,6 +6,13 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.3.2] - 2026-11-19
+
+### Değişti
+
+- Uygulama içinden güncellemenin ilk gerçek denemesi: 1.3.1'i kullananlar bu sürümü uygulamanın içinden
+  (**Güncelle**) alabilir. Uygulamada başka değişiklik yok.
+
 ## [1.3.1] - 2026-11-19
 
 ### Eklendi
@@ -308,7 +315,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.3.1...HEAD
+[Yayımlanmadı]: ../../compare/v1.3.2...HEAD
+[1.3.2]: ../../releases/tag/v1.3.2
 [1.3.1]: ../../releases/tag/v1.3.1
 [1.3.0]: ../../releases/tag/v1.3.0
 [1.2.1]: ../../releases/tag/v1.2.1
