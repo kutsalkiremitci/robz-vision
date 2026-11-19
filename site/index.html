@@ -359,6 +359,7 @@ h3 { font-size: 1.375rem; }
 .compare .wide { grid-column: 1 / -1; }
 .compare .wide img { aspect-ratio: 1280 / 976; }
 .compare figcaption span { display: block; margin-top: 2px; font: 400 .9375rem/1.5 var(--body); color: var(--text-3); }
+.compare.showcase .wide img { aspect-ratio: auto; }
 
 /* özellikler */
 .features { display: grid; gap: 44px; }
@@ -633,6 +634,28 @@ code.inline {
 </header>
 
 <main id="icerik">
+
+  <section class="section" id="gta6" aria-labelledby="gta6-baslik">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="gta6-baslik">GTA VI’da böyle görünür</h2>
+        <p class="section-intro">Altta oyunun İngilizce altyazısı, hemen üstünde Robz Vision’ın Türkçesi. Türkçe kutu uygulamanın kendi çizim koduyla çizildi.</p>
+      </div>
+      <div class="compare showcase">
+        <figure class="wide">
+          <img class="shot" src="img/gta6_kahraman.webp" width="1280" height="640" loading="lazy" decoding="async" alt="GTA VI sahnesi, Jason ve Lucia yan yana: altta oyunun İngilizce altyazısı “Stay close. If this goes wrong, we meet at the marina.”, hemen üstünde Robz Vision’ın Türkçe kutusu “Yanımdan ayrılma. İş ters giderse marinada buluşuruz.”; sağ üstte Robz Vision logosu, “GTA 6’yı Türkçe oyna.” ve kick.com/robzsogood.">
+        </figure>
+        <figure class="wide">
+          <picture>
+            <source srcset="img/gta6_demo_sabit.webp" media="(prefers-reduced-motion: reduce)">
+            <img class="shot" src="img/gta6_demo.webp" width="960" height="540" loading="lazy" decoding="async" alt="GTA VI sahnelerinde sırayla beliren İngilizce altyazılar ve her birinin üstünde Robz Vision’ın Türkçe çevirisi; son satırda İngilizce koyu bir kutuyla örtülüp Türkçesi tam yerine yazılıyor.">
+          </picture>
+          <figcaption>Satır belirir, Türkçesi gelir<span>Son satır “Oyun altyazısının üzerine” kipinde: İngilizce koyu kutuyla örtülür, Türkçesi tam yerine yazılır.</span></figcaption>
+        </figure>
+      </div>
+      <p class="note">Oyun görseli © Rockstar Games / Take-Two Interactive (GTA VI resmî tanıtım görselleri). Robz Vision bağımsız bir hayran projesidir, Rockstar Games ile bir bağlantısı yoktur. Altyazı cümleleri örnektir, oyundan alıntı değildir.</p>
+    </div>
+  </section>
 
   <section class="section" id="kimin-icin" aria-labelledby="kimin-baslik">
     <div class="wrap">
