@@ -6,6 +6,26 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.3.1] - 2026-11-19
+
+### Eklendi
+
+- **Geliştiriciyi Kick'te takip et:** kenar çubuğunun en altında Kick logolu küçük bir *Robz so good* bağlantısı
+  ve *Ayarlar → Uygulama*'da *Geliştirici* satırı (Kick ve YouTube); tıklanınca kanal tarayıcıda açılır. Açılır
+  pencere ya da bildirim yok, klavyeyle de açılır. Test düğmesinin örnek altyazısında da Kick daveti var; gerçek
+  altyazı akışına ve OBS sayfasına hiçbir şey eklenmez. README, kullanım kılavuzu ve web sitesinde de bağlantı var.
+- **README ve web sitesi yenilendi.** Örnek görseller artık GTA VI'nın resmî tanıtım görsellerinin üzerinde (oyun
+  görseli © Rockstar Games / Take-Two Interactive): Türkçe kutu ve "Oyun altyazısının üzerine" kipi uygulamanın
+  kendi çizim koduyla çizilir, altyazı cümleleri örnektir. README'nin başında büyük "Hemen indir" ve "Robz so
+  good'u Kick'te takip et" düğmeleri, özellik tablosu, sayılarla hız ve sistem gereksinimleri. Görseller
+  `tools/readme_gorselleri.py gta6 --kaynak KLASÖR` ile yeniden üretilir; kaynak görseller depoya girmez.
+- **Uygulama içinden güncelleme:** Robz Vision yeni sürümü kendisi denetler (açılıştan kısa süre sonra, sonra
+  saatte bir; GitHub'a kişisel bilgi içermeyen tek istek, *Ayarlar → Uygulama → Güncellemeler*'den kapatılabilir).
+  Yeni sürüm varsa kenar çubuğunda **Güncelleme var** çıkar; çeviri çalışırken bildirim beklenir. **Güncelle**
+  kurulum dosyasını indirir, boyutunu ve SHA256 özetini doğrular, Robz Vision'ı kapatıp sessizce kurar ve yeniden
+  açar; ayarlar ve modeller korunur, ayar dosyası önce yedeklenir. **Sonra** ve **Bu sürümü atla** da var.
+  Taşınabilir sürümde **İndir** sürüm sayfasını açar. 1.3.0 ve öncesi bir kez elle güncellenir.
+
 ## [1.3.0] - 2026-11-19
 
 ### Eklendi
@@ -288,7 +308,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.3.0...HEAD
+[Yayımlanmadı]: ../../compare/v1.3.1...HEAD
+[1.3.1]: ../../releases/tag/v1.3.1
 [1.3.0]: ../../releases/tag/v1.3.0
 [1.2.1]: ../../releases/tag/v1.2.1
 [1.2.0]: ../../releases/tag/v1.2.0
