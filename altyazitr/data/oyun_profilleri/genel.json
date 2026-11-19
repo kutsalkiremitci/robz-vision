@@ -1,12 +1,12 @@
 {
   "id": "genel",
-  "name": "Genel (tüm oyunlar)",
-  "description": "Her oyun için genel ayar: doğal, akıcı Türkçe. Kişi, yer ve tuş adları olduğu gibi kalır.",
+  "name": "Genel",
+  "description": "Her oyun için aynı kurallar: doğal, akıcı Türkçe. Özel isimler ve tuş adları olduğu gibi kalır.",
   "world": "",
   "rules": [
     "Write natural, fluent Turkish that fits the scene and the speaker; use informal \"sen\" in casual dialogue. Never translate word for word.",
     "Give slang, idioms and jokes a natural Turkish equivalent; keep swearing as strong as the source, but never add any.",
-    "Never translate names of people, places, factions, items or vehicles; add Turkish suffixes with an apostrophe.",
+    "Never translate proper names (Vice City, Lucia, John: people, places, gangs, brands, vehicles); add Turkish suffixes with an apostrophe: Lucia'yı, Vice City'de.",
     "Button prompts: keep button names exactly as written (X, A, L2, RT, E, Space) and write short Turkish commands.",
     "If dialogue and a button prompt got mixed in one line, untangle them and translate both, dialogue first."
   ],

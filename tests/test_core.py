@@ -380,7 +380,7 @@ def test_translate_defaults_migration(tmp_path, monkeypatch):
     path.write_text(json.dumps(old), encoding="utf-8")
     s = cfg.load_settings()
     assert (s.translate.ollama_model, s.translate.context_lines) == ("gemma4:12b", 8)
-    assert s.translate.profile == "gta6" and s.settings_version == Settings.settings_version  # geçişten sonra en yeni
+    assert s.translate.profile == "genel" and s.settings_version == Settings.settings_version  # geçişten sonra en yeni
     mine = {"settings_version": 2, "translate": {"ollama_model": "qwen3.5:9b", "context_lines": 5}}
     path.write_text(json.dumps(mine), encoding="utf-8")
     s = cfg.load_settings()
@@ -401,7 +401,7 @@ def test_ai_settings_defaults():
     from altyazitr.translate import RECOMMENDED_OLLAMA_MODEL
 
     s = Settings()
-    assert s.settings_version == 5 and isinstance(s.ai, AiCfg)
+    assert s.settings_version == 6 and isinstance(s.ai, AiCfg)
     assert (s.ai.choice, s.ai.pending_model, s.ai.failed, s.ai.failed_kind) == ("", "", "", "")
     assert s.ai.pause_while_running and not s.ai.installed_ollama and not s.ai.invite_pending and s.ai.speed_ms == 0
     assert TranslateCfg().ollama_model == RECOMMENDED_OLLAMA_MODEL

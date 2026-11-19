@@ -1252,10 +1252,9 @@ def create_translator(cfg, glossary: Glossary) -> Translator:
 
         profile = get_profile(getattr(cfg, "profile", ""))
         if cfg.engine == "ollama":
-            return OllamaTranslator(cfg.ollama_url, cfg.ollama_model, glossary, cfg.game_context, cfg.timeout_s,
+            return OllamaTranslator(cfg.ollama_url, cfg.ollama_model, glossary, timeout=cfg.timeout_s,
                                     profile=profile, context_lines=int(getattr(cfg, "context_lines", 8)))
-        return GeminiTranslator(cfg.gemini_key, cfg.gemini_model, glossary, cfg.game_context, cfg.timeout_s,
-                                profile=profile)
+        return GeminiTranslator(cfg.gemini_key, cfg.gemini_model, glossary, timeout=cfg.timeout_s, profile=profile)
     if cfg.engine == "deepl":
         return DeepLTranslator(cfg.deepl_key, glossary, cfg.timeout_s)
     if cfg.engine == "none":

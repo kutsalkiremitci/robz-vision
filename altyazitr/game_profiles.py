@@ -1,14 +1,13 @@
-"""Oyun profilleri: yapay zekâ çevirisine (Ollama, Gemini) oyunun dünyasını ve tonunu, çevrilmeyecek adları,
-argo sözlüğünü ve üslup örneklerini veren JSON dosyaları.
+"""Çeviri profilleri: yapay zekâ çevirisine (Ollama, Gemini) kuralları, çevrilmeyecek adları, sözlüğü ve üslup
+örneklerini veren JSON dosyaları. Uygulama yalnız genel profili (``genel.json``) kullanır: 1.3.0'da oyuna özel
+profil (GTA 6) ve arayüzdeki profil seçimi kaldırıldı. Yükleyici ve şema, kuralların veri olarak tutulması ve
+denetlenmesi için duruyor.
 
 Her profil ``altyazitr/data/oyun_profilleri/`` altında bir JSON dosyasıdır; dosya adı (uzantısız) profilin
-kimliğidir: ``gta6.json`` → ``gta6``. Bu modül dosyaları okur ve doğrular; istemi ``translate.py`` kurar.
-Bozuk dosya uygulamayı durdurmaz: günlüğe uyarı yazılır, dosya atlanır. Bilinmeyen ya da boş kimlik genel
-profile düşer; genel profilin dosyası da okunamazsa içi boş bir genel profil kullanılır.
-
-Yeni oyun profili eklemek (topluluk katkısı; ayrıntı: CONTRIBUTING.md → "Oyun profili ekleme"): mevcut bir
-dosyayı kopyalayıp oyunun kısa kimliğiyle adlandırın (ör. ``rdr2.json``) ve alanları doldurun. ``id``
-dışındaki tüm alanlar zorunludur. Metinler boş olamaz; yalnız ``world`` boş bırakılabilir.
+kimliğidir: ``genel.json`` → ``genel``. Bu modül dosyaları okur ve doğrular; istemi ``translate.py`` kurar.
+Bozuk dosya uygulamayı durdurmaz: günlüğe uyarı yazılır, dosya atlanır. Bilinmeyen ya da boş kimlik (ör. eski
+ayar dosyasındaki ``gta6``) genel profile düşer; genel profilin dosyası da okunamazsa içi boş bir genel profil
+kullanılır. ``id`` dışındaki tüm alanlar zorunludur. Metinler boş olamaz; yalnız ``world`` boş bırakılabilir.
 
     Alan         Tür             İçerik
     id           metin           İsteğe bağlı; yazılırsa dosya adıyla aynı olmalı
@@ -40,8 +39,9 @@ from altyazitr.paths import resource_dir
 
 log = logging.getLogger(__name__)
 
-DEFAULT_PROFILE_ID = "gta6"
 GENERIC_PROFILE_ID = "genel"
+# Uygulama oyuna özel profil kullanmaz: çeviri her oyunda genel kurallarla yapılır (1.3.0'da GTA 6 profili kalktı)
+DEFAULT_PROFILE_ID = GENERIC_PROFILE_ID
 
 # Önerilen boyut sınırları. Aşan profil yine yüklenir ama günlüğe uyarı yazılır (çeviri yavaşlar).
 MAX_WORLD_WORDS = 90
@@ -243,11 +243,10 @@ def load_profiles(folder: str | Path | None = None) -> Mapping[str, GameProfile]
 
 
 def list_profiles() -> list[GameProfile]:
-    """Arayüzdeki sıra: önce GTA 6, sonra genel, sonra diğerleri ada göre. Genel profil her zaman listededir."""
+    """Sıra: önce genel, sonra diğerleri ada göre. Genel profil her zaman listededir."""
     rest = dict(load_profiles())
-    rest.setdefault(GENERIC_PROFILE_ID, _EMPTY_GENERIC)
-    head = [rest.pop(k) for k in (DEFAULT_PROFILE_ID, GENERIC_PROFILE_ID) if k in rest]
-    return head + sorted(rest.values(), key=lambda p: (p.name.casefold(), p.id.casefold()))
+    head = rest.pop(GENERIC_PROFILE_ID, _EMPTY_GENERIC)
+    return [head, *sorted(rest.values(), key=lambda p: (p.name.casefold(), p.id.casefold()))]
 
 
 def get_profile(pid: str | None) -> GameProfile:

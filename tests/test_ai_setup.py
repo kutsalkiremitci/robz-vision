@@ -388,8 +388,8 @@ def test_fresh_install_runs_steps_in_order(make, qapp, tmp_path):
     assert h.finished == [(True, ai.TEXT_READY)] and svc.message == ai.TEXT_READY
 
 
-@pytest.mark.parametrize(("profile", "expected"), [("", "gta6"), ("genel", "genel")],
-                         ids=["boş profil gta6 olur", "profil korunur"])
+@pytest.mark.parametrize(("profile", "expected"), [("", "genel"), ("genel", "genel")],
+                         ids=["boş profil genel olur", "profil korunur"])
 def test_success_writes_engine_and_model_then_saves(make, qapp, tmp_path, profile, expected):
     deps = FakeDeps(tmp_path, api=True, version=NEW, installed=INST_NEW)
     h = make(deps)

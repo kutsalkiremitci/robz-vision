@@ -73,9 +73,8 @@ class TranslateCfg:
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "gemma4:12b"
     context_lines: int = 8  # LLM'e bağlam olarak giden önceki satır sayısı
-    # Oyun profili (altyazitr.game_profiles): dünya, ton, çevrilmeyecek adlar, argo sözlüğü ve üslup örnekleri
-    profile: str = "gta6"
-    game_context: str = ""  # kullanıcının ek bağlam notu; profilin üstüne eklenir
+    # Çeviri kuralları (altyazitr.game_profiles): her oyun için genel profil. Arayüzde seçilmez.
+    profile: str = "genel"
     deepl_key: str = ""
     timeout_s: float = 6.0
     # [ingilizce, türkçe]; türkçe boşsa terim çevrilmeden korunur
@@ -187,7 +186,7 @@ class Settings:
     # 3: yerel LLM'in varsayılanı TranslateGemma'dan Gemma 4'e geçti, bağlam 3 satırdan 8 satıra çıktı.
     # 4: yerel yapay zekâ kurulumu (ai); hızlı çeviriyle güncelleyen kullanıcıya bir kez yapay zekâ daveti.
     # 5: hızlı algılama: tarama hızı 10 → 20 kare/sn, kararlılık 2 → 1 kare (değiştirilmemişse taşınır).
-    settings_version: int = 5
+    settings_version: int = 6
 
 
 def _from_dict(cls, data: Any):
@@ -254,6 +253,9 @@ def load_settings() -> Settings:
                 s.capture.fps = CaptureCfg.fps
             if s.ocr.stable_frames == 2:
                 s.ocr.stable_frames = OcrCfg.stable_frames
+        if version < 6:
+            # 1.3.0: oyun profili ve "Ek bağlam" kalktı; çeviri her oyunda genel kurallarla (özel isimler çevrilmez)
+            s.translate.profile = TranslateCfg.profile
         s.settings_version = Settings.settings_version
         log.info("Ayarlar yüklendi: %s", SETTINGS_FILE)
         return s

@@ -83,9 +83,9 @@ PC oyunları, PS Remote Play ve Xbox uygulaması gibi uzaktan oynatma pencereler
   konuşmanın önceki 8 satırını görerek çevirir. OCR'ın yanlış okuduğu harfleri düzeltir, tuş ipuçlarını
   ("Hold L2 to …") ayırır. Ücretsizdir; internetsiz ve kotasız çalışır. İlk açılışta *Yapay zekâ ile*'yi
   seçmeniz yeterli: Robz Vision Ollama'yı ve modeli [kendisi kurar](#yerel-yapay-zekâ-çevirisi-önerilen).
-- **Oyun profilleri.** Varsayılan *GTA 6* profili modele oyunun dünyasını ve tonunu, çevrilmeyecek adları
-  (karakter, yer, silah, araç, marka), suç dünyası argosunu ve üslup örneklerini verir. Kelimesi kelimesine
-  saçma çeviriler azalır. Diğer oyunlar için *Genel* profil var; kendi notunuzu da ekleyebilirsiniz.
+- **Her oyunda aynı, sade kurallar.** Yapay zekâ doğal ve akıcı Türkçe yazar, kelimesi kelimesine çevirmez.
+  Özel isimler (Vice City, Lucia, John) Türkçedeki kural gibi çevrilmez, ekleri kesme işaretiyle alır:
+  Lucia'yı, Vice City'de. Tuş adları (L2, X) olduğu gibi kalır.
 - **Ücretsiz ve yerel.** OCR ve hızlı çeviri modeli (quickmt) bilgisayarınızda çalışır. Hesap, API anahtarı
   ya da abonelik gerekmez. Varsayılan ayarlarla internet yalnızca modelleri (yapay zekâyı seçerseniz Ollama'yı
   da) bir kez indirmek için kullanılır.
@@ -147,8 +147,8 @@ flowchart LR
 4. **Temizleme.** Satırlar birleştirilir, konuşmacı adı ayrılır. Okuma, İngilizce kelime listesine göre
    puanlanır; bozuk okumalar elenir. Aynı cümle ikinci kez çevrilmez, önbellekten gelir.
 5. **Çeviri.** Varsayılan model [quickmt-en-tr](https://huggingface.co/quickmt/quickmt-en-tr)'dir ve
-   CTranslate2 ile işlemcide çalışır. Önerilen yerel yapay zekâ (Ollama ile Gemma 4) her satırı oyun
-   profiliyle ve önceki 8 satırla birlikte çevirir. Çevirisi yaklaşık 1,2 sn içinde gelirse yalnız o
+   CTranslate2 ile işlemcide çalışır. Önerilen yerel yapay zekâ (Ollama ile Gemma 4) her satırı önceki 8
+   satırla birlikte çevirir. Çevirisi yaklaşık 1,2 sn içinde gelirse yalnız o
    görünür; gecikirse önce quickmt'nin çevirisi görünür, yapay zekânınki gelince aynı satırın üstüne yazılır.
    Yakalama, OCR ve çeviri ayrı iş parçacıklarındadır ve satırları sırayla işler; hızlı konuşmada satır
    kaybolmaz.
@@ -274,9 +274,9 @@ Adım adım anlatım, ekran görüntüleri ve senaryolara göre ipuçları: **[d
 
 Süreler donanıma ve bağlantıya göre değişir.
 
-- **Yerel yapay zekâ** oyun profilini ve önceki 8 satırı görür: konuşmanın gidişatına göre çevirir, OCR'ın
-  yanlış okuduğu harfleri düzeltir, tuş ipuçlarını ayırır. Ollama'daki başka modeller de seçilebilir.
-  TranslateGemma artık önerilmiyor: önceki satırları (bağlamı) ve oyun profilini kullanmıyor.
+- **Yerel yapay zekâ** önceki 8 satırı görür: konuşmanın gidişatına göre çevirir, OCR'ın yanlış okuduğu
+  harfleri düzeltir, tuş ipuçlarını ayırır. Ollama'daki başka modeller de seçilebilir. TranslateGemma artık
+  önerilmiyor: önceki satırları (bağlamı) kullanmıyor.
 - **Ollama, Gemini ve DeepL'de** çeviri yaklaşık 1,2 sn içinde gelirse yalnız o görünür. Gecikirse önce
   hızlı yerel çeviri görünür, asıl çeviri gelince yerine geçer. Hata ya da kota sınırında hızlı yerel
   çeviriyle devam eder.
@@ -303,7 +303,7 @@ Ticari olmayan lisanslı modeller (ör. NLLB) para kazanılan yayınlarla çeli�
 - Çeviri önbelleği (İngilizce–Türkçe metin çiftleri) ve günlük dosyaları `%LOCALAPPDATA%\RobzVision`
   altında, ayarlar ve API anahtarları `%APPDATA%\RobzVision\ayarlar.json` dosyasında tutulur.
 - Gemini ya da DeepL'i seçerseniz altyazı metni ve bağlam için önceki birkaç satır o hizmete gönderilir;
-  Gemini'ye oyun profili ve ek bağlam notunuz da gider. Görüntü gönderilmez. **Gemini'nin ücretsiz
+  Gemini'ye çeviri kuralları da gider. Görüntü gönderilmez. **Gemini'nin ücretsiz
   katmanında Google, gönderilen metinleri ürünlerini geliştirmek için kullanabilir.**
 
 ## SSS ve sorun giderme
@@ -445,7 +445,7 @@ ekler (`.github/workflows/release.yml`). Etiket, `altyazitr/__init__.py`'deki s�
 | `altyazitr/detect.py` | Değişim algılama (metin maskesi) |
 | `altyazitr/ocr.py`, `textproc.py`, `english.py` | OCR motorları, metin temizleme, okuma kalite puanı |
 | `altyazitr/translate.py` | quickmt, Ollama, Gemini, DeepL; sözlük ve önbellek |
-| `altyazitr/data/oyun_profilleri/` | Oyun profilleri (JSON): yapay zekâya giden dünya, ton, adlar, argo ve üslup örnekleri; yeni profil için [CONTRIBUTING.md](CONTRIBUTING.md#oyun-profili-ekleme) |
+| `altyazitr/data/oyun_profilleri/genel.json` | Yapay zekâya giden çeviri kuralları ve üslup örnekleri (her oyunda aynı) |
 | `altyazitr/pipeline.py` | Yakalama → OCR → çeviri iş parçacıkları |
 | `altyazitr/display.py`, `server.py`, `web/overlay.html` | Zamanlama ve OBS Tarayıcı Kaynağı |
 | `altyazitr/overlay.py`, `render.py` | Ekrandaki altyazı kutusu ve ortak çizim kodu |

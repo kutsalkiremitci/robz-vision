@@ -30,7 +30,6 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QFormLay
 
 from altyazitr import APP_NAME
 from altyazitr.ai_setup import is_local_url
-from altyazitr.game_profiles import DEFAULT_PROFILE_ID, list_profiles
 from altyazitr.gui.ai_setup_view import AiProgressPanel, confirm_ai_setup, start_survey
 from altyazitr.gui.common import Worker, _form, _tip
 from altyazitr.gui.controls import Collapsible
@@ -216,21 +215,6 @@ ROW_H = 34  # sözlük tablosu satır yüksekliği
 GLOSSARY_TIP = ("Oyundaki adlar ve terimler. Türkçe karşılığı boş bırakılan terim çevrilmeden aynen kalır "
                 "(Vice City, Lucia). İsterseniz karşılık da yazabilirsiniz: cop → polis, bro → kanka.")
 CONTEXT_TIP = "Önceki satırlar yapay zekâya bağlam olarak gider; konuşmanın gidişatını anlar."
-PROFILE_TIP = "Yapay zekâya oyunun dünyasını ve argosunu anlatır; oyundaki adlar her motorda çevrilmeden kalır"
-# "Oyun profili"nin yanındaki bilgi simgesinin ipucu: profilin ne olduğu ve neyi değiştirdiği
-PROFILE_INFO = (
-    "<b>Oyun profili</b> yapay zekâya hangi oyunu çevirdiğini anlatır; her satır bu bilgiyle çevrilir:"
-    "<ul style='margin-left:-24px'>"
-    "<li><b>Dünya ve ton:</b> oyunun geçtiği yer ve konusu (GTA 6: Leonida, Vice City, suç dünyası).</li>"
-    "<li><b>Çevrilmeyecek adlar:</b> karakter, yer, marka ve silah adları (Lucia, Vice City, Ammu-Nation…); "
-    "Türkçe ekleri doğru alır: Lucia'yı, Vice City'de.</li>"
-    "<li><b>Argo sözlüğü:</b> heist → soygun, stash → zula, snitch → ispiyoncu…</li>"
-    "<li><b>Üslup:</b> sokak ağzı, küfrün şiddeti, tuş adları (L2, R2) aynen kalır.</li>"
-    "</ul>"
-    "Yerel yapay zekâ ve Gemini profilin tamamını kullanır; hızlı çeviri ve DeepL yalnız adları korur. "
-    "Başka bir oyun oynarken <b>Genel</b>'i seçin."
-)
-EXTRA_TIP = "Profilin üstüne eklenen kendi notun. Ör: hangi görevdesin, kimlerle konuşuyorsun."
 
 OLLAMA_DOWN_TIP = "Ollama'yı başlatın veya adresi kontrol edin"
 
@@ -365,38 +349,12 @@ class TranslatePage(QWidget):
         self.hint_box = QWidget()
         self.hint_box.setLayout(vbox(self.hint_invite, self.hint_progress))
         add_row(f, "", self.hint_box)
-        # oyun profili: ad gösterilir, veri olarak id tutulur; ipucu profilin açıklaması. Yapay zekâ istemini
-        # belirler, profilin adlarını ise her motor korur; bu yüzden yerel hızlı çeviride de görünür.
-        self.profile = QComboBox()
-        self.profile.setMinimumWidth(FIELD_W)
-        self.profile.setAccessibleName("Oyun profili")
-        for p in list_profiles():
-            self.profile.addItem(p.name, p.id)
-            self.profile.setItemData(self.profile.count() - 1, p.description, Qt.ItemDataRole.ToolTipRole)
-        shown = self._select_profile(t.profile)
-        if shown and shown.casefold() != (t.profile or "").strip().casefold():
-            # kayıtlı profil listede yok: get_profile genel profile düşerdi; çeviri ekrandaki profille yapılsın
-            t.profile = shown
-        self.profile.currentIndexChanged.connect(self._profile_changed)
-        # yanında bilgi simgesi: üzerine gelince profilin ne olduğu ve neyi değiştirdiği görünür
-        self.profile_info = QLabel()
-        self.profile_info.setPixmap(pixmap("info", ICON["s"], C.TEXT_2))
-        self.profile_info.setToolTip(PROFILE_INFO)
-        self.profile_info.setAccessibleName("Oyun profili nedir")
-        self.profile_info.setAccessibleDescription(re.sub(r"<[^>]+>", " ", PROFILE_INFO))
-        self.profile_info.setCursor(Qt.CursorShape.WhatsThisCursor)
-        self.profile_row = QWidget()
-        self.profile_row.setLayout(hbox(self.profile, self.profile_info, None))
-        add_row(f, "Oyun profili", self.profile_row, tip=PROFILE_INFO)
         self.engine_form = f
         eng.add(layout=f)
         self.remote_box = QWidget()
         rf = form()
         self.remote_box.setLayout(rf)
         self.remote_form = rf
-        # ek bağlam profilin hemen altında: kullanıcının notu profile eklenir (yalnız yapay zekâ istemine gider)
-        self.extra = _tip(bind_line(t, "game_context", restart, "Ör: Lucia ile soygun planı"), EXTRA_TIP)
-        add_row(rf, "Ek bağlam", self.extra)
         self.hybrid = bind_check("Yapay zekâ gecikirse hızlı çeviriyi göster", t, "hybrid", restart,
                                  tip=hybrid_tip(t.hybrid_wait_ms))
         add_row(rf, "Hibrit mod", self.hybrid)
@@ -571,8 +529,6 @@ class TranslatePage(QWidget):
         self.card_gm.setVisible(e == "gemini")
         self.card_dl.setVisible(e == "deepl")
         self.remote_box.setVisible(e in ("ollama", "gemini", "deepl"))
-        self.engine_form.setRowVisible(self.profile_row, e != "none")
-        self.remote_form.setRowVisible(self.extra, e in ("ollama", "gemini"))  # DeepL istem kullanmaz
         self._update_setup_hint()
 
     def _update_setup_hint(self) -> None:
@@ -624,29 +580,6 @@ class TranslatePage(QWidget):
 
     def _update_engine_desc(self) -> None:
         self.engine_desc.setText(ENGINE_DESC.get(self.ctx.s.translate.engine, ""))
-
-    # --- oyun profili -------------------------------------------------------------------
-    def _select_profile(self, pid: str) -> str:
-        """Profili sinyal göndermeden seçer (büyük/küçük harf fark etmez, get_profile gibi); kayıtlı id listede
-        yoksa varsayılan profil seçilir. Seçilen profilin id'sini döndürür."""
-        ids = [str(self.profile.itemData(i) or "").casefold() for i in range(self.profile.count())]
-        key = (pid or "").strip().casefold()
-        i = ids.index(key) if key in ids else self.profile.findData(DEFAULT_PROFILE_ID)
-        self.profile.blockSignals(True)
-        self.profile.setCurrentIndex(max(i, 0))
-        self.profile.blockSignals(False)
-        self.profile.setToolTip(self.profile.itemData(self.profile.currentIndex(), Qt.ItemDataRole.ToolTipRole)
-                                or "")
-        return str(self.profile.currentData() or "")
-
-    def _profile_changed(self, i: int) -> None:
-        pid = self.profile.itemData(i)
-        if not pid:
-            return
-        self.ctx.s.translate.profile = pid
-        self.profile.setToolTip(self.profile.itemData(i, Qt.ItemDataRole.ToolTipRole) or "")
-        self.ctx.pipeline.cache.clear()  # önceki profille yapılmış çeviriler yeniden çevrilsin
-        self._restart()
 
     # --- quickmt ------------------------------------------------------------------------
     def _update_qm_status(self) -> None:
@@ -946,7 +879,6 @@ class TranslatePage(QWidget):
         finally:
             for w in widgets:
                 w.blockSignals(False)
-        self._select_profile(t.profile)
         self._update_engine_desc()
         self._update_visibility()  # motor Ollama olduysa davet gizlenir, Ollama bölümü görünür: sonuç orada
 
@@ -961,9 +893,8 @@ class TranslatePage(QWidget):
                 self.ol_model.blockSignals(False)
             self.ol_line.set(f"{model_title(model)} indirildi", "ok", tip="")
         elif t.engine == "ollama":
-            profile = self.profile.currentText() or DEFAULT_PROFILE_ID
             self.ol_line.set(f"Hazır: {model_title(t.ollama_model)} yerel çeviri", "ok",
-                             tip=f"Motor: Ollama. Model: {t.ollama_model}. Oyun profili: {profile}.")
+                             tip=f"Motor: Ollama. Model: {t.ollama_model}.")
 
     # --- sözlük -------------------------------------------------------------------------
     def _style_table(self) -> None:

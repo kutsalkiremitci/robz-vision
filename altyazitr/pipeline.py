@@ -26,6 +26,7 @@ aralıklar). LLM bağlamına işaretsiz metin girer. İki görünümde de vurgu 
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import math
 import statistics
@@ -387,6 +388,10 @@ class TrContext:
         # karma mod: hızlı çeviri çeviri döngüsünde, asıl motor ayrı iş parçacığında hazırlanır ve çevirir
         self.two_stage = _two_stage(tc, fast)
         self.model_tag = f"{main.key}:{getattr(main, 'model', '')}"
+        system = getattr(main, "system", "")
+        if isinstance(system, str) and system:
+            # Önbellek anahtarı istemi de içerir: kurallar (sözlük, istem) değişince eski çeviriler kullanılmaz
+            self.model_tag += ":" + hashlib.sha1(system.encode("utf-8")).hexdigest()[:8]
         # (line, en, tr); tr "" ise satırın güvenilir Türkçesi yok, LLM'e yalnız İngilizcesi gider
         self.hist: deque[tuple[int, str, str]] = deque(maxlen=max(0, tc.context_lines) or 1)
         self.last_t = 0.0

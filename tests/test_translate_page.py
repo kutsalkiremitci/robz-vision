@@ -19,7 +19,6 @@ import pytest
 from altyazitr.ai_setup import Step
 from altyazitr.ai_setup import model_title as catalog_title
 from altyazitr.config import Settings
-from altyazitr.game_profiles import DEFAULT_PROFILE_ID, get_profile, list_profiles
 from altyazitr.translate import RECOMMENDED_OLLAMA_MODEL, TranslatorError
 
 LIGHT = "gemma4:e4b"
@@ -281,18 +280,11 @@ def _wait(qapp, cond, timeout: float = 5.0) -> bool:
     return cond()
 
 
-def _other_profile() -> str:
-    """Varsayılan olmayan bir profil (genel profil her zaman listededir)."""
-    other = next((p.id for p in list_profiles() if p.id != DEFAULT_PROFILE_ID), None)
-    assert other is not None
-    return other
-
-
 def _settings(engine: str = "ollama") -> Settings:
-    """Önerilen kurulumdan önceki durum: başka model, varsayılan olmayan profil."""
+    """Önerilen kurulumdan önceki durum: başka model."""
     s = Settings()
     t = s.translate
-    t.engine, t.ollama_model, t.profile = engine, "translategemma:12b", _other_profile()
+    t.engine, t.ollama_model = engine, "translategemma:12b"
     return s
 
 
@@ -300,24 +292,17 @@ def _vis(page, w) -> bool:
     return w.isVisibleTo(page)
 
 
-# --- sayfa ve oyun profili -----------------------------------------------------------------------
-def test_page_builds_and_lists_profiles(qapp, monkeypatch):
-    from PySide6.QtCore import Qt
+# --- sayfa ------------------------------------------------------------------------------------
+def test_page_builds_without_game_profile(qapp, monkeypatch):
+    """Oyun profili seçimi ve "Ek bağlam" yok: çeviri her oyunda aynı genel kurallarla yapılır."""
     from PySide6.QtWidgets import QLabel
 
     page, t, calls, fake = _page(qapp, monkeypatch)
-    profiles = list_profiles()
-    assert profiles and DEFAULT_PROFILE_ID in {p.id for p in profiles}
-    cb = page.profile
-    assert [cb.itemText(i) for i in range(cb.count())] == [p.name for p in profiles]
-    assert [cb.itemData(i) for i in range(cb.count())] == [p.id for p in profiles]
-    assert [cb.itemData(i, Qt.ItemDataRole.ToolTipRole) for i in range(cb.count())] == \
-        [p.description for p in profiles]
-    assert cb.currentData() == t.profile == DEFAULT_PROFILE_ID
-    assert cb.toolTip() == get_profile(DEFAULT_PROFILE_ID).description
+    assert not hasattr(page, "profile") and not hasattr(page, "extra")
     labels = {lb.text() for lb in page.findChildren(QLabel)}
-    assert {"Motor", "Oyun profili", "Ek bağlam", "Hibrit mod", "Bağlam"} <= labels
-    assert "Oyun bağlamı" not in labels
+    assert {"Motor", "Hibrit mod", "Bağlam"} <= labels
+    assert not labels & {"Oyun profili", "Ek bağlam", "Oyun bağlamı"}
+    assert t.profile == "genel"
     assert calls == {"save": 0, "restart": 0, "clear": 0}  # açılırken hiçbir şey kaydedilmez
     assert fake.lists == [] and fake.pulls == []  # açılırken Ollama'ya sorulmaz
     ai = page.ai
@@ -325,38 +310,7 @@ def test_page_builds_and_lists_profiles(qapp, monkeypatch):
     assert ai.advice_calls == 1  # donanım önerisi bir kez, arka planda okunur
 
 
-def test_profile_selection_writes_setting(qapp, monkeypatch):
-    other = _other_profile()
-    page, t, calls, _ = _page(qapp, monkeypatch)
-    page.profile.setCurrentIndex(page.profile.findData(other))
-    assert t.profile == other
-    assert page.profile.toolTip() == get_profile(other).description
-    # eski profille yapılmış çeviriler önbellekten silinir; ayar kaydedilir, işlem hattı yeniden başlar
-    assert calls == {"save": 1, "restart": 1, "clear": 1}
-    page.profile.setCurrentIndex(page.profile.findData(DEFAULT_PROFILE_ID))
-    assert t.profile == DEFAULT_PROFILE_ID and calls["restart"] == 2
-
-
-def test_unknown_saved_profile_shows_default(qapp, monkeypatch):
-    s = Settings()
-    s.translate.profile = "yok-boyle-bir-oyun"
-    page, t, calls, _ = _page(qapp, monkeypatch, s)
-    assert page.profile.currentData() == DEFAULT_PROFILE_ID
-    # çeviri de ekrandaki profille yapılsın (get_profile bilinmeyen kimlikte genel profile düşerdi)
-    assert t.profile == DEFAULT_PROFILE_ID
-    assert calls == {"save": 0, "restart": 0, "clear": 0}
-
-
-def test_saved_profile_matches_case_insensitively(qapp, monkeypatch):
-    other = _other_profile()
-    s = Settings()
-    s.translate.profile = other.upper()
-    page, t, calls, _ = _page(qapp, monkeypatch, s)
-    assert page.profile.currentData() == other and t.profile == other.upper()  # get_profile de aynısını bulur
-    assert calls == {"save": 0, "restart": 0, "clear": 0}
-
-
-def test_context_hybrid_and_extra_context(qapp, monkeypatch):
+def test_context_and_hybrid(qapp, monkeypatch):
     s = Settings()
     s.translate.engine = "ollama"
     page, t, calls, _ = _page(qapp, monkeypatch, s)
@@ -368,11 +322,6 @@ def test_context_hybrid_and_extra_context(qapp, monkeypatch):
     assert "~1,2 sn" in page.hybrid.toolTip()
     page.hybrid.setChecked(False)
     assert t.hybrid is False and calls["restart"] == 2
-    assert page.extra.placeholderText() == "Ör: Lucia ile soygun planı"
-    assert page.extra.toolTip().startswith("Profilin üstüne eklenen kendi notun")
-    page.extra.setText("Lucia ile soygun planı")
-    page.extra.editingFinished.emit()
-    assert t.game_context == "Lucia ile soygun planı" and calls["restart"] == 3
 
 
 def test_rows_follow_engine(qapp, monkeypatch):
@@ -382,16 +331,15 @@ def test_rows_follow_engine(qapp, monkeypatch):
         page.engine.setCurrentIndex(page.engine.findData(key))
         assert t.engine == key
 
-    # yerel hızlı çeviri: profil (adları korur) görünür; yapay zekâya özgü satırlar görünmez
-    assert _vis(page, page.profile) and not _vis(page, page.extra) and not _vis(page, page.context)
-    engine("deepl")  # DeepL istem kullanmaz: ek bağlam yok, bağlam satırları var
-    assert _vis(page, page.profile) and _vis(page, page.context) and not _vis(page, page.extra)
+    # yerel hızlı çeviri: yapay zekâya özgü satırlar görünmez
+    assert not _vis(page, page.context) and not _vis(page, page.hybrid)
+    engine("deepl")  # bağlam satırları var
+    assert _vis(page, page.context)
     engine("ollama")
-    assert all(_vis(page, w) for w in (page.profile, page.extra, page.hybrid, page.context, page.ol_setup,
-                                       page.ol_pull))
+    assert all(_vis(page, w) for w in (page.hybrid, page.context, page.ol_setup, page.ol_pull))
     assert not any(_vis(page, w) for w in (page.ol_bar, page.ol_cancel, page.ol_line, page.ol_progress))
     engine("none")
-    assert not _vis(page, page.profile) and not _vis(page, page.extra)
+    assert not _vis(page, page.context)
 
 
 # --- yapay zekâ daveti ------------------------------------------------------------------------------
@@ -600,7 +548,7 @@ def test_finished_job_syncs_selections_without_signals(qapp, monkeypatch):
     ai.succeed()
     assert (t.engine, t.ollama_model, t.ollama_url, t.profile) == ("ollama", LIGHT, LOCAL, profile)
     assert page.engine.currentData() == "ollama" and page.ol_model.currentText() == LIGHT
-    assert page.ol_url.text() == LOCAL and page.profile.currentData() == profile
+    assert page.ol_url.text() == LOCAL
     assert calls == {"save": 0, "restart": 0, "clear": 0}
     # davet gizlenir, Ollama bölümü açılır ve sonuç orada
     assert not _vis(page, page.hint_box) and _vis(page, page.card_ol) and not _vis(page, page.card_qm)
@@ -664,7 +612,7 @@ def test_manual_model_download_on_remote_server_uses_ollama_directly(qapp, monke
     # yüklü modeller arka planda yeniden okunup listeye eklenir; inen model artık yüklü, "Modeli indir" gizlenir
     assert _wait(qapp, lambda: page.ol_model.findData("qwen3:8b") >= 0)
     assert page.ol_line.text.text() == "qwen3:8b indirildi" and not _vis(page, page.ol_pull)
-    assert t.engine == "ollama" and t.ollama_model == "qwen3:8b" and t.profile == DEFAULT_PROFILE_ID
+    assert t.engine == "ollama" and t.ollama_model == "qwen3:8b" and t.profile == "genel"
     assert calls["restart"] == 2 and all(_enabled(page))
 
 
@@ -782,18 +730,3 @@ def test_models_read_when_switching_to_ollama(qapp, monkeypatch):
     assert _wait(qapp, lambda: page._ol_installed is not None)
     assert not _vis(page, page.ol_pull)
 
-
-def test_profile_info_icon_explains_profile(qapp, monkeypatch):
-    """"Oyun profili"nin yanında bilgi simgesi: üzerine gelince profilin ne olduğu ve neyi değiştirdiği görünür."""
-    from altyazitr.gui.translate_page import PROFILE_INFO
-
-    page, *_ = _page(qapp, monkeypatch, _settings(engine="quickmt"))
-    tip = page.profile_info.toolTip()
-    assert tip == PROFILE_INFO
-    for part in ("Oyun profili", "Çevrilmeyecek adlar", "Argo sözlüğü", "Genel"):
-        assert part in tip
-    assert page.profile_info.pixmap() is not None and not page.profile_info.pixmap().isNull()
-    assert _vis(page, page.profile_info) and _vis(page, page.profile)
-    assert "<" not in page.profile_info.accessibleDescription()  # ekran okuyucuya düz metin
-    page.engine.setCurrentIndex(page.engine.findData("none"))
-    assert not _vis(page, page.profile_info) and not _vis(page, page.profile)

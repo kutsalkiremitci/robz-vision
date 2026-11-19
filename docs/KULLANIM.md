@@ -246,7 +246,7 @@ zaten aynıysa düğme soluk görünür. **Varsayılana dön** yalnız seçili t
 
 ## 7. Çeviriyi iyileştirin
 
-**Çeviri** sayfasında çeviri motorunu, oyun profilini ve sözlüğü ayarlarsınız.
+**Çeviri** sayfasında çeviri motorunu ve sözlüğü ayarlarsınız.
 
 ![Çeviri sayfası: motor seçimi, yerel model durumu ve sözlük](gorseller/ceviri.png)
 
@@ -285,17 +285,10 @@ kapatabilirsiniz. Ollama kendini de günceller: yeni sürümü (yaklaşık 1,9 G
 açılışında ya da görev çubuğundaki simgesinden *Restart to update* ile kurar. İndirmeyi istemiyorsanız
 Ollama'nın ayarlarında *Auto-download updates*'i kapatın.
 
-TranslateGemma artık önerilmiyor: önceki satırları (bağlamı) ve oyun profilini kullanmıyor. Kullanıyorsanız
-Gemma 4'e geçin.
+TranslateGemma artık önerilmiyor: önceki satırları (bağlamı) kullanmıyor. Kullanıyorsanız Gemma 4'e geçin.
 
 ### Çeviri ayarları
 
-- **Oyun profili.** Modele oyunun dünyasını ve tonunu, çevrilmeyecek adları (karakter, yer, silah, araç,
-  marka), suç dünyası argosunu ve üslup örneklerini verir. Böylece çeviri oyunun diline uyar, kelimesi
-  kelimesine saçma çeviriler azalır. Varsayılan profil *GTA 6*'dır; başka bir oyun oynuyorsanız *Genel*'i
-  seçin.
-- **Ek bağlam.** Profile kendi notunuzu ekler: hangi görevde olduğunuz, kimlerle konuştuğunuz
-  (ör. "Lucia ile soygun planı"). *Genel* profilde oyunun türünü ve üslubunu da yazabilirsiniz.
 - **Hibrit mod** (*Yapay zekâ gecikirse hızlı çeviriyi göster*). Yapay zekânın çevirisi yaklaşık 1,2 sn
   içinde gelirse yalnız o görünür. Gecikirse önce hızlı yerel çeviri görünür, yapay zekânınki gelince aynı
   satırın üstüne yazılır. Bilgisayar bu süreye yetişemiyorsa satır hiç bekletilmez, hızlı çeviri hemen görünür.
@@ -306,9 +299,10 @@ Gemma 4'e geçin.
   sütunu boş bırakırsanız terim olduğu gibi kalır; doldurursanız o karşılık kullanılır. Varsayılan sözlükte
   Vice City, Leonida, Lucia ve Jason vardır.
 
-Profilin dünya, argo ve üslup bilgisi ile ek bağlam yalnız yapay zekâ motorlarına (Ollama, Gemini) gider.
-Profildeki adlar ise her motorda, hızlı yerel çeviride de çevrilmeden kalır. Ollama'ya ulaşılamazsa ya da
-bir hata olursa Robz Vision hızlı yerel çeviriyle devam eder.
+Yapay zekâ her oyunda aynı, sade kurallarla çevirir: doğal Türkçe, kelimesi kelimesine değil. Özel isimler
+(Vice City, Lucia, John) Türkçedeki kural gibi çevrilmez, ekleri kesme işaretiyle alır: Lucia'yı, Vice
+City'de. Sözlükteki adlar her motorda, hızlı yerel çeviride de çevrilmeden kalır. Ollama'ya ulaşılamazsa ya
+da bir hata olursa Robz Vision hızlı yerel çeviriyle devam eder.
 
 ### Çevrimiçi motorlar
 

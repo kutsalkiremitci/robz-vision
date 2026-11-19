@@ -49,7 +49,7 @@ bir hatayı düzeltirken mümkünse `tests/` altına bir test ekleyin.
 - Sürüm (*Ayarlar → Uygulama → Sürüm*), kurulum türü ve Windows sürümü
 - Oyun ve platform (ör. "GTA VI, PS5, PS Remote Play")
 - Okuma yöntemi (ekran bölgesi ya da uygulama penceresi), OCR motoru, çeviri motoru ve modeli
-  (ör. Ollama, `gemma4:12b`), oyun profili
+  (ör. Ollama, `gemma4:12b`)
 - Ne yaptığınız, ne beklediğiniz, ne olduğu
 - **Günlük dosyası:** `%LOCALAPPDATA%\RobzVision\Logs` klasöründeki en son dosya. *Ayarlar → Uygulama →
   Günlükler* düğmesi bu klasörü açar.
@@ -73,42 +73,6 @@ bulduysanız başkalarının da işine yarar. **Öneri** formunda türü *Oyuna 
 
 Yeterince ipucu birikince kullanım kılavuzuna oyun bazında bir bölüm ekleyeceğiz.
 
-## Oyun profili ekleme
-
-Oyun profilleri yapay zekâ çevirisine oyunun dünyasını, çevrilmeyecek adları ve üslubu anlatır. Her profil
-`altyazitr/data/oyun_profilleri/` altında bir JSON dosyasıdır. Yeni bir oyun için mevcut bir profili
-kopyalayıp düzenleyin:
-
-```json
-{
-  "id": "ornek_oyun",
-  "name": "Örnek Oyun",
-  "description": "Vahşi Batı'da geçen açık dünya oyunu",
-  "world": "Open-world western set in 1899. Outlaws, sheriffs and ranchers; rough, laconic speech.",
-  "rules": ["Keep threats short and hard.", "Gang members address each other with 'sen'."],
-  "keep": ["Dusty Creek", "Marshal Hale"],
-  "glossary": [["posse", "takip ekibi"], ["bounty", "ödül"]],
-  "examples": [["Saddle up, we ride at dawn.", "Atlan, şafakta yola çıkıyoruz."]]
-}
-```
-
-| Alan | İçerik |
-|---|---|
-| `id` | Dosya adı, uzantısız: `ornek_oyun.json` → `ornek_oyun` |
-| `name`, `description` | Profilin Türkçe adı ve kısa açıklaması |
-| `world` | Oyunun dünyası ve tonu; model için İngilizce |
-| `rules` | Çeviri kuralları; İngilizce liste |
-| `keep` | Çevrilmeyecek adlar: karakter, yer, silah, araç, marka |
-| `glossary` | Argo ve terim sözlüğü: `[["en", "tr"], ...]` |
-| `examples` | Üslup örnekleri: `[["en", "tr"], ...]` |
-
-- **Kısa tutun.** Profil her istekte modele gider; toplamı yaklaşık 1000 token'ı (kabaca 3–4 bin karakter)
-  geçmesin. Uzun profil çeviriyi yavaşlatır.
-- **Örnekler özgün olsun.** Oyunun senaryosundan, altyazılarından ya da fragmanlarından cümle almayın
-  (telif hakkı). Oyunun üslubunu yansıtan kendi cümlelerinizi yazın.
-- Profili Robz Vision'da seçip birkaç sahnede deneyin. Pull request'e mümkünse bir çeviri raporu ekleyin
-  (aşağıya bakın).
-
 ## Çeviri kalitesini ölçme
 
 `tools/ceviri_testi.py`, `tools/ceviri_testi_seti.json`'daki hazır sahne metinlerini gerçek çeviri motoruyla
@@ -119,7 +83,8 @@ karşılaştırabilir. Seçenekler için `--help`.
 .venv\Scripts\python tools\ceviri_testi.py --engine ollama --model gemma4:12b --out rapor.md
 ```
 
-Oyun profilini, çeviri istemini ya da önerilen modeli değiştiren pull request'lere önce/sonra raporlarını
+Çeviri kurallarını (`altyazitr/data/oyun_profilleri/genel.json`), çeviri istemini ya da önerilen modeli
+değiştiren pull request'lere önce/sonra raporlarını
 ekleyin. Test setine eklediğiniz sahneler de özgün olmalı; oyun metninden alıntı yapmayın.
 
 ## Sürüm çıkarırken

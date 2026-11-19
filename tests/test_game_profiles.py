@@ -62,15 +62,13 @@ def test_shipped_profiles_load_and_match_schema(caplog):
         assert all(isinstance(r, str) and r for r in (*p.rules, *p.keep))
 
 
-def test_default_and_generic_profiles():
-    assert TranslateCfg().profile == gp.DEFAULT_PROFILE_ID
-    gta6 = gp.get_profile(gp.DEFAULT_PROFILE_ID)
-    assert (gta6.id, gta6.name) == ("gta6", "GTA 6")
-    assert gta6.world and gta6.rules and gta6.keep and gta6.glossary and gta6.examples
+def test_default_is_the_generic_profile():
+    """Oyuna özel profil yok: çeviri her oyunda genel kurallarla yapılır (1.3.0'da GTA 6 profili kalktı)."""
+    assert TranslateCfg().profile == gp.DEFAULT_PROFILE_ID == gp.GENERIC_PROFILE_ID == "genel"
     genel = gp.get_profile(gp.GENERIC_PROFILE_ID)
-    assert genel.id == "genel" and genel.rules and genel.examples
-    ids = [p.id for p in gp.list_profiles()]
-    assert ids[:2] == ["gta6", "genel"] and len(ids) == len(set(ids))
+    assert genel.id == "genel" and genel.rules and genel.examples and not genel.world
+    assert [p.id for p in gp.list_profiles()] == ["genel"]
+    assert gp.get_profile("gta6") == genel  # eski ayar dosyasındaki kimlik genel profile düşer
 
 
 @pytest.mark.parametrize("pid", ["yok_boyle_oyun", "", "   ", None])
@@ -79,7 +77,7 @@ def test_unknown_or_empty_id_falls_back_to_generic(pid):
 
 
 def test_profile_id_is_case_insensitive():
-    assert gp.get_profile(" GTA6 ").id == "gta6"
+    assert gp.get_profile(" GENEL ").id == "genel"
 
 
 @pytest.mark.parametrize("path", SHIPPED, ids=lambda p: p.stem)
@@ -90,10 +88,6 @@ def test_size_limits(path):
     assert len(p.rules) <= 12 and all(len(r.split()) <= 25 for r in p.rules)
     assert len(p.keep) <= 60 and len(p.glossary) <= 60 and len(p.examples) <= 14
     assert gp.text_size(p) < 6000
-    if p.id == "gta6":
-        assert 10 <= len(p.examples) <= 14
-        # istemin tamamı (ortak kurallar ve biçimle) ~5000 karakteri, profil ~1200 token'ı geçmesin
-        assert gp.text_size(p) <= 4000
     if p.id == "genel":
         assert 4 <= len(p.examples) <= 6
 
@@ -111,21 +105,11 @@ def test_keep_unique_and_pairs_filled(path):
         assert all(isinstance(s, str) and s.strip() == s and s for s in pair), pair
 
 
-def test_gta6_profile_content():
-    p = gp.get_profile("gta6")
-    official = {"Jason Duval", "Lucia Caminos", "Cal Hampton", "Boobie Ike", "Dre'Quan Priest", "Raul Bautista",
-                "Brian Heder", "Leonida", "Vice City", "Leonida Keys", "Grassrivers", "Port Gellhorn", "Ambrosia",
-                "Mount Kalaga"}
-    assert official | {"Hawk & Little", "Mediator", "Ammu-Nation"} <= set(p.keep)
-    # oyunda "marauder" silah adı değil, satıcının hitabı ("haydut"): ad listesine girerse model çevirmiyordu
-    assert "marauder" not in {k.casefold() for k in p.keep}
-    terms = {en.casefold(): tr for en, tr in p.glossary}
-    assert terms["marauder"] and terms["say less"]
-    assert any(en.startswith("Say less") for en, _tr in p.examples)
-    # Gündelik anlamı da olan silah / muhbir argosu sözlükte hangi anlamda geçerli olduğuyla yazılır; çatışmada
-    # "I'm out" mermisi bitmek demektir (kaçmak, çekilmek değil; ölçüm: tools/ceviri_testi_cokanlam.json, imout_ates).
-    assert {"piece / strap (gun)", "snitch / rat (informant)"} <= set(terms)
-    assert any("I'm out" in r and "ammo" in r for r in p.rules)
+def test_generic_profile_keeps_proper_names():
+    """Özel isimler Türkçedeki kural gibi çevrilmez, ekleri kesme işaretiyle alır (Lucia'yı, Vice City'de)."""
+    p = gp.get_profile("genel")
+    names = next(r for r in p.rules if "proper names" in r)
+    assert all(n in names for n in ("Vice City", "Lucia", "John", "Lucia'yı", "Vice City'de", "apostrophe"))
     # örnekler tuş adı uydurmaz: Türkçede geçen her tuş adı İngilizcesinde de vardır
     buttons = re.compile(r"\b(?:[LR][123]|X|Square|Triangle|Circle|Options|Touchpad)\b")
     for en, tr in p.examples:
@@ -192,7 +176,7 @@ def test_list_order_and_generic_fallback(profiles_in):
     gp.load_profiles.cache_clear()
     for stem, name in (("zz", "Zebra"), ("genel", "Genel"), ("aa", "Mafia"), ("gta6", "GTA 6"), ("bb", "Araba")):
         _write(profiles_in, f"{stem}.json", _valid(name=name))
-    assert [p.id for p in gp.list_profiles()] == ["gta6", "genel", "bb", "aa", "zz"]
+    assert [p.id for p in gp.list_profiles()] == ["genel", "bb", "gta6", "aa", "zz"]
 
 
 def test_cached_profiles_cannot_be_modified():
@@ -201,7 +185,7 @@ def test_cached_profiles_cannot_be_modified():
     with pytest.raises(TypeError):
         profiles["x"] = None  # type: ignore[index]
     with pytest.raises(dataclasses.FrozenInstanceError):
-        gp.get_profile("gta6").name = "x"  # type: ignore[misc]
+        gp.get_profile("genel").name = "x"  # type: ignore[misc]
 
 
 # --- paketleme ----------------------------------------------------------------------------------------------
