@@ -16,7 +16,7 @@ from collections.abc import Callable
 from typing import Any
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QTextDocument
+from PySide6.QtGui import QDesktopServices, QTextCursor, QTextDocument
 from PySide6.QtWidgets import (QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QTextBrowser,
                                QVBoxLayout, QWidget)
 
@@ -142,7 +142,10 @@ class ReleaseNotes(QTextBrowser):
                            f" {font_css(F.BODY, F.BODY_SIZE)} }}")
 
     def set_notes(self, markdown: str) -> None:
+        """Notlar baştan okunur: belgeye doğrudan yazınca imleç sonda kalır ve QTextEdit ilk gösterimde imleci
+        görünür kılar; uzun notlu pencere notların sonuna kaydırılmış açılırdı."""
         self.document().setMarkdown(markdown.strip() or NO_NOTES, self.FEATURES)
+        self.moveCursor(QTextCursor.MoveOperation.Start)
 
     def loadResource(self, _type, _name):  # noqa: N802 - Qt
         return None

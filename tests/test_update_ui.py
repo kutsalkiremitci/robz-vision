@@ -403,6 +403,27 @@ def test_release_notes_are_safe(qapp, opened):
     assert notes.toPlainText() == "Bu sürüm için not yazılmamış."
 
 
+def test_long_release_notes_open_at_top(qapp):
+    """Pencere notları gösterilmeden önce doldurur: uzun notlar ilk gösterimde sona kaydırılmış açılmamalı."""
+    from PySide6.QtCore import Qt
+
+    from altyazitr.gui.update_dialog import ReleaseNotes
+
+    notes = ReleaseNotes()
+    _WIDGETS.append(notes)
+    notes.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
+    notes.resize(470, 200)
+    notes.set_notes("\n".join(f"- Madde {i}: uzun bir sürüm notu satırı" for i in range(60)))
+    notes.show()
+    qapp.processEvents()
+    bar = notes.verticalScrollBar()
+    assert bar.maximum() > 0 and bar.value() == 0
+    assert notes.textCursor().position() == 0
+    notes.set_notes("- Yeni sürüm\n" * 60)  # ikinci sürümün notları da baştan
+    qapp.processEvents()
+    assert bar.value() == 0
+
+
 # --- Ayarlar → Uygulama → Güncellemeler ------------------------------------------------------------------------------
 def _settings_page(qapp, svc=None, win=None):
     from PySide6.QtCore import Qt

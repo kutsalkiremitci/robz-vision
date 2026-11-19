@@ -6,6 +6,10 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+### Düzeltildi
+
+- Güncelleme penceresi, sürüm notları uzunsa notların sonuna kaydırılmış açılıyordu; artık baştan başlar.
+
 ## [1.3.2] - 2026-11-19
 
 ### Değişti
