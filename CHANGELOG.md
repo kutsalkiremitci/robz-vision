@@ -6,6 +6,84 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.3.0] - 2026-11-19
+
+### Eklendi
+
+- **Yalnız altyazıları oku** (*Ayarlar → Metin okuma*, varsayılan açık): araç plakası, tabela, neon, duvar yazısı,
+  grafiti, köşedeki göstergeler ve tuş ipuçları gibi oyun içi yazılar çevrilmez; yalnız altyazı biçimindeki yazı
+  (beyaz ya da açık gri, koyu kenarlı ya da gölgeli, ortalı) okunur. Robz Vision altyazının yerini ve boyunu
+  okuduğu altyazılardan öğrenir; bölgeyi tam ortalı seçmeniz gerekmez. Altyazısı renkli, kenarsız ya da sola
+  dayalı bir oyunda kapatın.
+- **Oyun altyazısının üzerine** (*Görünüm → Yerleşim*, *Ekranımda* ve *Yayınımda* ayrı, varsayılan kapalı): Türkçe
+  çeviri oyunun İngilizce altyazısının tam yerine yazılır. Koyu, tamamen kapalı bir kutu İngilizce yazıyı örter;
+  kutu her satırda altyazının yerine ve genişliğine oturur, Türkçe içinde ortalanır ve oyunun yazısıyla aynı
+  boydadır. Uzun çeviride yazı biraz küçülür, gerekirse kutu yukarı doğru büyür. Oyun altyazıyı kaldırınca kutu da
+  kalkar. Windows ölçeklemesinde (%125, %150) ve birden çok ekranda doğru yere oturur.
+- Katkıcılar için `tools/ocr_hiz.py` (OCR gecikmesi, doğruluğu ve işlemci yükü), `tools/altyazi_bicimi_testi.py`
+  (altyazı süzgeci ve vurgu algılaması) ve `tools/hat_hizi.py` (altyazının belirmesinden Türkçesinin ekrana
+  gelmesine kadar geçen süre). Üçü de kodla üretilen sahnelerle çalışır; telifli görsel kullanmaz.
+
+### Değişti
+
+- **OCR çok daha hızlı ve hafif.** Altyazının belirmesinden okunup çeviriye gitmesine kadar geçen süre ortalama
+  ~400 ms'den ~100 ms'ye indi; okuma sırasında işlemci yükü yaklaşık 4 çekirdekten yarım çekirdeğe, yazı yokken
+  ~1,7 çekirdekten ~0,3 çekirdeğe düştü. Yazı belirdiği karede hemen okunur; ilk okuma güçlüyse görüntü ikinci
+  kez okunmaz; OCR motoru işlemcinin tamamını değil birkaç çekirdeğini kullanır; pencere yakalamada yeni kare
+  gelmedikçe işlem yapılmaz. Varsayılan tarama hızı 20 kare/sn, kararlılık 1 kare (önceden 10 ve 2); bu iki ayarı
+  değiştirmemiş kullanıcılar yeni değerlere geçer.
+- Akıllı algılama artık hızlı konuşmada satır kaçırmıyor; *Sabit aralık* kipi de yazı değişince aralığı
+  beklemeden okur.
+- **Oyun profili ve "Ek bağlam" kaldırıldı.** Yapay zekâ her oyunda aynı, sade kurallarla çevirir: doğal Türkçe,
+  kelimesi kelimesine değil; özel isimler (Vice City, Lucia, John) Türkçedeki kural gibi çevrilmez, ekleri
+  kesme işaretiyle alır (Lucia'yı, Vice City'de). GTA 6 profili kaldırıldı; önceki satırlar (bağlam) yine
+  modele gider. Eski profil ve notla yapılmış çeviriler önbellekten kullanılmaz.
+- **Yapay zekâ çevirisi daha hızlı.** Önceki satırlar (bağlam) modele her satırda baştan işletilmiyor: bağlam
+  yalnız sona eklenerek büyür, Ollama önceki isteğin işlenmiş kısmını yeniden kullanır. İstemin metni ve çeviri
+  aynı kalır. Model, bir altyazı satırının çevirisinden çok daha uzun yazmaya kalkarsa erken kesilir.
+- **Zayıf bilgisayarda boş ekranda bekleme yok.** Robz Vision yapay zekânın son satırlardaki hızını izler; çevirisi
+  bekleme süresine yetişmeyecekse satır bekletilmez, önce hızlı çeviri görünür, yapay zekânınki gelince yerine
+  geçer. Hibrit mod kapalıyken yapay zekâ satır başına 2 sn'den yavaşsa bir kez "Hibrit modu açın" bildirimi
+  çıkar.
+- **Hibrit mod kapalıyken de model yüklenirken altyazı akar.** Ayar artık yalnız yapay zekânın ne kadar
+  bekleneceğini belirler: kapalıyken her satır yapay zekâyı bekler, ama model belleğe yüklenirken ya da yapay
+  zekâ yanıt vermezse hızlı çeviri görünür.
+- Durdur'a basınca model bellekten atılmaz: yeniden Başlat ve ayar değişikliği modeli baştan yüklemez (Gemma 4
+  12B'de 5–100 sn). Model, Robz Vision kapanınca ya da başka bir modele veya motora geçilince boşaltılır. Uzun
+  sessizlikte (oyun duraklatıldı) model bellekte sıcak tutulur.
+- Yapay zekâya istek, hızlı çeviri hesaplanmadan gönderilir (Hibrit mod kapalıyken her satır ~25 ms erken).
+- Ayar değişikliği ya da Durdur / Başlat sonrası çeviri hemen sürer: hızlı çeviri modeli bellekte kalır (her yeniden
+  başlatmada ~0,8 sn diskten yükleniyordu, bu sırada altyazı çıkmıyordu).
+- Yapay zekâ aynı kelimeyi tekrarlamaya girerse (Ollama isteği keser ya da çıktı sınırına takılır) satır tekrar
+  cezasıyla bir kez daha istenir; önceden o satır hızlı çeviriye düşüyor ya da uzun bir yeniden üretim bekleniyordu.
+- Ollama adresi `http://localhost` yazılmışsa `127.0.0.1` kullanılır: Windows'ta `localhost`a her yeni bağlantı
+  önce IPv6'yı deneyip ~2 sn bekliyordu.
+
+### Düzeltildi
+
+- **Vurgu rengi vurgusuz kelimelerde çıkıyordu.** Yayın ve uzaktan oynatma görüntüsünde renkli zeminin (neon, gün
+  batımı) rengi beyaz harflere taşıyor, kelime vurgulu sanılıyordu. Artık yalnız harflerin içi belirgin ve tek
+  tonda renkliyse, renk zeminden gelmiyorsa vurgu çıkar ("Pay 'n' Spray" gibi araya giren kısa kelimeler de
+  vurgunun parçası sayılır).
+- Konuşmacı adındaki harf karışıklıkları ("LUClA", "JASoN") düzeltilir.
+- "No.", "Go!" gibi iki harfli kısa yanıtlar hiç gösterilmiyordu.
+- Yapay zekâ satır başına ~1,5 sn sürünce hızlı çeviri bir an görünüp hemen değişiyordu (göz kırpması). Bekleme
+  artık OCR'da geçen süreyi ve yapay zekânın süresindeki oynamayı hesaba katar: ya yalnız yapay zekâ çevirisi
+  görünür ya da hızlı çeviri baştan görünür ve yapay zekânınki gelince yerine geçer.
+- Zayıf bilgisayarda yapay zekânın kuyruğu birikince çeviriler satır ekrandan kalktıktan saniyeler sonra
+  geliyordu. Artık çevirisi geldiğinde ekranda olmayacak satır atlanır, yapay zekâ yeni satırlara kalır.
+- **Başlat'a basınca "ısınıyor"da takılma.** Hibrit mod kapalıyken model belleğe yüklenene kadar (dakikayı
+  bulabiliyordu) hiç altyazı çıkmıyordu; artık o sırada hızlı çeviri görünür ve durum satırı geçen süreyi
+  gösterir ("Gemma 4 12B belleğe yükleniyor… 12 sn (şimdilik hızlı çeviri)").
+- Model yüklenirken Durdur'a basılınca program yüklemenin bitmesini bekliyor, bu sırada basılan Başlat hiçbir şey
+  yapmıyordu. Artık Durdur anında durur; kapanırken basılan Başlat kaybolmaz, kapanış bitince çalışır. Başlat'tan
+  hemen sonra basılan Durdur da kaybolmaz: model boşuna yüklenmez.
+- Çeviri sırasında Ollama kapanır ya da yeniden başlarsa yapay zekâ bir daha devreye girmiyordu ve Hibrit mod
+  kapalıyken her satır ~2 sn geç görünüyordu. Artık satırlar beklemeden hızlı çeviriyle görünür; Robz Vision
+  Ollama'yı yeniden başlatıp modeli yükler, hazır olunca yapay zekâ çevirisi geri gelir.
+- Program kendiliğinden durduğunda (ör. OCR motoru açılamadı) model yüklemesi sürüyor, Başlat düğmesi "Durdur"
+  olarak kalıyordu.
+
 ## [1.2.1] - 2026-11-18
 
 ### Eklendi
@@ -210,7 +288,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.2.1...HEAD
+[Yayımlanmadı]: ../../compare/v1.3.0...HEAD
+[1.3.0]: ../../releases/tag/v1.3.0
 [1.2.1]: ../../releases/tag/v1.2.1
 [1.2.0]: ../../releases/tag/v1.2.0
 [1.1.0]: ../../releases/tag/v1.1.0
