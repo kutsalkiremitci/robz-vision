@@ -17,6 +17,7 @@ Kullanım:  python tools/readme_gorselleri.py [banner] [demo] [arayuz] [gta6] [-
   bolge_secimi.png    bölge seçici (sahte oyun sahnesinin üstünde)
   konum_ayari.png     "Konumu ayarla" modundaki ekran altyazısı kutusu
   obs_yardim.png      "OBS'e nasıl eklenir?" penceresi
+  guncelleme.png      güncelleme penceresi (bu sürüm yeni yayınlanmış gibi; ağa gidilmez, notlar CHANGELOG.md'den)
 
   gta6 bölümü (resmî GTA VI tanıtım görselleri üzerinde; görseller --kaynak ile verilen klasörde aranır):
   gta6_kahraman.png   1280×640 README başı ve GitHub "Social preview": sahne + İngilizce altyazı + Türkçe kutu + ad
@@ -81,6 +82,7 @@ ARAYUZ = [
     ("secici.png", "bolge_secimi.png", (0.08, 0.58, 0.92, 1.0)),
     ("overlay_ayar.png", "konum_ayari.png", None),
     ("obs_yardim.png", "obs_yardim.png", None),
+    ("guncelleme.png", "guncelleme.png", None),
 ]
 
 # arayuz_goruntusu.py'nin "oyun zemini" olarak düz renkle doldurduğu yüzeyler; ayrı süreçte bu renkler

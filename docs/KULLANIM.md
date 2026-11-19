@@ -127,7 +127,7 @@ yeşile boyanır; altyazı geldiğinde yeşil alan görünmüyorsa bölge ya da 
 **Başlat**'a basın. Üstteki bant *Çalışıyor* olur. Oyunda altyazı belirince Türkçesi ekrandaki kutuda ve
 OBS'te görünür.
 
-![Ana sayfa: Başlat düğmesi, bölge önizlemesi, son çeviri, Ekranımda ve OBS bölümleri](gorseller/ana_pencere.png)
+![Ana sayfa: Başlat düğmesi, bölge önizlemesi, son çeviri, Ekranımda bölümü ve OBS başlığı; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı](gorseller/ana_pencere.png)
 
 - **Test** düğmesi ekranınızda ve OBS'te 5 saniyelik örnek bir altyazı gösterir. Oyun açmadan görünümü
   denemek için kullanın.
@@ -220,7 +220,7 @@ oranındadır, *Ekranımda*'da kutunuzun ekrandaki boyutundadır. *Aydınlık* v
 yazının iki durumda da okunduğunu kontrol edin. **Test et** örnek altyazıyı iki tarafta da kendi
 görünümüyle gösterir.
 
-![Görünüm sayfası: önizleme, hazır stiller ve yazı ayarları](gorseller/gorunum.png)
+![Görünüm sayfası: Ekranımda ve Yayınımda seçici, pembe vurgulu örnek altyazıyla canlı önizleme, beş hazır stil ve yazı ayarları](gorseller/gorunum.png)
 
 - **Hazır stiller:** Klasik, Sinema, Kutulu, Sarı, Minimal. Birini seçip üzerinde ince ayar yapabilirsiniz.
 - **Yazı:** yazı tipi, kalınlık, boyut, renk.
@@ -250,7 +250,7 @@ zaten aynıysa düğme soluk görünür. **Varsayılana dön** yalnız seçili t
 
 **Çeviri** sayfasında çeviri motorunu ve sözlüğü ayarlarsınız.
 
-![Çeviri sayfası: motor seçimi, yerel model durumu ve sözlük](gorseller/ceviri.png)
+![Çeviri sayfası: motor seçimi (Yerel hızlı çeviri, quickmt), yerel yapay zekâ önerisi ve Önerilen kurulum düğmesi, yerel çeviri modelinin durumu (Hazır) ve sözlük](gorseller/ceviri.png)
 
 Varsayılan hızlı yerel çeviri (quickmt) her bilgisayarda çalışır ama satırları tek tek çevirir; bazen düz
 ya da yanlış çevirir. Ekran kartınız varsa yerel yapay zekâyı kurun.
@@ -461,6 +461,8 @@ bir GitHub'a kısa bir istek gönderir. Yalnız son sürümün numarası okunur,
 varsa kenar çubuğunda **Güncelleme var** satırı belirir ve bir kez kısa bir bildirim çıkar. Çeviri çalışırken
 bildirim beklenir; yayınınıza tepsi balonu düşmez. Satıra ya da bildirime tıklayınca neler yeni olduğunu
 görürsünüz:
+
+![Güncelleme penceresi: yayınlanan yeni sürüm ve kullandığınız sürüm, Neler yeni? altında sürüm notları, Sürüm sayfası bağlantısı ve Bu sürümü atla, Sonra, Güncelle düğmeleri](gorseller/guncelleme.png)
 
 - **Güncelle:** yeni sürüm iner ve doğrulanır. Boyutu ve SHA256 özeti GitHub'daki sürüm kaydıyla
   karşılaştırılır; tutmazsa dosya silinir, çalıştırılmaz. Sonra Robz Vision kapanır, yeni sürüm kurulur ve

@@ -2,7 +2,7 @@
 
 Kullanım:  python tools/arayuz_goruntusu.py ÇIKTI_KLASÖRÜ [--genislik 1100]
 Çıktı: ana_pencere.png, sayfa_<ad>.png (tam yükseklik), secici.png, overlay_ayar.png, overlay_altyazi.png,
-       bolge_penceresi.png, obs_yardim.png, ikonlar.png
+       bolge_penceresi.png, obs_yardim.png, guncelleme.png, ikonlar.png
 Kullanıcının ayar dosyasına yazmaz; boş bir port seçer.
 """
 
@@ -168,6 +168,13 @@ def main() -> int:
         obs.grab().save(str(out / "obs_yardim.png"))
         obs.close()
 
+        # güncelleme penceresi: ağa gitmeden "yeni sürüm var" durumu (bkz. _fake_update), ana pencerenin açtığı gibi
+        _fake_update(ctx.updater)
+        win.open_update_dialog()
+        pump(0.3)
+        win._update_dlg.grab().save(str(out / "guncelleme.png"))
+        win._update_dlg.reject()
+
         # ikon seti
         from altyazitr.gui import icons
         from altyazitr.gui.tokens import C
@@ -205,6 +212,29 @@ def _fake_region_frame(rect):
     a = np.frombuffer(img.constBits(), np.uint8).reshape(H, img.bytesPerLine())[:, :W * 3].reshape(H, W, 3)
     x, y, w, h = rect
     return np.ascontiguousarray(a[y:y + h, x:x + w, ::-1])
+
+
+def _fake_update(upd) -> None:
+    """Güncelleme servisi ağsız "yeni sürüm var" durumuna getirilir: yeni yayınlanmış sürüm, CHANGELOG.md'de yeni
+    özellik ("### Eklendi") içeren en son sürüm (yalnız düzeltme içeren küçük sürümlerin notu vitrinde zayıf kalır);
+    kullanılan sürüm ondan bir önceki. Notlar sürüm sayfasındaki gibi CHANGELOG'daki bölüm (tools/surum_notlari.py).
+    Kurulu kopyanın görünümü (kind "user", kurulum dosyası var: Güncelle düğmesi). Hiçbir şey inmez."""
+    import re
+
+    from altyazitr import __version__
+    from altyazitr.updater import SUMS_NAME, Asset, Release, setup_name
+
+    sys.path.insert(0, str(ROOT / "tools"))
+    from surum_notlari import changelog_section
+
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    versions = re.findall(r"^## \[(\d+\.\d+\.\d+)\]", text, re.MULTILINE)
+    v = next((x for x in versions if "### Eklendi" in changelog_section(x, text)), __version__)
+    prev = versions[versions.index(v) + 1] if v in versions[:-1] else v
+    upd.release = Release(v, f"v{v}", f"{upd.source.releases_url}/tag/v{v}", changelog_section(v, text),
+                          Asset(setup_name(v), "", 1), Asset(SUMS_NAME, "", 1))
+    upd.kind, upd.version, upd.status = "user", prev, "available"
+    upd.changed.emit()
 
 
 def _on_bg(pm):

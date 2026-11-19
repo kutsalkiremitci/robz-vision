@@ -74,16 +74,22 @@ Oyun görseli © Rockstar Games / Take-Two Interactive.</sub></p>
 <table>
   <tr>
     <td width="33%" valign="top">
-      <img src="docs/gorseller/ana_pencere.png" alt="Robz Vision ana sayfası: Başlat düğmesi, çevrilecek bölgenin önizlemesi, son çeviri, Ekranımda ve OBS bölümleri"><br>
-      <sub><b>Ana sayfa:</b> Başlat, bölge önizlemesi, son çeviriler, Ekranımda ve OBS.</sub>
+      <img src="docs/gorseller/ana_pencere.png" alt="Robz Vision ana sayfası: Başlat düğmesi, çevrilecek bölgenin önizlemesi, son çeviri, Ekranımda bölümü ve OBS başlığı; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı"><br>
+      <sub><b>Ana sayfa:</b> Başlat, bölge önizlemesi, son çeviriler, Ekranımda ve OBS; kenar çubuğunda sürüm ve Kick bağlantısı.</sub>
     </td>
     <td width="33%" valign="top">
-      <img src="docs/gorseller/gorunum.png" alt="Görünüm sayfası: önizleme, hazır stiller ve yazı ayarları"><br>
-      <sub><b>Görünüm:</b> canlı önizleme, hazır stiller, yazı ve vurgu rengi.</sub>
+      <img src="docs/gorseller/gorunum.png" alt="Görünüm sayfası: Ekranımda ve Yayınımda seçici, pembe vurgulu örnek altyazıyla canlı önizleme, beş hazır stil ve yazı ayarları"><br>
+      <sub><b>Görünüm:</b> Ekranımda ve Yayınımda ayrı; canlı önizleme, hazır stiller ve yazı.</sub>
     </td>
     <td width="33%" valign="top">
-      <img src="docs/gorseller/ceviri.png" alt="Çeviri sayfası: motor seçimi, yerel model durumu ve sözlük"><br>
-      <sub><b>Çeviri:</b> motor seçimi, yerel yapay zekâ ve sözlük.</sub>
+      <img src="docs/gorseller/ceviri.png" alt="Çeviri sayfası: motor seçimi (Yerel hızlı çeviri, quickmt), yerel yapay zekâ önerisi ve Önerilen kurulum düğmesi, yerel çeviri modelinin durumu (Hazır) ve sözlük"><br>
+      <sub><b>Çeviri:</b> motor seçimi, yerel yapay zekâyı kuran <i>Önerilen kurulum</i> ve sözlük.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center" valign="top">
+      <img src="docs/gorseller/guncelleme.png" width="360" alt="Güncelleme penceresi: yayınlanan yeni sürüm ve kullandığınız sürüm, Neler yeni? altında sürüm notları, Sürüm sayfası bağlantısı ve Bu sürümü atla, Sonra, Güncelle düğmeleri"><br>
+      <sub><b>Güncelleme:</b> yeni sürüm çıkınca <i>Neler yeni?</i> ve tek tıkla <b>Güncelle</b>; ayarlar ve modeller korunur.</sub>
     </td>
   </tr>
 </table>
@@ -209,7 +215,7 @@ değiştirilebilir). Adım adım anlatım, ekran görüntüleri ve senaryolara g
 <br>
 
 <p align="center">
-  <img src="docs/gorseller/ana_pencere.png" width="760" alt="Robz Vision ana sayfası: Başlat düğmesi, çevrilecek bölgenin önizlemesi, son çeviri, Ekranımda ve OBS bölümleri">
+  <img src="docs/gorseller/ana_pencere.png" width="760" alt="Robz Vision ana sayfası: Başlat düğmesi, çevrilecek bölgenin önizlemesi, son çeviri, Ekranımda bölümü ve OBS başlığı; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı">
 </p>
 
 1. **İlk açılış.** Program çevirinin nasıl yapılacağını sorar: *Yapay zekâ ile* ya da *Yalnız hızlı çeviri*
