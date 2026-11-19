@@ -122,6 +122,10 @@ def test_gta6_profile_content():
     terms = {en.casefold(): tr for en, tr in p.glossary}
     assert terms["marauder"] and terms["say less"]
     assert any(en.startswith("Say less") for en, _tr in p.examples)
+    # Gündelik anlamı da olan silah / muhbir argosu sözlükte hangi anlamda geçerli olduğuyla yazılır; çatışmada
+    # "I'm out" mermisi bitmek demektir (kaçmak, çekilmek değil; ölçüm: tools/ceviri_testi_cokanlam.json, imout_ates).
+    assert {"piece / strap (gun)", "snitch / rat (informant)"} <= set(terms)
+    assert any("I'm out" in r and "ammo" in r for r in p.rules)
     # örnekler tuş adı uydurmaz: Türkçede geçen her tuş adı İngilizcesinde de vardır
     buttons = re.compile(r"\b(?:[LR][123]|X|Square|Triangle|Circle|Options|Touchpad)\b")
     for en, tr in p.examples:

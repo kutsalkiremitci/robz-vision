@@ -23,6 +23,7 @@ from altyazitr.overlay import ScreenOverlay
 from altyazitr.paths import ensure_dirs
 from altyazitr.pipeline import Pipeline
 from altyazitr.server import AsyncBridge, OverlayServer
+from altyazitr.translate import release_ollama_models
 
 log = logging.getLogger("altyazitr")
 
@@ -177,6 +178,8 @@ class AppContext(QObject):
         # açılışta sürer. Hattan önce: hattın durması duraklamış işi yeniden başlatmasın.
         self.ai.shutdown()
         self.pipeline.stop_and_wait(3.0)
+        # Hat dururken model bellekte bırakılır (yeniden Başlat anında hazır olsun); uygulama kapanırken boşaltılır
+        release_ollama_models()
         self.overlay.stop()
         self.hotkeys.unregister_all()
         try:

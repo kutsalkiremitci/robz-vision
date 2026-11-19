@@ -2,7 +2,8 @@
 
 http://127.0.0.1:<port>/  → altyazı sayfası (şeffaf, 1920x1080 tuval için)
 http://127.0.0.1:<port>/sw.js → OBS uygulamadan önce açılırsa sayfanın saklanan kopyasını açar
-ws://127.0.0.1:<port>/ws  → canlı altyazı akışı ("lines")/stil/maske güncellemeleri
+ws://127.0.0.1:<port>/ws  → canlı altyazı akışı ("lines")/stil/maske/"oyun altyazısının üzerine" ("cover")
+                            güncellemeleri
 
 aiohttp ayrı bir iş parçacığındaki asyncio döngüsünde çalışır; Qt tarafı AsyncBridge.submit
 ile eşyordam gönderir. Yalnızca 127.0.0.1'e bağlanır (güvenlik duvarı uyarısı çıkmaz).
@@ -13,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import threading
 from collections.abc import Callable
 
@@ -73,6 +75,29 @@ def clean_spans(spans, length: int) -> list[list[int]]:
     return out
 
 
+def clean_cover(cover) -> dict | None:
+    """"Oyun altyazısının üzerine" kutusunu denetler (bkz. OverlayServer.set_cover): dikdörtgen ve yazı boyları sonlu
+    pozitif sayı, satırın yazısı var; değilse None (kutu yok)."""
+    if not isinstance(cover, dict) or not isinstance(cover.get("line"), dict):
+        return None
+    line = cover["line"]
+    text = str(line.get("text") or "")
+    try:
+        rect = [float(v) for v in cover["rect"]]
+        rows, font, low = max(1, int(cover.get("rows") or 1)), float(cover["font"]), float(cover["min"])
+        lid = int(line.get("line") or 0)
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not text or len(rect) != 4 or not all(math.isfinite(v) for v in (*rect, font, low)) \
+            or min(rect[2], rect[3], font, low) <= 0:
+        return None
+    item = {"line": lid, "text": text, "speaker": line.get("speaker") or None}
+    spans = clean_spans(line.get("spans"), len(text))
+    if spans:
+        item["spans"] = spans
+    return {"rect": rect, "rows": rows, "font": font, "min": min(low, font), "line": item}
+
+
 def style_vars(st: StyleCfg) -> dict[str, str]:
     """StyleCfg → sayfadaki CSS değişkenleri. Pikseller 1080p tuvale göre vh'ye çevrilir."""
     vh = lambda px: f"{px / 10.8:.3f}vh"  # noqa: E731
@@ -94,6 +119,7 @@ def style_vars(st: StyleCfg) -> dict[str, str]:
         "orig-size": f"{st.original_size_percent / 100:.2f}em",
         "orig-display": "block" if st.show_original else "none",
         "mask": _hex_rgba(st.mask_color, st.mask_opacity),
+        "cover": _hex_rgba(st.mask_color, 1.0),  # "oyun altyazısının üzerine" kutusu: hep opak, İngilizce görünmesin
     }
 
 
@@ -109,12 +135,13 @@ class OverlayServer:
         self.on_clients_changed: Callable[[int], None] | None = None
         # Yeni bağlanan sayfaya bu sırayla gönderilir. "lines" sayfanın çizdiği altyazı akışıdır; "sub" yalnızca
         # en yeni satırdır ve eski sayfa kopyaları (OBS'te açık kalmış ya da service worker'ın sakladığı) için
-        # tutulur, yeni sayfa onu yok sayar.
+        # tutulur, yeni sayfa onu yok sayar. "cover" ("oyun altyazısının üzerine") eski kopyalarda yok sayılır.
         self.state: dict[str, dict] = {
             "style": {"type": "style", "vars": {}},
             "sub": {"type": "sub", "text": "", "speaker": None, "original": ""},
             "mask": {"type": "mask", "rect": None},
             "lines": {"type": "lines", "lines": []},
+            "cover": {"type": "cover", "cover": None},
         }
 
     @property
@@ -223,3 +250,11 @@ class OverlayServer:
     async def set_mask(self, rect: list[float] | None) -> None:
         self.state["mask"] = {"type": "mask", "rect": rect}
         await self._broadcast(self.state["mask"])
+
+    async def set_cover(self, cover: dict | None) -> None:
+        """"Oyun altyazısının üzerine" kutusu (yayın görünümünde açıkken; yerini SubtitleDisplay hesaplar):
+        {"rect": [x, y, w, h] yayın karesine oransal (oyunun altyazısı + pay), "rows": oyundaki satır sayısı,
+        "font" / "min": yazının hedef ve en küçük boyu (kare yüksekliğine oransal), "line": {"line", "text", "speaker"
+        ve vurgu varsa "spans"}}; None = kutu yok. Sayfaya {"type": "cover", "cover": …} gider."""
+        self.state["cover"] = {"type": "cover", "cover": clean_cover(cover)}
+        await self._broadcast(self.state["cover"])

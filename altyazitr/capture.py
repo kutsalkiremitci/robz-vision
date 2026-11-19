@@ -39,6 +39,12 @@ class CaptureError(RuntimeError):
     pass
 
 
+def frame_interval_ms(fps: int) -> int:
+    """Windows Graphics Capture'dan istenen en kısa kare aralığı: tarama hızı kadar kare. Yakalama döngüsü her kareyi
+    geldiği anda işler (WindowCapturer.wait_frame); fazlası boşuna kopyalanır."""
+    return max(16, int(1000 / max(1, fps)))
+
+
 class WindowCapturer:
     """Windows Graphics Capture ile tek pencere yakalama."""
 
@@ -50,6 +56,7 @@ class WindowCapturer:
         self.frame_count = 0
         self._lock = threading.Lock()
         self._roi: np.ndarray | None = None
+        self._new = threading.Event()  # grab_roi'den sonra yeni kare geldi
         self._full: np.ndarray | None = None
         self._want_full = False
         self._full_event = threading.Event()
@@ -64,8 +71,7 @@ class WindowCapturer:
 
         if not winutil.is_window(self.hwnd):
             raise CaptureError("Hedef pencere bulunamadı.")
-        # İstenen en düşük kare aralığı: kontrol hızının ~2 katı (gereksiz kopyadan kaçın)
-        interval = max(16, int(1000 / (self.fps * 2)))
+        interval = frame_interval_ms(self.fps)
         try:
             cap = WindowsCapture(cursor_capture=False, draw_border=False,
                                  minimum_update_interval=interval, window_hwnd=self.hwnd)
@@ -131,6 +137,7 @@ class WindowCapturer:
             full = np.ascontiguousarray(buf[cy0:cy1, cx0:cx1, :3])
         with self._lock:
             self._roi = roi
+            self._new.set()
             if full is not None:
                 self._full = full
                 self._want_full = False
@@ -140,8 +147,14 @@ class WindowCapturer:
     def set_region(self, region: Region) -> None:
         self.region = tuple(region)  # type: ignore[assignment]
 
+    def wait_frame(self, timeout: float) -> bool:
+        """Son grab_roi'den sonra yeni kare gelene kadar bekler (en çok timeout sn); geldiyse True. Pencerenin
+        görüntüsü değişmiyorsa Windows yeni kare vermez: aynı kareyi yeniden işlemeye gerek yoktur."""
+        return self._new.wait(timeout)
+
     def grab_roi(self) -> np.ndarray | None:
         with self._lock:
+            self._new.clear()
             return self._roi
 
     def grab_full(self, timeout: float = 2.0) -> np.ndarray | None:
@@ -236,6 +249,36 @@ def monitor_fraction(rect: Sequence[int]) -> tuple[float, float, float, float] |
             if m["left"] <= cx < m["left"] + m["width"] and m["top"] <= cy < m["top"] + m["height"]:
                 return ((x - m["left"]) / m["width"], (y - m["top"]) / m["height"], w / m["width"], h / m["height"])
     return None
+
+
+def _client_region(hwnd: int, region: Region) -> list[int] | None:
+    """Pencerenin istemci alanındaki oransal bölgenin ekrandaki yeri [x, y, genişlik, yükseklik] (fiziksel piksel);
+    görüntü de aynı kuralla kırpılır (bkz. WindowCapturer._on_frame)."""
+    client = winutil.client_rect_screen(hwnd)
+    if not client:
+        return None
+    a, b, c, d = _crop_box(region, *client)
+    return [a, b, c - a, d - b]
+
+
+def roi_screen_rect(cap) -> list[int] | None:
+    """Okunan bölgenin şu anki ekran yeri [x, y, genişlik, yükseklik] (fiziksel piksel); bilinmiyorsa None. Pencere
+    modunda pencerenin o anki istemci alanından hesaplanır: pencere taşınsa ya da boyutlansa da doğrudur. Çeviriyi
+    oyunun altyazısının tam üstüne yazmak için (bkz. display)."""
+    if isinstance(cap, RegionCapturer):
+        return list(cap.rect)
+    if isinstance(cap, WindowCapturer):
+        return _client_region(cap.hwnd, cap.region)
+    return None
+
+
+def region_screen_rect(c) -> list[int] | None:
+    """Ayardaki bölgenin (CaptureCfg) ekran yeri, roi_screen_rect gibi; pencere modunda pencere açık değilse None.
+    Pencereyi aradığı için işlem hattının okumasında değil, örnek altyazıda kullanılır."""
+    if c.mode != "window":
+        return list(c.rect) if c.is_ready() else None
+    win = winutil.find_window(c.window_exe, c.window_title)
+    return _client_region(win.hwnd, tuple(c.region)) if win is not None and len(c.region) == 4 else None
 
 
 def snapshot_window(hwnd: int, timeout: float = 3.0) -> np.ndarray | None:

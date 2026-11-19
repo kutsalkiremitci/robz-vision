@@ -199,6 +199,21 @@ class Translator:
         karşılığı bulunamayan vurgu işaretsiz kalır. Varsayılan: vurgusuz çeviri."""
         return self.translate(unmark(text)[0], context)
 
+    def abort(self) -> None:
+        """Süren ya da başlayacak hazırlığı (prepare) bırakır: hat durdurulurken başka iş parçacığından çağrılır.
+        Kalıcıdır: motor her çalıştırmada yeniden oluşturulur, durdurulan motor bir daha hazırlanmaz (hazırlık
+        başlamadan gelen Durdur da kaybolmasın). Uzun süren hazırlığı olan motor (yerel LLM) bunu uygular;
+        ötekilerde bir şey yapmaz."""
+
+    def healthy(self) -> bool:
+        """Art arda hata veren motor gerçekten çalışabilir durumda mı (hat buna göre motoru yeniden hazırlar).
+        Yerel LLM: model Ollama'nın belleğinde mi. Ötekiler: hep True (hatalar geçicidir: ağ, kota)."""
+        return True
+
+    def keep_warm(self) -> None:
+        """Hat çalışırken uzun süre çeviri istenmediyse çağrılır (oyun duraklatıldı, konuşma yok). Modelini bellekte
+        tutan motor (yerel LLM) kalma süresini yeniler; ötekilerde bir şey yapmaz."""
+
     def close(self) -> None:
         pass
 
@@ -371,6 +386,12 @@ def _add_cuda_dll_dirs() -> None:
                 os.environ["PATH"] = b + os.pathsep + os.environ.get("PATH", "")
 
 
+# Yüklenmiş quickmt modelleri (istenen cihaza göre): işlem hattı her yeniden başlatmada (Başlat, ayar değişikliği)
+# yeni bir QuickMtTranslator kurar; model diskten yeniden yüklenmesin (~0,5–1 sn, bu sürede altyazı çıkmaz).
+_quickmt_models: dict[str, tuple[object, object, object, str]] = {}
+_quickmt_lock = threading.Lock()
+
+
 class QuickMtTranslator(Translator):
     key = "quickmt"
     label = "Yerel hızlı çeviri — quickmt (ücretsiz, en hafif, bağlamsız)"
@@ -385,6 +406,11 @@ class QuickMtTranslator(Translator):
 
     def prepare(self, status: StatusCb) -> None:
         if self._tr is not None:
+            return
+        with _quickmt_lock:
+            cached = _quickmt_models.get(self.device)
+        if cached is not None:  # önceki çalıştırmada yüklendi
+            self._tr, self._src, self._tgt, self.active_device = cached
             return
         if not quickmt_downloaded():
             status("Çeviri modeli ilk kez indiriliyor (~400 MB, bir kereye mahsus)…")
@@ -412,6 +438,8 @@ class QuickMtTranslator(Translator):
         self._tr = tr
         self._src = spm.SentencePieceProcessor(model_file=os.path.join(d, "src.spm.model"))
         self._tgt = spm.SentencePieceProcessor(model_file=os.path.join(d, "tgt.spm.model"))
+        with _quickmt_lock:
+            _quickmt_models[self.device] = (self._tr, self._src, self._tgt, self.active_device)
         log.info("quickmt yüklendi (%s)", self.active_device)
 
     def translate(self, text: str, context: Context = ()) -> str:
@@ -452,6 +480,7 @@ class QuickMtTranslator(Translator):
         return out
 
     def close(self) -> None:
+        """Bu motoru kapatır; model bellekte kalır (sonraki çalıştırma kullanır, bkz. _quickmt_models)."""
         self._tr = None
 
 
@@ -572,11 +601,99 @@ LLM_MARK_RULE = ("The words in [[ ]] are highlighted in the game. In your Turkis
 
 # Ollama istek ayarları. num_ctx her istekte aynı kalmalı: değişirse Ollama modeli yeniden yükler.
 OLLAMA_NUM_CTX = 4096
-OLLAMA_KEEP_ALIVE = "60m"  # uygulama açıkken model bellekte kalsın; kapanınca close() boşaltır
-# Isınma cümleleri: ekran kartı farklı uzunluktaki istemler için çekirdekleri ilk kez derlerken birkaç saniye
-# takılıyor; bunu yayın başlamadan, hazırlıkta yaşarız.
-WARMUP_LINES = ("Hey.", "Get in the car, we're late.",
-                "Hold L2 to talk to the clerk. We need two pistols and a lot of ammo before tonight.")
+# Model bellekte ne kadar kalır. Çeviri sürerken her istek süreyi yeniler. Hat durunca model bellekten ATILMAZ
+# (yeniden Başlat ve ayar değişikliği modeli baştan yüklemesin: 12B'de 5-100 sn), yalnız süresi kısalır; uygulama
+# kapanırken ya da başka modele geçilirken hemen boşaltılır (release_ollama_models).
+OLLAMA_KEEP_ALIVE = "30m"
+OLLAMA_IDLE_KEEP_ALIVE = "10m"
+OLLAMA_LOAD_TIMEOUT_S = 600.0  # ilk yükleme: 8 GB'lık model yavaş diskten dakikalar sürebilir
+# Çıktı sınırı: bir altyazı satırının çevirisi kısadır. Model sapıtıp uzun yazarsa zayıf makinede saniyeler gider;
+# sınır satırın uzunluğuna göre konur (kelime başına ~4 token + pay), en çok OLLAMA_MAX_PREDICT.
+OLLAMA_MAX_PREDICT = 160
+# Model aynı belirteci üst üste üretmeye girerse Ollama isteği keser ("token repeat limit"; gerçek oturumda seyrek
+# görüldü). O satır bu seçeneklerle bir kez daha istenir; yine olmazsa hata (hat hızlı çeviriyle sürer).
+OLLAMA_REPEAT_RETRY = {"repeat_penalty": 1.2, "temperature": 0.4}
+# Isınma cümleleri: ilk istek modeli belleğe yükler ve sistem istemini işler (asıl bekleme budur); ikincisi küçük
+# eklemeli isteğin ilk çalıştırmasını da yayından önceye alır.
+WARMUP_LINES = ("Hey.", "Get in the car, we're late.")
+
+
+_LOCALHOST_RE = re.compile(r"^(http://)localhost(?=[:/]|$)", re.I)
+
+
+def ollama_base(url: str) -> str:
+    """Ollama adresinin kullanılan hali: boşluk ve sondaki "/" atılır, `localhost` 127.0.0.1 yapılır.
+
+    Windows `localhost`u önce IPv6'ya (::1) çözer; Ollama yalnız IPv4'te (127.0.0.1) dinler, bu yüzden `localhost`a
+    açılan her yeni bağlantı önce ~2 sn boşuna bekler (ölçüm: 2050 ms'ye karşı 15 ms). Varsayılan adres zaten
+    127.0.0.1'dir; bu, adresi elle `localhost` yazan kullanıcıyı korur (ollama_runtime._clean_url ile aynı kural).
+    https adresine dokunulmaz: sertifika `localhost` adına düzenlenmiş olabilir."""
+    return _LOCALHOST_RE.sub(r"\g<1>127.0.0.1", (url or "").strip().rstrip("/"))
+
+
+def predict_limit(text: str) -> int:
+    """Satır için üretilecek en çok token sayısı (bkz. OLLAMA_MAX_PREDICT)."""
+    return min(OLLAMA_MAX_PREDICT, 32 + 4 * len(text.split()))
+
+
+class ContextWindow:
+    """Yerel LLM'e giden bağlam penceresi: istemin başı istekler arasında aynı kalsın diye yalnız sona eklenir.
+
+    İşlem hattı her çeviride son N satırı verir (kayan pencere). Kayan pencere her yeni satırda istemin bağlam
+    kısmını baştan değiştirir; model de o kısmı her satırda yeniden işler (ölçüm, Gemma 4 12B: satır başına ~245
+    token; yalnız işlemcide çalışan zayıf makinede bu saniyeler eder). Bu sınıf pencereyi büyüterek taşır: yeni
+    satırlar sona eklenir, pencere `limit`i aşınca son `keep` satıra iner. İstemin başı çoğu istekte bir öncekiyle
+    aynıdır, Ollama onu önbellekten kullanır ve yalnız yeni satırı işler (aynı ölçümde ~58 token).
+
+    N satırlık ayar için pencere N/2 ile N + N/2 satır arasında gezer (8 → 4..12)."""
+
+    def __init__(self, lines: int):
+        n = max(0, int(lines))
+        self.keep = (n + 1) // 2
+        self.limit = n + max(2, n // 2) if n else 0
+        self._win: list[tuple[str, str]] = []
+
+    def reset(self) -> None:
+        self._win = []
+
+    def update(self, context: Context) -> list[tuple[str, str]]:
+        """Hattın verdiği son satırlardan (context) bu isteğin bağlamını üretir. Bağlam boşsa (yeni sahne) pencere
+        de boşalır. Önceki pencereyle hizalanamayan bağlam (hat bağlamı baştan kurdu) pencerenin yerini alır."""
+        ctx = [(str(en), str(tr or "")) for en, tr in context]
+        if not ctx or self.limit <= 0:
+            self._win = []
+            return []
+        merged: list[tuple[str, str]] | None = None
+        # Aynı satırın yeni okuması gelince hat eskisini bağlamdan çıkarır: penceremizin sonundaki en çok iki eski
+        # okuma bırakılarak hizalama denenir (istemin yalnız sonu değişir).
+        for drop in range(min(2, len(self._win)) + 1):
+            base = self._win[:len(self._win) - drop]
+            new = self._new_lines(base, ctx)
+            if new is not None:
+                merged = base + new
+                break
+        if merged is None:
+            merged = ctx
+        if len(merged) > self.limit:
+            merged = merged[-self.keep:] if self.keep else []
+        self._win = merged
+        return list(merged)
+
+    @staticmethod
+    def _new_lines(base: list[tuple[str, str]], ctx: list[tuple[str, str]]) -> list[tuple[str, str]] | None:
+        """ctx'in, base'in sonuyla örtüşen kısmından sonraki (yeni) satırları; örtüşme yoksa None. Satırlar
+        İngilizce metinleriyle eşleşir (Türkçesi noktalama düzeltmesiyle değişmiş olabilir)."""
+        if not base:
+            return list(ctx)
+        have = [en for en, _ in base]
+        ens = [en for en, _ in ctx]
+        for fresh in range(len(ctx) + 1):
+            k = min(len(have), len(ctx) - fresh)  # örtüşen satır sayısı
+            if k <= 0:
+                break
+            if have[len(have) - k:] == ens[len(ctx) - fresh - k:len(ctx) - fresh]:
+                return list(ctx[len(ctx) - fresh:])
+        return None
 
 
 def _merge_terms(profile: GameProfile | None, glossary: Glossary) -> tuple[list[str], list[tuple[str, str]]]:
@@ -657,8 +774,8 @@ class OllamaTranslator(Translator):
     label = "Yerel yapay zekâ — Ollama (önerilen kalite, ücretsiz, internetsiz)"
 
     def __init__(self, url: str, model: str, glossary: Glossary, game_context: str = "",
-                 timeout: float = 6.0, profile: GameProfile | None = None):
-        self.url = url.rstrip("/")
+                 timeout: float = 6.0, profile: GameProfile | None = None, context_lines: int = 8):
+        self.url = ollama_base(url)
         self.model = model.strip()
         self.glossary = glossary
         self.game_context = game_context.strip()
@@ -668,28 +785,100 @@ class OllamaTranslator(Translator):
         self._think_ok = True
         self.is_tg = self.model.lower().startswith("translategemma")
         self.system = build_system_prompt(profile, glossary, self.game_context)
+        self._window = ContextWindow(context_lines)  # istem önbelleği için yalnız sona eklenen bağlam
+        self._abort = threading.Event()
 
     def prepare(self, status: StatusCb) -> None:
         """Ollama açık mı ve model yüklü mü; kurulu ama kapalı Ollama'yı başlatır, sonra modeli belleğe yükleyip
         ısıtır. Ollama'ya ulaşılamazsa ya da model yoksa TranslatorError (1. satır kısa ve ne yapılacağını söyler):
-        karma modda hat hızlı çeviriyle sürer, kullanıcıya pencere açmayan bildirim gider (Pipeline.notice)."""
-        status(f"Ollama'ya bağlanılıyor ({self.url})…")
+        hat hızlı çeviriyle sürer, kullanıcıya pencere açmayan bildirim gider (Pipeline.notice).
+
+        Adımlar ayrı bir iş parçacığında yürür (Ollama'nın açılması ~25 sn, modelin belleğe yüklenmesi dakikayı
+        bulabilir); bu yöntem durumu geçen süreyle bildirir ve abort() çağrılınca hemen döner: Durdur ve yeniden
+        Başlat hazırlığı beklemez. Yarıda bırakılan yükleme Ollama'da sürer, bir sonraki Başlat hazır modeli bulur.
+        Model zaten bellekteyse (önceki çalıştırmadan) ısınma ~1 sn'dir."""
+        if self._abort.is_set():  # hazırlık başlamadan Durdur'a basıldı
+            raise TranslatorError("Yapay zekâ hazırlığı durduruldu.")
+        t0 = time.monotonic()
+        last = [""]  # son durum iletisi: uzun süren adımda geçen süreyle yenilenir
+        found: list[bool] = []
+        errors: list[Exception] = []
+        done = threading.Event()
+
+        def say(msg: str) -> None:
+            last[0] = msg
+            if not self._abort.is_set():  # bırakılan hazırlık arayüze yazmaz
+                status(msg)
+
+        def work() -> None:
+            try:
+                found.append(self._prepare_steps(say))
+            except Exception as e:
+                errors.append(e)
+            finally:
+                done.set()
+
+        threading.Thread(target=work, name="ollama-hazirlik", daemon=True).start()
+        shown = 0
+        while not done.wait(0.25):
+            if self._abort.is_set():
+                raise TranslatorError("Yapay zekâ hazırlığı durduruldu.")
+            sec = int(time.monotonic() - t0)
+            if last[0] and sec >= 2 and sec != shown:  # uzun adımda geçen süre görünsün (takılmış sanılmasın)
+                shown = sec
+                status(f"{last[0]} {sec} sn")
+        if errors:
+            raise errors[0]
+        log.info("Ollama hazır: %s, %.1f sn (%s)", self.model, time.monotonic() - t0,
+                 "bellekteydi" if found and found[0] else "belleğe yüklendi")
+
+    def _prepare_steps(self, say: StatusCb) -> bool:
+        """Hazırlığın adımları (kendi iş parçacığında): bağlan, gerekirse Ollama'yı başlat, modeli belleğe yükle ve
+        ısıt. Model zaten bellekteydiyse True. Bağlantı ve model hataları TranslatorError olarak çıkar; ısınma
+        isteğinin hatası yutulur (çeviri yine denensin, hata orada görünür)."""
+        say("Ollama'ya bağlanılıyor…")
         names = ollama_list(self.url)
         if names is None:  # kurulu ama kapalı olabilir (Windows açılışında başlamadı ya da kapatıldı)
-            names = self._start_ollama(status)
+            names = self._start_ollama(say)
         if names is None:
             raise TranslatorError(f"{TEXT_OLLAMA_DOWN}\nAyrıntı: {self.url} yanıt vermiyor.")
         if not _model_in(self.model, names):
             raise TranslatorError(missing_model_text(self.model))
-        status(f"{self.model} belleğe yükleniyor ve ısınıyor (ilk seferde biraz sürebilir)…")
+        if self._abort.is_set():  # hazırlık bırakıldı: model boşuna belleğe yüklenmesin
+            return False
+        release_ollama_models(keep=(self.url, self.model))  # önceki model ekran kartı belleğini tutmasın
+        in_memory = ollama_loaded(self.url, self.model)
+        title = model_title(self.model) or self.model
+        say(f"{title} {'ısınıyor' if in_memory else 'belleğe yükleniyor'}…")
+        try:
+            self._warm_up()
+        except Exception as e:
+            log.warning("Ollama ısınması başarısız: %s", e)
+        return in_memory
+
+    def _warm_up(self) -> None:
+        """Modeli belleğe yükler ve ısıtır: ilk çeviriyle aynı sistem istemi ve aynı seçeneklerle (Ollama sistem
+        istemini önbelleğe alır; num_ctx aynı olduğu için model sonradan yeniden yüklenmez)."""
         ctx: list[tuple[str, str]] = []
         for i, line in enumerate(WARMUP_LINES):
-            try:
-                out = self._request(line, ctx, timeout=180.0 if i == 0 else 60.0)
-                ctx.append((line, out))
-            except Exception as e:  # ısınma başarısız olsa da çeviri denensin; hata orada görünür
-                log.warning("Ollama ısınması başarısız: %s", e)
-                break
+            out = self._request(line, ctx, timeout=OLLAMA_LOAD_TIMEOUT_S if i == 0 else 60.0)
+            if self._abort.is_set():  # hazırlık bırakıldı: model yüklendi, gerisi bir sonraki Başlat'ta
+                _settle_abandoned(self.url, self.model)
+                return
+            ctx.append((line, out))
+
+    def abort(self) -> None:
+        self._abort.set()
+
+    def healthy(self) -> bool:
+        return ollama_loaded(self.url, self.model)
+
+    def keep_warm(self) -> None:
+        """Modelin bellekte kalma süresini yeniler. Süre dolup model boşalırsa uzun bir sessizlikten sonraki ilk
+        satır onun yeniden yüklenmesini beklerdi. Boş istek modele iş yaptırmaz, istem önbelleğine dokunmaz."""
+        if _is_loaded_by_us(self.url, self.model):
+            self._s.post(f"{self.url}/api/generate", timeout=5, json={
+                "model": self.model, "keep_alive": OLLAMA_KEEP_ALIVE, "options": {"num_ctx": OLLAMA_NUM_CTX}})
 
     def _start_ollama(self, status: StatusCb) -> list[str] | None:
         """Kurulu ama kapalı Ollama'yı penceresiz başlatır (ollama_runtime.ensure_running; açılışı en çok ~25 sn
@@ -707,11 +896,12 @@ class OllamaTranslator(Translator):
         return ollama_list(self.url)
 
     def _body(self, text: str, context: Context) -> dict:
+        limit = predict_limit(text)
         if self.is_tg:  # TranslateGemma yalnız kendi şablonuyla çalışır: bağlam ve profil gitmez
-            options = {"temperature": 0.0, "num_predict": 160, "num_ctx": OLLAMA_NUM_CTX}
+            options = {"temperature": 0.0, "num_predict": limit, "num_ctx": OLLAMA_NUM_CTX}
             messages = [{"role": "user", "content": TG_TEMPLATE.format(text=text)}]
         else:
-            options = {"temperature": 0.15, "top_p": 0.9, "num_predict": 160, "num_ctx": OLLAMA_NUM_CTX,
+            options = {"temperature": 0.15, "top_p": 0.9, "num_predict": limit, "num_ctx": OLLAMA_NUM_CTX,
                        "stop": ["\nEN:"]}
             messages = [{"role": "system", "content": self.system},
                         {"role": "user", "content": build_user_prompt(text, context)}]
@@ -724,34 +914,59 @@ class OllamaTranslator(Translator):
     def _request(self, text: str, context: Context, timeout: float | None = None) -> str:
         body = self._body(text, context)
         timeout = self.timeout if timeout is None else timeout
+        data = self._post(body, timeout)
+        if data.get("done_reason") == "length":
+            # Çeviri çıktı sınırına takıldı. Sınır gerçek çevirilerin en az ~2 katıdır (ölçüm: 598 çeviride en çok
+            # %43'ü kullanıldı): bu neredeyse her zaman modelin kendini tekrarlamaya girmesidir. Yarım / bozuk satır
+            # gösterilmez; tekrar cezasıyla bir kez daha istenir, yine sınıra takılırsa hata (hızlı çeviri gösterilir).
+            limit = min(OLLAMA_MAX_PREDICT, 2 * body["options"]["num_predict"])
+            log.info("Çeviri çıktı sınırına takıldı; tekrar cezasıyla yeniden isteniyor: %r", text)
+            body = {**body, "options": {**body["options"], **OLLAMA_REPEAT_RETRY, "num_predict": limit}}
+            data = self._post(body, timeout)
+            if data.get("done_reason") == "length":
+                raise TranslatorError("Yapay zekâ çevirisi çıktı sınırını aştı (tekrara girdi)")
+        _note_loaded(self.url, self.model)  # yanıt geldi: model bellekte (ısınma başarısız olsa da kayda girsin)
+        return _clean_llm_output(data.get("message", {}).get("content", ""))
+
+    def _post(self, body: dict, timeout: float) -> dict:
         r = self._s.post(f"{self.url}/api/chat", json=body, timeout=timeout)
         if r.status_code == 400 and "think" in r.text.lower() and "think" in body:
             self._think_ok = False
             body.pop("think")
             r = self._s.post(f"{self.url}/api/chat", json=body, timeout=timeout)
+        if r.status_code == 500 and "repeat limit" in r.text.lower():
+            log.info("Ollama tekrar sınırına takıldı; satır yeniden isteniyor")
+            body = {**body, "options": {**body["options"], **OLLAMA_REPEAT_RETRY}}
+            r = self._s.post(f"{self.url}/api/chat", json=body, timeout=timeout)
         if r.status_code != 200:
             raise TranslatorError(f"Ollama hatası ({r.status_code}): {r.text[:200]}")
-        return _clean_llm_output(r.json().get("message", {}).get("content", ""))
+        return r.json()
 
     def translate(self, text: str, context: Context = ()) -> str:
         if self.is_tg:
             prot, mapping = self.glossary.protect(text)
             return Glossary.restore(self._request(prot, ()), mapping)
-        return self._request(text, context)
+        return self._request(text, self._window.update(context))
 
     def translate_marked(self, text: str, context: Context = ()) -> str:
         """İşaretli satır modele işaretli gider; işaretler bozuk, eksik ya da fazlaysa vurgusuz düz metin döner.
         TranslateGemma kendi şablonu dışında talimat almaz: vurgusuz çevirir."""
         if self.is_tg:
             return super().translate_marked(text, context)
-        return clean_marks(self._request(text, context), len(unmark(text)[1]))
+        return clean_marks(self._request(text, self._window.update(context)), len(unmark(text)[1]))
 
     def close(self) -> None:
-        # VRAM'i boşalt
-        try:
-            self._s.post(f"{self.url}/api/generate", json={"model": self.model, "keep_alive": 0}, timeout=2)
-        except Exception:
-            pass
+        """Oturumu kapatır. Model bellekten atılmaz: hat yeniden başlayınca (Başlat, ayar değişikliği) hazır
+        olsun diye bellekte kalır, yalnız kalma süresi kısalır. Uygulama kapanırken release_ollama_models boşaltır."""
+        self._abort.set()
+        # Model bellekte değilse (süresi dolmuş, Ollama kapanmış) süre isteği onu boşuna yeniden yükletirdi
+        if _is_loaded_by_us(self.url, self.model) and ollama_loaded(self.url, self.model):
+            try:  # aynı num_ctx: farklı seçenek modeli yeniden yükletirdi
+                self._s.post(f"{self.url}/api/generate", timeout=2, json={
+                    "model": self.model, "keep_alive": OLLAMA_IDLE_KEEP_ALIVE,
+                    "options": {"num_ctx": OLLAMA_NUM_CTX}})
+            except Exception:
+                pass
         self._s.close()
 
 
@@ -759,6 +974,67 @@ def _model_in(model: str, names: Sequence[str]) -> bool:
     m = model.strip()
     cands = {m, m + ":latest"} if ":" not in m else {m}
     return any(n in cands for n in names)
+
+
+# Bu uygulamanın çeviri için kullandığı (belleğe yüklettiği ya da bellekte bulup kullandığı) (adres, model)
+# çiftleri: başka modele geçerken ve uygulama kapanırken boşaltılır. Uygulamanın hiç kullanmadığı modellere
+# dokunulmaz.
+_loaded_models: set[tuple[str, str]] = set()
+_loaded_lock = threading.Lock()
+# Şu an istenen model (son hazırlığın): yarıda bırakılan bir yükleme bittiğinde, model artık istenmiyorsa boşaltılır.
+_wanted: tuple[str, str] | None = None
+
+
+def _note_loaded(url: str, model: str) -> None:
+    with _loaded_lock:
+        _loaded_models.add((ollama_base(url), model.strip()))
+
+
+def _is_loaded_by_us(url: str, model: str) -> bool:
+    with _loaded_lock:
+        return (ollama_base(url), model.strip()) in _loaded_models
+
+
+def _settle_abandoned(url: str, model: str) -> None:
+    """Durdurulan hazırlığın yüklemesi bitti. O model artık istenmiyorsa (bu arada başka modele ya da başka motora
+    geçildi) hemen boşaltılır; hâlâ isteniyorsa yeni çalıştırma onu kullanır."""
+    with _loaded_lock:
+        wanted = _wanted
+    if wanted != (ollama_base(url), model.strip()):
+        release_ollama_models(keep=wanted, want=False)
+
+
+def ollama_loaded(url: str, model: str) -> bool:
+    """Model şu an Ollama'nın belleğinde mi (/api/ps). Ollama'ya ulaşılamazsa False. Bağlanma süresi kısa tutulur:
+    Windows'ta kapalı porta bağlanmak ~2 sn sürer, bu denetim Durdur'u bekletmemeli."""
+    try:
+        with _ollama_session() as s:
+            r = s.get(f"{ollama_base(url)}/api/ps", timeout=(1.0, 2.5))
+            r.raise_for_status()
+            return _model_in(model, [m.get("name", "") for m in r.json().get("models", [])])
+    except Exception:
+        return False
+
+
+def release_ollama_models(keep: tuple[str, str] | None = None, *, want: bool = True) -> None:
+    """Bu uygulamanın kullandığı modelleri bellekten çıkarır (ekran kartı belleği boşalır). keep: bellekte kalacak
+    (adres, model); başka modele geçerken yenisi verilir. Uygulama kapanırken ve yerel yapay zekâdan başka motora
+    geçilince keep'siz çağrılır. want: keep artık istenen model olur (yarıda kalan yüklemeler buna göre boşaltılır).
+    Hata fırlatmaz."""
+    global _wanted
+    kept = (ollama_base(keep[0]), keep[1].strip()) if keep else None
+    with _loaded_lock:
+        if want:
+            _wanted = kept
+        drop = [m for m in _loaded_models if m != kept]
+        _loaded_models.difference_update(drop)
+    for url, model in drop:
+        try:
+            with _ollama_session() as s:
+                s.post(f"{url}/api/generate", json={"model": model, "keep_alive": 0}, timeout=3)
+            log.info("Ollama modeli bellekten çıkarıldı: %s", model)
+        except Exception:
+            log.debug("Ollama modeli bellekten çıkarılamadı: %s", model, exc_info=True)
 
 
 def _ollama_session():
@@ -775,7 +1051,7 @@ def ollama_list(url: str) -> list[str] | None:
     """Yüklü modellerin adları; Ollama çalışmıyorsa None."""
     try:
         with _ollama_session() as s:
-            r = s.get(f"{url.rstrip('/')}/api/tags", timeout=2.5)
+            r = s.get(f"{ollama_base(url)}/api/tags", timeout=2.5)
             r.raise_for_status()
             return [m.get("name", "") for m in r.json().get("models", [])]
     except Exception:
@@ -785,7 +1061,7 @@ def ollama_list(url: str) -> list[str] | None:
 def ollama_pull(url: str, model: str, progress: Callable[[str, float], None],
                 cancel: threading.Event) -> None:
     """Modeli indirir; progress(durum_metni, oran 0..1 veya -1)."""
-    with _ollama_session() as s, s.post(f"{url.rstrip('/')}/api/pull", json={"model": model, "stream": True},
+    with _ollama_session() as s, s.post(f"{ollama_base(url)}/api/pull", json={"model": model, "stream": True},
                                         stream=True, timeout=(5, 600)) as r:
         if r.status_code != 200:
             raise TranslatorError(f"Model indirilemedi ({r.status_code}): {r.text[:200]}")
@@ -977,7 +1253,7 @@ def create_translator(cfg, glossary: Glossary) -> Translator:
         profile = get_profile(getattr(cfg, "profile", ""))
         if cfg.engine == "ollama":
             return OllamaTranslator(cfg.ollama_url, cfg.ollama_model, glossary, cfg.game_context, cfg.timeout_s,
-                                    profile=profile)
+                                    profile=profile, context_lines=int(getattr(cfg, "context_lines", 8)))
         return GeminiTranslator(cfg.gemini_key, cfg.gemini_model, glossary, cfg.game_context, cfg.timeout_s,
                                 profile=profile)
     if cfg.engine == "deepl":

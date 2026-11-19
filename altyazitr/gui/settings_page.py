@@ -127,11 +127,14 @@ class SettingsPage(QWidget):
         ocr = Card("Metin okuma")
         f = form()
         engine = _tip(bind_combo(s.ocr, "engine", [(v[0], k) for k, v in ENGINES.items()], restart),
-                      "Windows OCR çok hızlıdır ve çoğu oyunda yeterlidir. Süslü veya ince fontlarda "
-                      "RapidOCR'ı deneyin.")
+                      "RapidOCR önerilir: daha doğru okur, tek satırı onlarca milisaniyede okur. Windows OCR için "
+                      "Windows'ta İngilizce OCR dil paketi gerekir.")
         engine.setMinimumWidth(FIELD_W)
         engine.setAccessibleName("Metin okuma motoru")
         add_row(f, "Motor", engine)
+        add_row(f, "", bind_check("Yalnız altyazıları oku", s.ocr, "subtitle_only", self.ctx.save_later,
+                                  tip="Plaka, tabela, duvar yazısı gibi oyun içi yazıları atlar; beyaz, kenarlı, ortalı "
+                                      "yazıyı okur. Altyazısı renkli ya da kenarsız bir oyunda kapatın."))
         ocr.add(layout=f)
         adv = Collapsible("Gelişmiş")
         f = form(inside=adv)
@@ -143,25 +146,29 @@ class SettingsPage(QWidget):
             "kumlu arka planda da çalışır."))
         add_row(f, "Algılama", _tip(bind_combo(s.ocr, "detect_mode", [
             ("Akıllı (önerilen)", "smart"), ("Sabit aralık", "interval")], restart),
-            "Akıllı: yalnızca altyazı değişince okur. Renkli veya koyu altyazılarda 'Sabit aralık'ı deneyin."))
-        add_row(f, "Sabit aralık", bind_spin(s.ocr, "interval_ms", 100, 3000, restart, step=50, suffix=" ms"))
+            "Akıllı: altyazı belirince ya da değişince hemen okur. Sabit aralık: bunun yanında yazı dururken de "
+            "her aralıkta bir kez okur (işlemciyi biraz daha kullanır)."))
+        add_row(f, "Sabit aralık", _tip(bind_spin(s.ocr, "interval_ms", 100, 3000, restart, step=50, suffix=" ms"),
+                                        "Sabit aralık algılamasında iki okuma arasındaki en uzun süre"))
         add_row(f, "Kararlılık", _tip(bind_spin(s.ocr, "stable_frames", 1, 10, restart, suffix=" kare"),
-                                      "Yazı kaç kare sabit kalınca okunsun (daktilo efektli altyazılarda artırın)"))
+                                      "Yazı belirdikten sonra kaç kare aynı kalınca okunsun. Belirme ve daktilo "
+                                      "efektleri kendiliğinden beklenir; 1 önerilir."))
         add_row(f, "Parlaklık eşiği", _tip(bind_spin(s.ocr, "bright_threshold", 60, 250, restart),
-                                           "Altyazı algılanmıyorsa düşürün; arka plan yüzünden sürekli "
-                                           "tetikleniyorsa yükseltin"))
+                                           "Yalnız yapay zekâ metin bulucu kapalıyken: altyazı algılanmıyorsa "
+                                           "düşürün; arka plan yüzünden sürekli tetikleniyorsa yükseltin"))
         add_row(f, "Büyütme", bind_combo(s.ocr, "upscale", [("Otomatik", "auto"), ("1x", "1"), ("1.5x", "1.5"),
                                                            ("2x", "2")], restart))
         add_row(f, "Tarama hızı", _tip(bind_spin(s.capture, "fps", 2, 30, restart, suffix=" kare/sn"),
-                                       "10 kare/sn çoğu oyun için idealdir"))
+                                       "20 kare/sn önerilir: yazı en geç bir kare sonra görülür. Zayıf "
+                                       "bilgisayarda metin bulucu kendi yükünü sınırlar."))
         add_row(f, "En az harf", bind_spin(s.ocr, "min_letters", 1, 20, restart))
         add_row(f, "Gizleme gecikmesi", _tip(bind_spin(s.ocr, "hide_delay_ms", 0, 5000, self.ctx.save_later,
                                                        step=100, suffix=" ms"),
                                              "Altyazı oyundan kaybolduktan sonra çevirinin ekranda kalma süresi"))
         add_row(f, "", bind_check("Yapay zekâ metin bulucu", s.ocr, "text_detector", restart,
-                                  "Açık zemindeki beyaz yazı, gölgesiz yazı gibi zor altyazıları da bulur; hiçbir "
-                                  "altyazı kaçmasın diye açık önerilir. Saniyede 5 kez çalışır, işlemciyi biraz "
-                                  "daha kullanır."))
+                                  "Yazının yerini harf şeklinden bulur: açık zeminde beyaz, gölgesiz yazı da. "
+                                  "Altyazının belirdiği ve değiştiği kareyi yakalar; hiçbir altyazı kaçmasın ve "
+                                  "hızlı okunsun diye açık önerilir. Kapalıysa kurallı algılama kullanılır."))
         add_row(f, "", bind_check("Yalnızca en alttaki satırları oku", s.ocr, "keep_lowest_block", restart,
                                   tip="Bölgedeki üst satırları (HUD, görev yazısı) yok sayar"))
         add_row(f, "", bind_check("Konuşmacı adını ayır", s.ocr, "detect_speaker", restart,

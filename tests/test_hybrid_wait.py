@@ -304,20 +304,34 @@ def test_context_has_blank_turkish_for_quick_fallback(make_pipe):
     ]
 
 
-def test_context_blank_for_fallback_when_hybrid_off(make_pipe):
-    """(f) Karma kapalı: asıl motor hata verince gösterilen yedek hızlı çeviri de bağlama girmez."""
+def test_hybrid_off_waits_for_main_and_keeps_fallback_out_of_context(make_pipe):
+    """(f) Karma kapalı: satır asıl çeviriyi bekler (bekleme penceresi dolsa da hızlı çeviri görünmez); hızlı
+    çeviri yalnız asıl motor hata verince gösterilir ve bağlama girmez."""
+    h = Hybrid(make_pipe(hybrid=False), main=FakeTr("asıl", fail=("Who are those guys?",)))
+    a = h.read("Get in the car, now.")
+    h.wait(3.0)  # karma açıkken pencere (1,2 sn) çoktan dolmuştu
+    assert h.out == []
+    h.remote()
+    assert h.out == [(MAIN, a["text"], a["line"])]
+    b = h.read("Who are those guys?")
+    h.remote()  # asıl motor hata verdi: hızlı çeviri beklemeden
+    assert h.out[-1] == (QUICK, b["text"], b["line"])
+    c = h.read("Hold on tight!")
+    h.remote()
+    assert [o[0] for o in h.out] == [MAIN, QUICK, MAIN] and h.out[-1][1:] == (c["text"], c["line"])
+    assert h.main.contexts["Hold on tight!"] == [("Get in the car, now.", "asıl: Get in the car, now."),
+                                                 ("Who are those guys?", "")]
+
+
+def test_hybrid_off_shows_quick_when_main_never_answers(make_pipe):
+    """Karma kapalıyken de satır kaybolmaz: asıl çeviri istek zaman aşımına kadar gelmezse hızlı çeviri gösterilir."""
     pipe = make_pipe(hybrid=False)
-    main = FakeTr("asıl", fail=("Who are those guys?",))
-    cx = TrContext(pipe.s.translate, main, FakeTr("hızlı"))
-    assert not cx.two_stage and cx.ready
-    got: list[dict] = []
-    pipe.subtitle.connect(got.append)
-    for k, text in enumerate(("Get in the car, now.", "Who are those guys?", "Hold on tight!")):
-        ev = pipe.tracker.on_text(text, None, 1000.0 + k)
-        pipe._apply(pipe._translate_item(("sub", ev["t"], ev), cx))
-    assert [g["engine"] for g in got] == [MAIN, QUICK, MAIN]
-    assert main.contexts["Hold on tight!"] == [("Get in the car, now.", "asıl: Get in the car, now."),
-                                               ("Who are those guys?", "")]
+    h = Hybrid(pipe)
+    a = h.read("Keep your head down.")
+    h.wait(pipe.s.translate.timeout_s - 0.1)
+    assert h.out == []
+    h.wait(0.2)
+    assert h.out == [(QUICK, a["text"], a["line"])]
 
 
 def test_context_survives_quiet_scene_then_resets(make_pipe):
@@ -344,6 +358,162 @@ def test_context_survives_quiet_scene_then_resets(make_pipe):
     ctx = say("Head south to Leonida Keys.", 1211.0)
     assert len(ctx) == pipe.s.translate.context_lines == 8
     assert [en for en, _ in ctx] == lines[2:]
+
+
+# --- uyarlamalı bekleme: asıl motor süreye yetişemiyorsa satır boşuna bekletilmez --------------------------
+def _speed(cx: TrContext, seconds: float) -> None:
+    """Asıl motorun ölçülen hızını ayarlar: son satırların hepsi bu kadar sürmüş gibi."""
+    cx._service.clear()
+    for _ in range(pl.SERVICE_SAMPLES):
+        cx.note_service(seconds)
+
+
+def _arrive(service: float, queued: int = 0, lag: float = 0.0) -> float:
+    """Asıl çevirinin okunduğu kareden kaç sn sonra gelmesi beklenir (payıyla; bkz. Pipeline._wait_s)."""
+    return lag + service * (queued + 1) * pl.ARRIVE_MARGIN + pl.ARRIVE_PAD_S
+
+
+def test_wait_adapts_to_main_engine_speed(make_pipe):
+    """Asıl çevirinin geleceği an (payıyla) pencereye sığıyorsa pencere kadar beklenir; az farkla aşıyorsa o ana
+    kadar beklenir (hızlı çeviri görünüp hemen değişmesin); belirgin aşıyorsa hiç beklenmez (hızlı çeviri hemen)."""
+    pipe = make_pipe()
+    h = Hybrid(pipe)  # pencere 1,2 sn
+    assert pipe._wait_s(h.cx) == pytest.approx(1.2)  # henüz ölçüm yok
+    _speed(h.cx, 0.4)
+    assert pipe._wait_s(h.cx) == pytest.approx(1.2)
+    _speed(h.cx, 1.2)
+    assert 1.2 < _arrive(1.2) <= 1.2 * pl.WAIT_GIVE_UP
+    assert pipe._wait_s(h.cx) == pytest.approx(_arrive(1.2))
+    _speed(h.cx, 1.35)
+    assert pipe._wait_s(h.cx) == 0.0  # payıyla 1,5 sn'yi aşar
+    _speed(h.cx, 2.5)
+    assert pipe._wait_s(h.cx) == 0.0
+    # sırada bekleyen işler de sayılır: 0,4 sn'lik motor, önünde iki iş varken pencereye az farkla yetişemez
+    _speed(h.cx, 0.4)
+    pipe._remote_q.put({"ev": {"line": 901}, "quick": None, "done": None})
+    pipe._remote_q.put({"ev": {"line": 902}, "quick": None, "done": None})
+    assert pipe._wait_s(h.cx) == pytest.approx(_arrive(0.4, queued=2))
+    pipe._remote_q.put({"ev": {"line": 903}, "quick": None, "done": None})
+    assert pipe._wait_s(h.cx) == 0.0
+    pipe._remote_q.clear()
+
+
+def test_wait_counts_the_time_already_spent(make_pipe):
+    """Süre satırın okunduğu kareden sayılır: OCR ve hızlı çeviride geçen süre (lag) de hesaba girer. 1 sn'lik
+    motor boş satırda pencereye sığar; okuma 0,3 sn geç geldiyse sığmaz, satır beklemez."""
+    pipe = make_pipe()
+    h = Hybrid(pipe)
+    _speed(h.cx, 1.0)
+    assert pipe._wait_s(h.cx) == pytest.approx(_arrive(1.0))
+    assert _arrive(1.0, lag=0.3) > 1.2 * pl.WAIT_GIVE_UP
+    assert pipe._wait_s(h.cx, 0.3) == 0.0
+
+
+def test_translation_in_flight_counts_towards_the_wait(make_pipe):
+    """Asıl motor o an başka bir satırı çeviriyorsa onun kalan süresi de hesaba girer: 1 sn'lik motor yeni
+    başladığı bir çevirinin ortasındayken gelen satır pencereye (1,2 sn) yetişemez, bekletilmez."""
+    pipe = make_pipe()
+    h = Hybrid(pipe)
+    _speed(h.cx, 0.8)
+    assert pipe._wait_s(h.cx) == pytest.approx(1.2)  # motor boşta: 0,8 sn pencereye sığar
+    h.cx.job_started()
+    assert pipe._wait_s(h.cx) == 0.0  # kalan ~0,8 sn + kendi 0,8 sn
+    h.cx.note_service(0.8)  # süren iş bitti
+    assert pipe._wait_s(h.cx) == pytest.approx(1.2)
+
+
+def test_slow_main_engine_shows_quick_at_once_then_upgrades(make_pipe):
+    """Zayıf makine: asıl motor satır başına ~2,5 sn sürüyorsa satır pencere kadar boşuna bekletilmez; hızlı
+    çeviri hemen görünür, asıl çeviri gelince aynı satırı günceller. Satır kaybolmaz."""
+    h = Hybrid(make_pipe())
+    _speed(h.cx, 2.5)
+    a = h.read("They're right behind us!")
+    assert h.out == [(QUICK, a["text"], a["line"])]
+    h.wait(2.5)
+    h.remote()
+    assert h.out == [(QUICK, a["text"], a["line"]), (MAIN, a["text"], a["line"])]
+
+
+def test_hybrid_off_does_not_wait_for_a_translation_that_cannot_make_it(make_pipe):
+    """Karma kapalı: satır asıl çeviriyi bekler. Asıl motorun yetişemeyeceği belliyse (ağır model: satır başına
+    istek zaman aşımından uzun, ya da sırada çok iş var) boş ekranda zaman aşımı kadar beklenmez: hızlı çeviri
+    hemen görünür, asıl çeviri gelince üstüne yazılır."""
+    pipe = make_pipe(hybrid=False)
+    h = Hybrid(pipe)
+    limit = pipe.s.translate.timeout_s
+    assert pipe._wait_s(h.cx) == pytest.approx(limit)  # henüz ölçüm yok: beklenir
+    _speed(h.cx, 3.5)
+    assert pipe._wait_s(h.cx) == pytest.approx(limit)  # yavaş ama yetişir: karma kapalıyken beklenir
+    _speed(h.cx, limit + 1.0)
+    assert pipe._wait_s(h.cx) == 0.0
+    a = h.read("Nobody moves until I say so.")
+    assert h.out == [(QUICK, a["text"], a["line"])]
+    h.remote()
+    assert h.out == [(QUICK, a["text"], a["line"]), (MAIN, a["text"], a["line"])]
+
+
+def test_service_time_is_the_median_of_recent_lines(make_pipe):
+    """Asıl motorun süresi her uzak çeviride (hata dahil) ölçülür; son satırların ortancası alınır: tek bir zaman
+    aşımı sonraki satırların beklemesini bozmaz, makine gerçekten yavaşladıysa birkaç satırda izlenir."""
+    pipe = make_pipe()
+    h = Hybrid(pipe, main=FakeTr("asıl", fail=("Just drive.",)))
+    assert h.cx.service_s is None and h.cx.steady_service_s() is None
+    h.read("Get in the car, now.")
+    h.remote()
+    assert h.cx.service_s is not None and h.cx.service_s >= 0
+    h.read("Just drive.")
+    h.remote()  # hata: yine ölçülür
+    assert len(h.cx._service) == 2 and h.cx.steady_service_s() is None  # kullanıcıya gösterilecek karar için az
+
+    _speed(h.cx, 0.4)
+    h.cx.note_service(6.0)  # tek bir zaman aşımı
+    assert h.cx.service_s == pytest.approx(0.4) and pipe._wait_s(h.cx) == pytest.approx(1.2)
+    h.cx.note_service(6.0)
+    assert h.cx.service_s == pytest.approx(0.4)
+    h.cx.note_service(6.0)  # son beş satırın üçü yavaş: makine gerçekten yavaşladı
+    assert h.cx.service_s == pytest.approx(6.0) and pipe._wait_s(h.cx) == 0.0
+    for _ in range(3):
+        h.cx.note_service(0.4)  # toparlandı
+    assert h.cx.service_s == pytest.approx(0.4) and h.cx.steady_service_s() == pytest.approx(0.4)
+
+
+def test_slow_engine_with_hybrid_off_suggests_hybrid_once(make_pipe):
+    """Karma kapalıyken asıl motor yavaşsa (ağır model, zayıf makine) kullanıcıya pencere açmayan bir bildirimle
+    Hibrit mod önerilir: oturumda bir kez, yeterince satır ölçüldükten sonra. Karma açıkken (satırlar zaten hızlı
+    çeviriyle görünür) ya da motor hızlıyken bildirim çıkmaz."""
+    pipe = make_pipe(hybrid=False)
+    h = Hybrid(pipe)
+    notices: list[str] = []
+    pipe.notice.connect(notices.append)
+    h.cx.note_service(3.0)
+    pipe._hint_if_slow(h.cx)
+    assert notices == []  # tek ölçüm yetmez
+    _speed(h.cx, 0.4)
+    pipe._hint_if_slow(h.cx)
+    assert notices == []  # hızlı motor
+    _speed(h.cx, 3.0)
+    pipe._hint_if_slow(h.cx)
+    assert notices == [pl.AI_SLOW_NOTICE.format(sec="3,0")] and "Hibrit" in notices[0]
+    pipe._hint_if_slow(h.cx)
+    assert len(notices) == 1  # oturumda bir kez
+
+    on = make_pipe(hybrid=True)
+    h2 = Hybrid(on)
+    got: list[str] = []
+    on.notice.connect(got.append)
+    _speed(h2.cx, 3.0)
+    on._hint_if_slow(h2.cx)
+    assert got == []
+
+
+def test_every_remote_translation_checks_for_a_slow_engine(make_pipe):
+    pipe = make_pipe(hybrid=False)
+    h = Hybrid(pipe)
+    seen: list[TrContext] = []
+    pipe._hint_if_slow = seen.append
+    h.read("Get in the car, now.")
+    h.remote()
+    assert seen == [h.cx]
 
 
 # --- asıl motorun arka planda hazırlanması --------------------------------------------------------------
@@ -425,8 +595,9 @@ def test_main_prepares_in_background_quick_meanwhile(make_pipe, monkeypatch):
     assert not loop.is_alive()
     assert not any(th.name == "ceviri-uzak" and th.is_alive() for th in threading.enumerate())
     assert llm.prepare_thread == "ceviri-uzak" and llm.closed and fast.closed
-    assert statuses.index(pl.PREPARING_STATUS) < statuses.index("sahte model yükleniyor…") < statuses.index(
-        pl.READY_STATUS)
+    # motorun kendi durum satırı "şimdilik hızlı çeviri" ekiyle gelir: kullanıcı altyazının sürdüğünü görür
+    assert statuses.index(pl.PREPARING_STATUS) < statuses.index(
+        "sahte model yükleniyor…" + pl.WHILE_PREPARING) < statuses.index(pl.READY_STATUS)
 
 
 @pytest.mark.parametrize(("exc", "message"), [
@@ -457,6 +628,183 @@ def test_prepare_failure_reports_error_and_keeps_quick(make_pipe, exc, message):
     assert len(pipe._remote_q) == 0
 
 
+def test_main_request_starts_before_quick_translation(make_pipe):
+    """Asıl istek hızlı çeviriyi beklemeden kuyruğa girer (karma kapalıyken her satırın yolu budur): uzak iş
+    parçacığı hızlı çeviri hesaplanırken çevirmeye başlayabilir. Asıl çeviri hızlı çeviriden önce gelirse yalnız o
+    gösterilir; hızlı çeviri sonradan gelince bir şey değişmez."""
+    pipe = make_pipe(hybrid=False)
+    h = Hybrid(pipe)
+    order: list[str] = []
+    real_quick = h.fast.translate
+
+    def quick(text, context=()):
+        order.append(f"hızlı başladı, uzak kuyrukta {len(pipe._remote_q)} iş")
+        h.remote()  # asıl çeviri bu arada geldi
+        return real_quick(text, context)
+
+    h.fast.translate = quick
+    a = h.read("Get in the car, now.")
+    assert order == ["hızlı başladı, uzak kuyrukta 1 iş"]
+    assert h.out == [(MAIN, a["text"], a["line"])]
+    h.wait(10.0)
+    assert h.out == [(MAIN, a["text"], a["line"])]
+
+
+def test_main_error_before_quick_translation_does_not_lose_the_line(make_pipe):
+    """Asıl çeviri hızlı çeviri hesaplanırken hata verirse satır kaybolmaz: hızlı çevirisi gelince gösterilir."""
+    pipe = make_pipe(hybrid=False)
+    h = Hybrid(pipe, main=FakeTr("asıl", fail=("Get in the car, now.",)))
+    real_quick = h.fast.translate
+
+    def quick(text, context=()):
+        h.remote()  # asıl motor hemen hata verdi
+        assert h.out == []
+        return real_quick(text, context)
+
+    h.fast.translate = quick
+    a = h.read("Get in the car, now.")
+    assert h.out == [(QUICK, a["text"], a["line"])]
+
+
+def test_line_waits_for_its_quick_translation_after_deadline(make_pipe):
+    """Bekleme süresi hızlı çeviri hesaplanırken dolarsa satır hızlı çevirisini bekler, sonra gösterilir."""
+    pipe = make_pipe()
+    h = Hybrid(pipe, wait_ms=100)
+    real_quick = h.fast.translate
+
+    def quick(text, context=()):
+        h.wait(0.5)  # zayıf makine: hızlı çeviri bile yavaş
+        assert h.out == []
+        return real_quick(text, context)
+
+    h.fast.translate = quick
+    a = h.read("Where are we going?")
+    assert h.out == [(QUICK, a["text"], a["line"])]
+    h.remote()
+    assert h.out[-1] == (MAIN, a["text"], a["line"])
+
+
+def test_stale_job_is_skipped_on_a_slow_machine(make_pipe):
+    """Yavaş makinede asıl motorun kuyruğu birikirse, çevirisi geldiğinde ekrandan çoktan kalkmış olacak satır
+    çevrilmez: motor yeni satırlara kalır. Satır hızlı çevirisiyle gösterilmiştir; bağlama yalnız İngilizcesi girer."""
+    pipe = make_pipe()
+    h = Hybrid(pipe)
+    _speed(h.cx, 2.5)
+    a = h.read("Who are those guys?")
+    b = h.read("Hold on tight!")
+    assert h.out == [(QUICK, a["text"], a["line"]), (QUICK, b["text"], b["line"])]
+    h.wait(pipe.s.flow.max_show_s - 2.0)  # 2,5 sn'lik çeviri gelene kadar satırın ekranda kalma süresi dolar
+    h.remote()  # a bayat ve arkasında b bekliyor: atlanır
+    assert len(h.out) == 2 and h.main.contexts == {}
+    h.remote()  # b de bayat ama arkasında iş yok: motor boşta, geç de olsa çevrilir
+    assert h.out[-1] == (MAIN, b["text"], b["line"])
+    assert h.main.contexts["Hold on tight!"] == [("Who are those guys?", "")]
+
+
+def test_failing_engine_is_not_waited_for(make_pipe):
+    """Asıl motor art arda hata veriyorsa (ör. Ollama kapandı: her istek ~2 sn'de bağlantı hatası) satırlar onu
+    beklemez: hızlı çeviri hemen görünür. Motor yeniden yanıt verince bekleme geri gelir."""
+    pipe = make_pipe(hybrid=False)
+    h = Hybrid(pipe, main=FakeTr("asıl", fail=("Who are those guys?", "Cops. Keep your head down.")))
+    h.read("Who are those guys?")
+    h.remote()
+    assert not h.cx.failing and pipe._wait_s(h.cx) > 0  # tek hata: geçici olabilir
+    h.read("Cops. Keep your head down.")
+    h.remote()
+    assert h.cx.failing and pipe._wait_s(h.cx) == 0.0
+    c = h.read("Hold on tight!")
+    assert h.out[-1] == (QUICK, c["text"], c["line"])  # beklemeden
+    h.remote()  # motor yanıt verdi
+    assert not h.cx.failing and h.out[-1] == (MAIN, c["text"], c["line"])
+    assert pipe._wait_s(h.cx) > 0
+
+
+class DeadLlm(FakeTr):
+    """Çalışırken ölen yerel LLM: `dead` kuruluyken her çeviri hata verir ve healthy() False döner; prepare()
+    (Ollama'yı başlatıp modeli yeniden yükler) onu diriltir."""
+
+    def __init__(self):
+        super().__init__("asıl")
+        self.dead = False
+        self.prepares = 0
+
+    def prepare(self, status) -> None:
+        self.prepares += 1
+        status("sahte model yükleniyor…")
+        self.dead = False
+
+    def healthy(self) -> bool:
+        return not self.dead
+
+    def translate(self, text, context=()):
+        if self.dead:
+            raise TranslatorError("bağlantı reddedildi")
+        return super().translate(text, context)
+
+
+def test_dead_engine_is_prepared_again(make_pipe):
+    """Ollama çeviri sırasında kapandı ya da modeli bellekten düştü: asıl motor art arda hata verince ve gerçekten
+    çalışamıyorsa uzak iş parçacığı onu yeniden hazırlar (Ollama'yı başlatır, modeli yükler). O sırada sıradaki
+    satırlar beklemeden hızlı çeviriyle gösterilir; motor hazır olunca asıl çeviri geri gelir. Hiçbir satır
+    kaybolmaz."""
+    pipe = make_pipe(hybrid=False)
+    llm = DeadLlm()
+    h = Hybrid(pipe, main=llm)
+    statuses: list[str] = []
+    pipe.status.connect(statuses.append)
+    a = h.read("Get in the car, now.")
+    h.remote()
+    assert h.out == [(MAIN, a["text"], a["line"])]
+    llm.dead = True
+    b = h.read("Where are we going?")
+    h.remote()  # 1. hata: satır hızlı çeviriyle
+    c = h.read("Just drive.")
+    d = h.read("Who are those guys?")  # c'nin işi sırada; d de
+    assert len(pipe._remote_q) == 2
+    job = pipe._remote_q.get(0)
+    pipe._apply(pipe._remote_item(job, h.cx))  # 2. hata: art arda iki hata
+    assert h.cx.failing and not pipe._main_alive(h.cx)
+    pipe._run.set()
+    assert pipe._recover_main(h.cx)
+    assert llm.prepares == 1 and h.cx.ready and not h.cx.failing
+    assert pl.RECOVER_STATUS in statuses and pl.READY_STATUS in statuses
+    assert len(pipe._remote_q) == 0  # sıradaki iş beklemedi: hızlı çeviriye bırakıldı
+    shown = {o[2]: o[0] for o in h.out}
+    assert shown == {a["line"]: MAIN, b["line"]: QUICK, c["line"]: QUICK, d["line"]: QUICK}
+    e = h.read("Take the next exit.")
+    h.remote()
+    assert h.out[-1] == (MAIN, e["text"], e["line"])
+
+
+def test_dead_engine_that_cannot_be_prepared_leaves_quick(make_pipe):
+    """Yeniden hazırlık da başarısızsa (Ollama başlatılamadı) bildirilir ve hat hızlı çeviriyle sürer."""
+    pipe = make_pipe(hybrid=False)
+    llm = DeadLlm()
+    h = Hybrid(pipe, main=llm)
+    errors: list[str] = []
+    pipe.error.connect(errors.append)  # sahte motor yerel yapay zekâ değil: bilinen hata da uyarı olarak gelir
+    llm.prepare = lambda status: (_ for _ in ()).throw(TranslatorError("Ollama başlatılamadı."))
+    llm.dead = True
+    for text in ("Where are we going?", "Just drive."):
+        h.read(text)
+        h.remote()
+    pipe._run.set()
+    assert not pipe._recover_main(h.cx)
+    assert not h.cx.ready and errors == ["Ollama başlatılamadı."]
+    f = h.read("Hold on tight!")
+    assert h.out[-1] == (QUICK, f["text"], f["line"]) and len(pipe._remote_q) == 0
+
+
+def test_healthy_engine_is_not_prepared_again(make_pipe):
+    """Art arda hata veren ama çalışır durumdaki motor (geçici ağ hatası, kota) yeniden hazırlanmaz."""
+    pipe = make_pipe(hybrid=False)
+    h = Hybrid(pipe, main=FakeTr("asıl", fail=("Where are we going?", "Just drive.")))
+    for text in ("Where are we going?", "Just drive."):
+        h.read(text)
+        h.remote()
+    assert h.cx.failing and pipe._main_alive(h.cx)
+
+
 def test_prepare_failure_while_stopping_is_silent(make_pipe):
     """Durdurulurken yarıda kalan hazırlığın hatası kullanıcıya gösterilmez."""
     pipe = make_pipe()
@@ -470,8 +818,9 @@ def test_prepare_failure_while_stopping_is_silent(make_pipe):
 
 @pytest.mark.parametrize("hybrid", [True, False], ids=["karma", "karma kapalı"])
 def test_prepare_translators(make_pipe, monkeypatch, hybrid):
-    """Karma modda asıl motor çeviri döngüsünü bekletmesin diye burada hazırlanmaz (uzak iş parçacığı hazırlar);
-    karma kapalıysa davranış aynı: önceden hazırlanır. İki motor da oyun profilinin adlarını içeren sözlüğü alır."""
+    """Asıl motor çeviri döngüsünü bekletmesin diye burada hazırlanmaz (uzak iş parçacığı hazırlar); karma ayarı
+    kapalıyken de öyle: o ayar yalnız satırın asıl çeviriyi ne kadar bekleyeceğini belirler. İki motor da oyun
+    profilinin adlarını içeren sözlüğü alır."""
     glossary = object()
     main, fast = FakeTr("asıl"), FakeTr("hızlı")
     seen: list[object] = []
@@ -479,6 +828,8 @@ def test_prepare_translators(make_pipe, monkeypatch, hybrid):
     monkeypatch.setattr(pl, "QuickMtTranslator", lambda g, device="cpu": seen.append(g) or fast)
     monkeypatch.setattr(pl, "create_translator", lambda tc, g: seen.append(g) or main)
     pipe = make_pipe(hybrid)
+    pipe._run.set()  # hat çalışıyor
     assert pipe._prepare_translators() == (main, fast)
     assert seen == [glossary, glossary]
-    assert fast.prepared and main.prepared is not hybrid
+    assert fast.prepared and not main.prepared
+    assert pipe._main_tr is main  # stop() hazırlığı bunun üzerinden yarıda keser

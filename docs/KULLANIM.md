@@ -112,6 +112,9 @@ Ana sayfadaki **Çevrilecek bölge** bölümünde iki yol var:
 - Altyazının en uzun ve en çok satırlı hâlini kapsayın; iki satırlık altyazılara yer bırakın.
 - Mini harita, görev yazısı, para göstergesi gibi arayüz öğelerini dışarıda bırakın. Bırakamıyorsanız
   *Ayarlar → Metin okuma → Gelişmiş → Yalnızca en alttaki satırları oku* açık kalsın.
+- Bölgeye giren araç plakası, tabela ya da duvar yazısı çevrilmez: *Ayarlar → Metin okuma → Yalnız altyazıları
+  oku* yalnız altyazı biçimindeki (beyaz, koyu kenarlı ya da gölgeli, ortalı) yazıyı okur. Altyazısı renkli,
+  kenarsız ya da sola dayalı bir oyunda bu ayarı kapatın.
 - Bölgeyi gereğinden büyük tutmayın. Küçük bölge hem daha hızlı hem daha doğru okunur.
 
 Seçtiğiniz bölgenin canlı görüntüsü Ana sayfada görünür. Program çalışırken metin olarak algılanan yerler
@@ -225,6 +228,12 @@ görünümüyle gösterir.
   zekâ ve Gemini taşır; hızlı yerel çeviride en iyi çabayla bulunur, DeepL'de vurgu yoktur.
 - **Kenar ve gölge:** açık renkli sahnelerde kenarı kalınlaştırmak okumayı kolaylaştırır.
 - **Arka plan:** *Yok*, *Yarı saydam* ya da *Opak* kutu.
+- **Yerleşim → Oyun altyazısının üzerine** (iki tarafta ayrı, varsayılan kapalı): çeviri, oyunun İngilizce
+  altyazısının tam yerine yazılır. Koyu, tamamen kapalı bir kutu İngilizce yazıyı örter; kutu altyazının
+  genişliğindedir, Türkçe içinde ortalanır ve oyunun yazısıyla aynı boydadır. Türkçe sığmazsa yazı biraz küçülür,
+  gerekirse ikinci satıra geçer ve kutu yukarı doğru büyür. Oyun altyazıyı kaldırınca kutu da kalkar. Açıkken o
+  tarafın konum ayarları kullanılmaz (*Ekranımda* kutunun kaydettiğiniz yeri korunur, kapatınca oraya döner;
+  *Yayınımda* OBS maskesi gerekmez, oyun görüntüsü OBS tuvalini tam kaplamalıdır). Kutunun rengi *Kutu rengi*'nden.
 - **Ölçek** (yalnız *Ekranımda*): kutudaki yazıyı kenarı ve arka planıyla birlikte büyütür ya da küçültür.
   Kutunun yerini Ana sayfadaki **Konumu ayarla** belirler.
 - **Konum ve genişlik** (yalnız *Yayınımda*): OBS'teki altyazının alt kenara uzaklığı ve en fazla genişliği.
@@ -289,7 +298,9 @@ Gemma 4'e geçin.
   (ör. "Lucia ile soygun planı"). *Genel* profilde oyunun türünü ve üslubunu da yazabilirsiniz.
 - **Hibrit mod** (*Yapay zekâ gecikirse hızlı çeviriyi göster*). Yapay zekânın çevirisi yaklaşık 1,2 sn
   içinde gelirse yalnız o görünür. Gecikirse önce hızlı yerel çeviri görünür, yapay zekânınki gelince aynı
-  satırın üstüne yazılır. Kapalıyken her satırda yapay zekâ beklenir.
+  satırın üstüne yazılır. Bilgisayar bu süreye yetişemiyorsa satır hiç bekletilmez, hızlı çeviri hemen görünür.
+  Kapalıyken her satırda yapay zekâ beklenir; hızlı çeviri yalnız model belleğe yüklenirken ya da yapay zekâ
+  yanıt vermezse görünür. Yayın için açık bırakmanızı öneririz.
 - **Bağlam.** Modelin gördüğü önceki satır sayısı; varsayılan 8.
 - **Sözlük.** Çevrilmemesi gereken adları ekleyin: karakterler, mekânlar, çeteler, araç markaları. Türkçe
   sütunu boş bırakırsanız terim olduğu gibi kalır; doldurursanız o karşılık kullanılır. Varsayılan sözlükte
@@ -385,6 +396,9 @@ hata penceresi yerine bir bildirim gösterir (ör. *Gemma 4 12B hazırlanamadı;
 
 **Çeviri gecikiyor.** Ekranda önce hızlı çeviri görünüp sık sık sonradan değişiyorsa yapay zekâ yetişemiyor
 demektir. Daha küçük bir model seçin: *Ollama* bölümünde modeli `gemma4:e4b` yapıp **Modeli indir**'e basın.
+
+**Bazı altyazılar çevrilmiyor.** Oyunun altyazısı renkli, kenarsız ya da sola dayalıysa *Ayarlar → Metin
+okuma → Yalnız altyazıları oku*'yu kapatın.
 
 **Ekran kartının belleği (VRAM) yetmiyor.** `gemma4:12b` 12 GB bellekli kartta rahat çalışır. Bellek
 yetmezse Ollama modelin bir kısmını işlemcide çalıştırır ve çeviri yavaşlar.

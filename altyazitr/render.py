@@ -6,14 +6,17 @@ Akış (Settings.flow): son çeviriler alt alta durur. En yeni satır en altta v
 giderek soluklaşır (STACK_ALPHA; OBS sayfası da aynı değerleri kullanır).
 
 Vurgulu kelimeler (satırın `spans` aralıkları) görünümün vurgu rengiyle doldurulur; kenar çizgisi ve gölge bütün
-satır için bir kez çizilir, böylece renkli parça da aynı kenarı ve gölgeyi taşır."""
+satır için bir kez çizilir, böylece renkli parça da aynı kenarı ve gölgeyi taşır.
+
+"Oyun altyazısının üzerine" (StyleCfg.cover_original): kutunun yeri ve yazı boyları display'de hesaplanır; burada
+yazı kutuya sığdırılır (cover_text) ve kutu çizilir (paint_cover)."""
 
 from __future__ import annotations
 
 import math
 import re
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, replace
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QImage, QPainter, QPainterPath, QPen
@@ -305,3 +308,79 @@ def paint_subtitle(p: QPainter, W: float, H: float, st: StyleCfg, text: str, spe
             a = stack_alpha(k - 1) + (stack_alpha(k) - stack_alpha(k - 1)) * prog
             pt.draw(p, b, top + shift, a)
     return len(placed)
+
+
+# --- oyun altyazısının üzerine ------------------------------------------------------------------------------------
+# Kutunun içinde yazının kenara uzaklığı (yazı boyuna oranla: yatay, dikey) ve köşe yuvarlaklığı. OBS sayfası
+# (web/overlay.html: COVER_INNER, #cover) aynı değerleri kullanır.
+COVER_INNER = (0.3, 0.12)
+COVER_RADIUS = 0.18
+
+
+def cover_size(lines_at: Callable[[float], int], rows: int, font: float, low: float) -> float:
+    """Kapak yazısının boyu. Metin, oyunun altyazısının satır sayısına (rows) sığdığı en büyük boyda yazılır: hedef
+    boydan (font) 1 px adımlarla en küçük boya (low) kadar küçülür. Orada da sığmazsa satır kaydırılır: o satır
+    sayısıyla yazılabilen en büyük boy seçilir (kutu yukarı doğru büyür). lines_at(boy): metnin o boyda kutu
+    genişliğine kaydırılınca kaç satır olduğu (boy küçüldükçe artmaz). OBS sayfası aynı kuralı uygular."""
+    low = min(low, font)
+    sizes = [font - i for i in range(int(font - low) + 1)]
+    if sizes[-1] > low:
+        sizes.append(low)
+    for s in sizes:
+        if lines_at(s) <= rows:
+            return s
+    n = lines_at(low)
+    return next(s for s in sizes if lines_at(s) <= n)
+
+
+@dataclass
+class CoverText:
+    """Kapak yazısının yerleşimi: yazı boyu (px) ve yazının iç payıyla gerektirdiği en küçük kutu (px)."""
+    size: float
+    w: float
+    h: float
+
+
+def _cover_painter(st: StyleCfg, size: float, width: float) -> _Painter:
+    """Kapak yazısının çizicisi: yazı `size` px, kenar kalınlığı görünümdeki yazı/kenar oranıyla. Arka plan ve İngilizce
+    orijinal çizilmez: arka plan kutunun kendisidir, orijinal de zaten örtülen yazıdır."""
+    look = replace(st, bg_opacity=0.0, show_original=False)
+    pt = _Painter(width, size, look, size / max(1.0, float(st.font_size)), 1080.0, True)
+    pt.maxw = max(1.0, width - 2 * COVER_INNER[0] * size)
+    return pt
+
+
+def cover_text(st: StyleCfg, line: Mapping, width: float, rows: int, font: float, low: float) -> CoverText | None:
+    """Satırı ({"text", "speaker", "spans"}) `width` genişliğindeki kapak kutusuna sığdırır (bkz. cover_size); metin
+    yoksa None."""
+    text = str(line.get("text") or "")
+    memo: dict[float, _Block | None] = {}
+
+    def block(s: float) -> _Block | None:
+        if s not in memo:
+            memo[s] = _cover_painter(st, s, width).layout(text, line.get("speaker"), "", line.get("spans") or ())
+        return memo[s]
+
+    if block(font) is None:
+        return None
+    size = cover_size(lambda s: len(block(s).lines), max(1, int(rows)), font, low)
+    b = block(size)
+    return CoverText(size, b.widest + 2 * COVER_INNER[0] * size, b.total_h + 2 * COVER_INNER[1] * size)
+
+
+def paint_cover(p: QPainter, W: float, H: float, st: StyleCfg, line: Mapping, size: float) -> None:
+    """Kapak kutusu: W×H alanı opak doldurur (görünümün maske rengiyle; İngilizce yazı hiç görünmesin), satırı
+    `size` px yazıyla yatay ve dikey ortalar. Vurgulu kelimeler ve konuşmacı adı görünümün renkleriyle çizilir."""
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    color = QColor(st.mask_color)
+    if not color.isValid():
+        color = QColor(0, 0, 0)
+    color.setAlpha(255)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(color)
+    r = size * COVER_RADIUS
+    p.drawRoundedRect(QRectF(0, 0, W, H), r, r)
+    pt = _cover_painter(st, size, W)
+    b = pt.layout(str(line.get("text") or ""), line.get("speaker"), "", line.get("spans") or ())
+    if b is not None:
+        pt.draw(p, b, (H - b.total_h) / 2)

@@ -127,6 +127,41 @@ def test_kenar_golge_ve_renkli_zemin_yanlis_vurgu_uretmez(outline):
     assert _marked(img, line) == "Lose the [[cops]]."
 
 
+def _stream(img: np.ndarray) -> np.ndarray:
+    """720p yayın görüntüsü 1080p'ye büyütülmüş gibi: küçült, 4:2:0 renk alt örneklemesi, büyüt."""
+    h, w = img.shape[:2]
+    k = cv2.resize(img, (w * 2 // 3 // 2 * 2, h * 2 // 3 // 2 * 2), interpolation=cv2.INTER_AREA)
+    k = cv2.cvtColor(cv2.cvtColor(k, cv2.COLOR_BGR2YUV_I420), cv2.COLOR_YUV2BGR_I420)
+    return cv2.resize(k, (w, h), interpolation=cv2.INTER_LINEAR)
+
+
+def test_renkli_zeminden_bulasan_renk_vurgu_sayilmaz():
+    """Doygun pembe / turkuaz zeminin önünde gölgeli beyaz yazı, yayın görüntüsü: renk alt örneklemesi zeminin rengini
+    ince harflere bulaştırır; bu renk vurgu sayılmaz (önceki sürüm "I", "now" gibi kelimeleri vurguluyordu). Aynı
+    zeminde gerçekten renkli (sarı) kelime bulunur. Zeminle aynı tondaki vurgu ise bulunmaz: rengi zeminden
+    ayırt edilemez (yanlış alarmı önlemenin bedeli)."""
+    bg = np.zeros((110, 900, 3), np.uint8)
+    bg[:, :450] = (200, 40, 230)
+    bg[:, 450:] = (230, 200, 30)
+    img, line = _mission([("Keep the engine running, I will be right back.", WHITE)], bg=bg, quality=0)
+    img = _stream(img)
+    assert True not in [f for _, f in line_colors(img, line)]
+    assert highlight_spans(img, [line], line.text) == []
+    img, line = _mission([("Drive to the ", WHITE), ("safehouse", YELLOW), (" now.", WHITE)], bg=bg, quality=0)
+    assert _marked(_stream(img), line) == "Drive to the [[safehouse]] now."
+    img, line = _mission([("Lose the ", WHITE), ("cops", PINK), (" and hide.", WHITE)], bg=bg, quality=0)
+    assert _marked(_stream(img), line) == "Lose the cops and hide."
+
+
+def test_tek_harfli_kelime_iki_vurgu_arasinda_koprulenir():
+    """"Pay 'n' Spray": tek harflik 'n' rengi ölçülemeyecek kadar küçüktür; iki vurgulu kelimenin arasındaysa vurguya
+    katılır, gövde kelimesi sayılmaz (yalnız o beyazsa satır tamamı renkli sayılır: vurgu yok)."""
+    text = "Take the Phoenix to the Pay 'n' Spray"
+    tokens = [(w, False) for w in text.split()[:5]] + [("Pay", True), ("'n'", False), ("Spray", True)]
+    assert [text[s:e] for s, e in align_spans(tokens, text)] == ["Pay 'n' Spray"]
+    assert align_spans([("Pay", True), ("'n'", False), ("Spray", True)], "Pay 'n' Spray") == []
+
+
 def test_tamami_renkli_altyazi_vurgu_sayilmaz():
     """Altyazının kendisi sarıysa (beyaz/gri gövde metni yok) hiçbir kelime vurgu değildir."""
     img, line = _mission([("Get in the car, we are leaving now.", YELLOW)], outline=True)
@@ -353,6 +388,36 @@ def _quickmt(table: dict[str, str], glossary: Glossary | None = None) -> tuple[Q
     fake = _FakeCt2(table)
     q._tr = q._src = q._tgt = fake
     return q, fake
+
+
+def test_quickmt_model_survives_restarts(monkeypatch):
+    """İşlem hattı her yeniden başlatmada yeni bir QuickMtTranslator kurar; model diskten bir kez yüklenir,
+    sonrakiler bellektekini kullanır (yeniden başlatmada ~1 sn altyazısız kalınmasın). close() modeli atmaz."""
+    from altyazitr import translate as tr_mod
+
+    loads: list[str] = []
+
+    class FakeCtranslate2:
+        @staticmethod
+        def Translator(path, device="cpu", **_kw):  # noqa: N802 - ctranslate2 adı
+            loads.append(device)
+            return _FakeCt2({})
+
+    class FakeSpm:
+        @staticmethod
+        def SentencePieceProcessor(model_file=""):  # noqa: N802 - sentencepiece adı
+            return _FakeCt2({})
+
+    monkeypatch.setitem(__import__("sys").modules, "ctranslate2", FakeCtranslate2)
+    monkeypatch.setitem(__import__("sys").modules, "sentencepiece", FakeSpm)
+    monkeypatch.setattr(tr_mod, "quickmt_downloaded", lambda: True)
+    monkeypatch.setattr(tr_mod, "_quickmt_models", {})
+    first = QuickMtTranslator(Glossary())
+    first.prepare(lambda _m: None)
+    first.close()
+    again = QuickMtTranslator(Glossary())
+    again.prepare(lambda _m: None)
+    assert loads == ["cpu"] and again._tr is not None
 
 
 def test_quickmt_vurguyu_tek_toplu_cagriyla_tasir():

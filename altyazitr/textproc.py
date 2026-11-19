@@ -81,15 +81,24 @@ def split_speaker(text: str) -> tuple[str | None, str]:
     name = m.group(1).strip()
     if name.casefold() in _NOT_SPEAKERS or len(name) > 26:
         return None, text
-    return name, m.group(2).strip()
+    return _caps_name(name), m.group(2).strip()
 
 
-def assemble(lines: Sequence[OcrLine], keep_lowest_block: bool = True,
-             detect_speaker: bool = True) -> tuple[str, str | None, list[float]]:
-    """OCR satırlarını tek altyazı metnine çevirir: (metin, konuşmacı, güven değerleri)."""
+def _caps_name(name: str) -> str:
+    """Büyük harfle yazılmış konuşmacı adındaki OCR harf büyüklüğü hataları: "LUClA", "LUclA", "JASoN" → "LUCIA",
+    "JASON" (harflerinin çoğu büyükse ad büyük harftir; küçük l orada I'dır). "Big Mike" gibi adlar değişmez."""
+    letters = [c for c in name if c.isalpha()]
+    if len(letters) < 3 or sum(c.isupper() for c in letters) < 0.6 * len(letters):
+        return name
+    return name.replace("l", "I").upper()
+
+
+def subtitle_rows(lines: Sequence[OcrLine], keep_lowest_block: bool = True) -> list[list[OcrLine]]:
+    """Altyazı metnine giren satırlar (bkz. assemble), üstten alta; her satırın parçaları soldan sağa. Satırlar,
+    aralarında boşluk olan öbeklere ayrılır; keep_lowest_block ise yalnız en alttaki öbek (konuşmacı adı dahil)."""
     rows = _rows(lines)
     if not rows:
-        return "", None, []
+        return []
     blocks: list[list[list[OcrLine]]] = [[rows[0]]]
     heights = [max(1.0, max(x.h for x in r)) for r in rows]
     hm = statistics.median(heights)
@@ -100,7 +109,40 @@ def assemble(lines: Sequence[OcrLine], keep_lowest_block: bool = True,
             blocks.append([row])
         else:
             blocks[-1].append(row)
-    chosen = blocks[-1] if keep_lowest_block else [r for b in blocks for r in b]
+    return blocks[-1] if keep_lowest_block else [r for b in blocks for r in b]
+
+
+def subtitle_box(lines: Sequence[OcrLine], size: Sequence[int], keep_lowest_block: bool = True) -> dict | None:
+    """Altyazının görüntüdeki yeri (çeviriyi oyunun altyazısının tam üstüne yazmak için; bkz. display): assemble'ın
+    metne kattığı satırların birleşik kutusu. size: görüntünün (genişlik, yükseklik) pikseli. Sonuç:
+    {"rect": [x, y, w, h] görüntüye oransal (0..1), "rows": satır sayısı, "line_h": satır yüksekliği (ortanca,
+    görüntü yüksekliğine oransal), "roi": [genişlik, yükseklik]}. Satırların yeri bilinmiyorsa None."""
+    try:
+        width, height = (int(v) for v in size[:2])
+    except (TypeError, ValueError):
+        return None
+    rows = [[x for x in r if x.w > 0 and x.h > 0] for r in subtitle_rows(lines, keep_lowest_block)]
+    rows = [r for r in rows if r]
+    if not rows or width <= 0 or height <= 0:
+        return None
+    parts = [x for r in rows for x in r]
+    x0, y0 = max(0.0, min(x.x for x in parts)), max(0.0, min(x.y for x in parts))
+    x1 = min(float(width), max(x.x + x.w for x in parts))
+    y1 = min(float(height), max(x.y + x.h for x in parts))
+    if x1 <= x0 or y1 <= y0:
+        return None
+    line_h = statistics.median(max(x.h for x in r) for r in rows)
+    return {"rect": [round(x0 / width, 5), round(y0 / height, 5), round((x1 - x0) / width, 5),
+                     round((y1 - y0) / height, 5)],
+            "rows": len(rows), "line_h": round(min(line_h, y1 - y0) / height, 5), "roi": [width, height]}
+
+
+def assemble(lines: Sequence[OcrLine], keep_lowest_block: bool = True,
+             detect_speaker: bool = True) -> tuple[str, str | None, list[float]]:
+    """OCR satırlarını tek altyazı metnine çevirir: (metin, konuşmacı, güven değerleri)."""
+    chosen = subtitle_rows(lines, keep_lowest_block)
+    if not chosen:
+        return "", None, []
     row_texts = [" ".join(x.text.strip() for x in r) for r in chosen]
     confs = [x.conf for r in chosen for x in r if x.conf is not None]
 
@@ -114,11 +156,20 @@ def assemble(lines: Sequence[OcrLine], keep_lowest_block: bool = True,
     return text, speaker, confs
 
 
+SHORT_SCORE = 0.99  # en az harften kısa satır: kelimelerinin tamamı sözlükte olmalı...
+SHORT_CONF = 0.8  # ...ve OCR güveni en az bu kadar olmalı
+
+
 def is_valid(text: str, confs: Sequence[float], min_letters: int = 3, score: float | None = None) -> bool:
     letters = sum(c.isalpha() for c in text)
     nonspace = sum(not c.isspace() for c in text)
-    if letters < min_letters or nonspace == 0:
+    if nonspace == 0:
         return False
+    if letters < min_letters:
+        # Kısa yanıtlar ("No.", "Go!", "Hi.") de altyazıdır: tamamı bilinen İngilizce kelimeyse ve güvenle
+        # okunduysa geçer. Tek harf ve sözlükte olmayan kısa parça (doku, gürültü) geçmez.
+        conf = sum(confs) / len(confs) if confs else 1.0
+        return letters >= 2 and score is not None and score >= SHORT_SCORE and conf >= SHORT_CONF
     if letters / nonspace < 0.6:
         return False
     if confs and sum(confs) / len(confs) < 0.55:
@@ -314,7 +365,9 @@ def align_spans(tokens: Sequence[tuple[str, bool | None]], text: str) -> Spans:
     """OCR kelimelerinin renklerini (okuma sırasıyla) birleştirilmiş metne taşır ve renkli kelime dizilerini vurgu
     aralığı yapar. Metin assemble'dan geçtiği için kelimeler bire bir aynı olmayabilir: konuşmacı adı ve başka
     bloklar düşer, OCR düzeltmeleri harf değiştirir, satır sonu tiresi iki kelimeyi birleştirir; kelimeler sırayla
-    hizalanır. Metinde beyaz/gri (gövde) kelime yoksa (altyazının tamamı renkli, ör. sarı) vurgu yoktur."""
+    hizalanır. Metinde beyaz/gri (gövde) kelime yoksa (altyazının tamamı renkli, ör. sarı) vurgu yoktur. Tek harflik
+    kelime ("Pay 'n' Spray"daki 'n') renk ölçülemeyecek kadar küçüktür: iki vurgulu kelimenin arasındaysa köprülenir,
+    gövde kelimesi sayılmaz."""
     dst = [(m.start(), m.end()) for m in re.finditer(r"\S+", text)]
     if not dst or not tokens:
         return []
@@ -328,7 +381,8 @@ def align_spans(tokens: Sequence[tuple[str, bool | None]], text: str) -> Spans:
             colors = {f for _, f in tokens[i1:i2]}
             if len(colors) == 1:
                 flags[j1:j2] = [colors.pop()] * (j2 - j1)
-    if False not in flags:
+    tiny = [len(k) <= 1 for k in dst_keys]
+    if not any(f is False and not t for f, t in zip(flags, tiny)):
         return []
     spans: Spans = []
     run: list[int] = []  # süren vurgunun kelimeleri
@@ -337,7 +391,7 @@ def align_spans(tokens: Sequence[tuple[str, bool | None]], text: str) -> Spans:
         if f is True:
             run += [*unsure, j]
             unsure = []
-        elif f is None and run:
+        elif run and (f is None or (j < len(dst) and tiny[j])):
             unsure.append(j)
         else:
             if run:

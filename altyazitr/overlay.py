@@ -11,12 +11,17 @@
 * Varsayılan olarak SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE) ile ekran yakalamaya girmez:
   hem izleyiciler iki kez görmez hem de OCR kendi Türkçe yazımızı okumaz. İstenirse "yayında da
   görünsün" seçeneğiyle OBS Ekran Yakalama'da görünür hâle gelir.
+* "Oyun altyazısının üzerine" (screen_style.cover_original; bkz. set_cover): kutu her satırda oyunun altyazısının
+  üstüne taşınır, onu opak örter ve çeviriyi içinde ortalar. Kullanıcının kaydettiği kutu yeri değişmez: kapak
+  kalkınca kutu oraya döner.
 """
 
 from __future__ import annotations
 
 import ctypes
 import logging
+import math
+from collections.abc import Sequence
 from ctypes import wintypes
 
 from PySide6.QtCore import QEasingCurve, QPoint, QPointF, QRect, QRectF, Qt, QTimer, QVariantAnimation, Signal
@@ -28,7 +33,7 @@ from altyazitr.config import Settings, StyleCfg
 from altyazitr.gui import icons
 from altyazitr.gui.dialogs import body_font
 from altyazitr.gui.tokens import ICON, RADIUS, SPACE, C, F
-from altyazitr.render import paint_subtitle, stack_limit
+from altyazitr.render import cover_text, paint_cover, paint_subtitle, stack_limit
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +64,40 @@ SAMPLE_STACK = (
 EDIT_HINT = "Sürükleyerek taşıyın, kenarlardan boyutlandırın. Bitirmek için çift tıklayın."
 EDGE = 12
 MIN_W, MIN_H = 220, 70
+
+Rect = tuple[float, float, float, float]
+
+
+def to_logical(rect: Sequence[float], screens: Sequence[tuple[Sequence[float], float]]) -> tuple[Rect, Rect] | None:
+    """Fiziksel piksel dikdörtgenini (yakalama ve Win32 koordinatı) Qt'nin mantıksal koordinatına çevirir:
+    (dikdörtgen, bulunduğu ekranın mantıksal alanı). screens: [((x, y, genişlik, yükseklik) mantıksal,
+    devicePixelRatio)]. Qt her ekranın sol üst köşesini iki koordinatta da aynı tutar, ekranın içi ölçekle küçülür
+    (Windows %125 / %150 ölçek). Ekran, dikdörtgenin ortasının fiziksel olarak düştüğü ekrandır; hiçbiri değilse en
+    yakını (çok ekranlı kurulumda her ekranın kendi ölçeği kullanılır)."""
+    x, y, w, h = (float(v) for v in rect)
+    cx, cy = x + w / 2, y + h / 2
+    best: tuple[Rect, float] | None = None
+    best_d = math.inf
+    for geo, dpr in screens:
+        sx, sy, sw, sh = (float(v) for v in geo)
+        dpr = dpr if dpr > 0 else 1.0
+        dx = max(sx - cx, 0.0, cx - (sx + sw * dpr))
+        dy = max(sy - cy, 0.0, cy - (sy + sh * dpr))
+        if dx * dx + dy * dy < best_d:
+            best, best_d = ((sx, sy, sw, sh), dpr), dx * dx + dy * dy
+    if best is None:
+        return None
+    (sx, sy, sw, sh), dpr = best
+    return (sx + (x - sx) / dpr, sy + (y - sy) / dpr, w / dpr, h / dpr), (sx, sy, sw, sh)
+
+
+def screen_area(rect: Sequence[float]) -> tuple[Rect, Rect] | None:
+    """to_logical, bu bilgisayarın ekranlarıyla."""
+    screens = []
+    for scr in QGuiApplication.screens():
+        g = scr.geometry()
+        screens.append(((g.x(), g.y(), g.width(), g.height()), scr.devicePixelRatio()))
+    return to_logical(rect, screens)
 
 
 class ScreenOverlay(QWidget):
@@ -96,6 +135,10 @@ class ScreenOverlay(QWidget):
         self._shift.setEndValue(1.0)
         self._shift.valueChanged.connect(self._on_shift)
         self._top_timer = QTimer(self, interval=2000, timeout=self._raise_topmost)
+        # "Oyun altyazısının üzerine" (bkz. set_cover): gösterilen satır ve yazı boyu; None ise kutu kendi yerinde.
+        # _cover_req: son istenen kapak (ayar modu bitince yeniden uygulanır)
+        self._cover: dict | None = None
+        self._cover_req: dict | None = None
         self._restore_geometry()
 
     @property
@@ -121,11 +164,18 @@ class ScreenOverlay(QWidget):
         self.setGeometry(rect)
 
     def save_geometry(self) -> None:
+        if self._cover is not None:  # kutu oyunun altyazısının üstünde: kullanıcının kaydettiği yer değişmez
+            return
         g = self.geometry()
         self.s.overlay.box = [g.x(), g.y(), g.width(), g.height()]
         self.geometry_saved.emit()
 
     def reset_position(self) -> None:
+        if self._cover is not None:  # kapak yerinde kalır; kayıtlı yer yine sıfırlanır, kapak kalkınca oraya döner
+            g = self.default_box()
+            self.s.overlay.box = [g.x(), g.y(), g.width(), g.height()]
+            self.geometry_saved.emit()
+            return
         self.setGeometry(self.default_box())
         self.save_geometry()
 
@@ -147,6 +197,8 @@ class ScreenOverlay(QWidget):
         if not lines:
             self.clear()
             return
+        if self._cover is not None:  # "üzerine yerleştir" kapandı: kutu hemen kaydedilen yerine döner
+            self._leave_cover()
         showing = self._opacity > 0.001 and bool(self.text)
         old_ids = {ln["line"] for ln in self.lines} if showing else set()
         self.lines = lines
@@ -174,9 +226,70 @@ class ScreenOverlay(QWidget):
     def clear(self) -> None:
         self._fade_to(0.0)
 
+    def set_cover(self, cover: dict | None) -> None:
+        """Oyun altyazısının üzerine yerleştirir ("Ekranımda" görünümünde açıkken; yerini SubtitleDisplay hesaplar):
+        kutu oyunun altyazısının üstüne taşınır, onu opak örter, çeviri içinde ortalanır. cover: {"rect": [x, y, w, h]
+        oyunun altyazısı + pay, "bounds": bulunduğu ekran (ikisi de mantıksal piksel), "rows": oyundaki satır sayısı,
+        "font" / "min": yazının hedef ve en küçük boyu (px), "line": {"text", "speaker", "spans"}}. None: kutu solar,
+        sonra kullanıcının kaydettiği yerine döner. Ayar modunda ("Konumu ayarla") kullanıcının kendi kutusu
+        düzenlenir; istenen kapak ayar modu bitince uygulanır."""
+        self._cover_req = cover
+        if self.editing:
+            return
+        placed = self._place_cover(cover) if cover else None
+        if placed is None:
+            if self._cover is not None:
+                self._fade_to(0.0)
+            return
+        rect, size = placed
+        entering = self._cover is None
+        if entering:  # akıştan kapağa: kutudaki satırlar hemen bırakılır
+            self._anim.stop()
+            self._shift.stop()
+            self._opacity, self._progress = 0.0, 1.0
+            self.lines = []
+        line = cover["line"]
+        self._cover = {"line": dict(line), "size": size}
+        self.text, self.speaker, self.original = str(line.get("text") or ""), line.get("speaker"), ""
+        if self.geometry() != rect:
+            self.setGeometry(rect)
+        self._update_visibility()
+        if entering:
+            self._apply_win32()  # ekran yakalamaya görünürlük kapakta değişebilir (bkz. _affinity)
+        self._fade_to(1.0)
+        self.update()
+
+    def _place_cover(self, cover: dict) -> tuple[QRect, float] | None:
+        """Kapak kutusunun pencere alanı (mantıksal piksel) ve yazı boyu. Kutu oyunun altyazısının dikdörtgenidir;
+        Türkçe sığmazsa yukarı doğru büyür (alt kenar sabit: oyun altyazısı alttan hizalıdır), tek kelime bile
+        sığmıyorsa iki yana genişler; ekrandan taşmaz. Yazı boyu render.cover_text ile seçilir."""
+        try:
+            x, y, w, h = (float(v) for v in cover["rect"])
+            bx, by, bw, bh = (float(v) for v in cover["bounds"])
+            fit = cover_text(self.look, cover["line"], w, int(cover.get("rows") or 1), float(cover["font"]),
+                             float(cover["min"]))
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return None
+        if fit is None or w <= 0 or h <= 0 or bw <= 0 or bh <= 0:
+            return None
+        W, H = min(max(w, fit.w), bw), min(max(h, fit.h), bh)
+        left = min(max(x + (w - W) / 2, bx), bx + bw - W)
+        top = min(max(y + h - H, by), by + bh - H)
+        x0, y0 = math.floor(left), math.floor(top)
+        return QRect(x0, y0, math.ceil(left + W) - x0, math.ceil(top + H) - y0), fit.size
+
+    def _leave_cover(self) -> None:
+        """Kapaktan hemen çıkar: kutu kaydedilen yerine döner (geçişsiz)."""
+        self._anim.stop()
+        self._opacity = 0.0
+        self._forget()
+        self._apply_win32()
+
     def set_editing(self, on: bool) -> None:
         if on == self.editing:
             return
+        if on and self._cover is not None:  # ayar modunda kullanıcının kendi kutusu düzenlenir
+            self._leave_cover()
         self.editing = on
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, not on)
         if not on:
@@ -187,6 +300,8 @@ class ScreenOverlay(QWidget):
         self._apply_win32()
         self.update()
         self.editing_changed.emit(on)
+        if not on and self._cover_req is not None:
+            self.set_cover(self._cover_req)
 
     def apply_settings(self) -> None:
         self._update_visibility()
@@ -218,10 +333,16 @@ class ScreenOverlay(QWidget):
         else:
             ex |= WS_EX_TRANSPARENT
         _u32.SetWindowLongPtrW(h, GWL_EXSTYLE, ex | WS_EX_NOACTIVATE)
-        aff = WDA_NONE if self.s.overlay.visible_in_stream else WDA_EXCLUDEFROMCAPTURE
-        if not _u32.SetWindowDisplayAffinity(h, aff):
+        if not _u32.SetWindowDisplayAffinity(h, self._affinity()):
             log.warning("SetWindowDisplayAffinity başarısız: %s", ctypes.get_last_error())
         self._raise_topmost()
+
+    def _affinity(self) -> int:
+        """Ekran yakalamaya görünürlük: "yayında da görünsün" açıksa görünür. Kapak ekran bölgesi okunurken (ekran
+        modu) hiçbir zaman görünmez: görünseydi OCR oyunun altyazısı yerine kapağı okur, altyazı "kaybolur", kapak
+        kalkar ve yazı yeniden okunur (titreme). Pencere modunda yalnız oyunun penceresi yakalanır, sorun yok."""
+        covering_roi = self._cover is not None and self.s.capture.mode != "window"
+        return WDA_NONE if self.s.overlay.visible_in_stream and not covering_roi else WDA_EXCLUDEFROMCAPTURE
 
     def showEvent(self, e) -> None:  # noqa: N802 - Qt adı
         super().showEvent(e)
@@ -254,11 +375,14 @@ class ScreenOverlay(QWidget):
         self.update()
 
     def _forget(self) -> None:
-        """Kutu tamamen kaybolunca gösterilen satırlar unutulur."""
+        """Kutu tamamen kaybolunca gösterilen satırlar unutulur; kapak kutusu kullanıcının kaydettiği yere döner."""
         self.text = ""
         self.lines = []
         self._shift.stop()
         self._progress = 1.0
+        if self._cover is not None:
+            self._cover = None
+            self._restore_geometry()
 
     # --- fareyle taşıma / boyutlandırma (yalnızca ayar modunda) ------------------------
     def _edges(self, pos: QPoint) -> set[str]:
@@ -335,6 +459,10 @@ class ScreenOverlay(QWidget):
             showing = bool(self.text and self.lines)
             self._paint_lines(p, W, H, self.lines if showing else self.sample_lines(),
                               self._progress if showing else 1.0)
+        elif self._cover is not None:
+            if self._opacity > 0.001:
+                p.setOpacity(self._opacity)
+                paint_cover(p, W, H, self.look, self._cover["line"], self._cover["size"])
         elif self._opacity > 0.001 and self.text and self.lines:
             p.setOpacity(self._opacity)
             self._paint_lines(p, W, H, self.lines, self._progress)

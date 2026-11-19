@@ -835,7 +835,12 @@ def speed_test(url: str, model: str, profile_id: str, lines: Sequence[str]) -> S
                 break
         share = gpu_share(url, model)
     finally:
-        tr.close()
+        tr.close()  # model bellekte kalır (hat yeniden başlayınca hazır olsun); ölçümden sonra boşaltılır:
+        try:
+            with _session() as s:
+                s.post(f"{url}/api/generate", json={"model": model, "keep_alive": 0}, timeout=3)
+        except requests.RequestException:
+            log.debug("Hız testi: model bellekten çıkarılamadı", exc_info=True)
     speed = Speed(median_ms=round(statistics.median(times)), p90_ms=round(_percentile(times, 90)), gpu_share=share)
     log.info("Hız testi %s: ortanca %d ms, %%90 %d ms, ekran kartı payı %s (%d satır)", model, speed.median_ms,
              speed.p90_ms, share, len(times))

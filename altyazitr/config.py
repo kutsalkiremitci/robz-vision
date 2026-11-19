@@ -22,7 +22,9 @@ class CaptureCfg:
     window_exe: str = ""
     window_title: str = ""
     region: list[float] = field(default_factory=lambda: [0.12, 0.74, 0.76, 0.22])
-    fps: int = 10
+    # Tarama hızı (kare/sn). Yazı en geç bir kare sonra görülür; metin bulucu yük payını kendisi sınırlar (zayıf
+    # işlemcide kare atlar). 1.2.1'e kadar 10'du (bkz. load_settings, sürüm 5).
+    fps: int = 20
 
     def is_ready(self) -> bool:
         if self.mode == "window":
@@ -33,20 +35,28 @@ class CaptureCfg:
 @dataclass
 class OcrCfg:
     engine: str = "rapidocr"  # "rapidocr" (önerilen) | "windows"
-    detect_mode: str = "smart"  # "smart" (değişince oku) | "interval" (sabit aralık)
+    # "smart" (yazı belirince / değişince oku) | "interval" (ayrıca her interval_ms'de bir oku; metin bulucu açıksa
+    # yazı değişince aralığı beklemeden de okur)
+    detect_mode: str = "smart"
     interval_ms: int = 500
-    stable_frames: int = 2  # metin bu kadar kare sabit kalınca okunur
+    stable_frames: int = 1  # yazı belirdikten / değiştikten sonra bu kadar kare aynı kalınca okunur (1.2.1'e kadar 2)
     bright_threshold: int = 160  # metin maskesi parlaklık eşiği (0-255)
     upscale: str = "auto"  # "auto" | "1" | "1.5" | "2"
-    # "auto" (kenarlı + parlak [+ ham], en çok anlamlı okuyanı seç) | "outline" (her renkte kenarlı yazı) |
+    # "auto" (RapidOCR: ham görüntü, okuma zayıfsa ayıklanmış görüntü de; Windows OCR: kenarlı + parlak [+ ham];
+    # en çok anlamlı okuyan seçilir) | "outline" (her renkte kenarlı yazı) |
     # "bright" (beyaz/sarı parlak metin) | "none"
     preprocess: str = "auto"
     min_letters: int = 3
     keep_lowest_block: bool = True
-    # Yapay zekâ metin bulucu (PP-OCRv6 det): açık zeminde beyaz, kenarsız altyazıları da bulur; saniyede 5 kez
+    # Yapay zekâ metin bulucu (PP-OCRv6 det): yazının yerini harf şeklinden bulur (açık zeminde beyaz, kenarsız
+    # altyazı da); yazının belirdiği ve değiştiği kareyi o yakalar (bkz. detect.TextGate). Kapalıysa kurallı algılama.
     text_detector: bool = True
     detect_speaker: bool = True
     hide_delay_ms: int = 700  # altyazı kaybolduktan sonra çeviriyi gizlemeden önce bekleme
+    # Yalnız altyazıları oku: biçimi ve yeri altyazıya benzemeyen satırlar (plaka, tabela, duvar yazısı, HUD, tuş
+    # ipucu) birleştirmeden önce atılır (bkz. subtitle_style). Altyazısı başka biçimde (renkli, kenarsız, ortasız)
+    # olan oyunda kapatılır.
+    subtitle_only: bool = True
 
 
 @dataclass
@@ -99,6 +109,10 @@ class StyleCfg:
     mask_color: str = "#101010"
     mask_opacity: float = 0.92
     mask_pad_percent: float = 0.6
+    # Oyun altyazısının üzerine yerleştir: çeviri, oyunun İngilizce altyazısının tam yerine yazılır; altyazıyı İngilizce
+    # yazı hiç görünmesin diye opak bir kutu (rengi mask_color) örter, genişliği altyazınınki kadardır. Açıkken bu
+    # görünümün konumu (alt boşluk, genişlik, ekrandaki kutunun yeri) ve OBS maskesi kullanılmaz (bkz. display).
+    cover_original: bool = False
 
 
 @dataclass
@@ -172,7 +186,8 @@ class Settings:
     # Ayar dosyası biçimi. 2: varsayılan OCR motoru RapidOCR oldu (eski dosyalardaki "windows" bir kez taşınır).
     # 3: yerel LLM'in varsayılanı TranslateGemma'dan Gemma 4'e geçti, bağlam 3 satırdan 8 satıra çıktı.
     # 4: yerel yapay zekâ kurulumu (ai); hızlı çeviriyle güncelleyen kullanıcıya bir kez yapay zekâ daveti.
-    settings_version: int = 4
+    # 5: hızlı algılama: tarama hızı 10 → 20 kare/sn, kararlılık 2 → 1 kare (değiştirilmemişse taşınır).
+    settings_version: int = 5
 
 
 def _from_dict(cls, data: Any):
@@ -231,6 +246,14 @@ def load_settings() -> Settings:
             # 1.1.0 ve öncesinden güncelleyen: ilk açılış penceresi açılmaz (hızlı çeviri modeli zaten var). Motoru
             # hızlı çeviri olana bir kez "Yeni: yapay zekâ çevirisi" bildirimi gösterilir (kartı uygunsa; arayüz bakar).
             s.ai.invite_pending = s.translate.engine == "quickmt"
+        if version < 5:
+            # 1.2.1 ve öncesinin varsayılanları (10 kare/sn, 2 kare kararlılık) yazıyı ~200 ms geç görüyordu; yeni
+            # algılama 20 kare/sn ve 1 kareyle hem daha hızlı hem satır kaçırmıyor. Kullanıcının kendi seçtiği değer
+            # (ve algılama kipi, sabit aralık) korunur.
+            if s.capture.fps == 10:
+                s.capture.fps = CaptureCfg.fps
+            if s.ocr.stable_frames == 2:
+                s.ocr.stable_frames = OcrCfg.stable_frames
         s.settings_version = Settings.settings_version
         log.info("Ayarlar yüklendi: %s", SETTINGS_FILE)
         return s

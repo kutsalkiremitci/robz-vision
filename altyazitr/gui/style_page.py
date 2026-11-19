@@ -26,10 +26,12 @@ from altyazitr.gui.widgets import Card, button_icon, label, page, row
 # --- iki görünüm ---------------------------------------------------------------------
 SCREEN, STREAM = "screen", "stream"
 # Yalnız yayında işe yarayan alanlar. Ekrandaki kutu bunları kullanmaz: render.paint_subtitle(in_box=True)
-# konumu ve genişliği kutudan alır; maske yalnız OBS'te çizilir. Kopyalama bunlara dokunmaz.
+# konumu ve genişliği kutudan alır; maske yalnız OBS'te çizilir (maske rengi ekranda yalnız "oyun altyazısının
+# üzerine" kutusunun rengidir). Kopyalama bunlara ve yerleşime (PLACEMENT) dokunmaz.
 STREAM_ONLY = frozenset({"bottom_percent", "max_width_percent", "mask_original", "mask_color", "mask_opacity",
                          "mask_pad_percent"})
-LOOK_FIELDS = tuple(f.name for f in dataclasses.fields(StyleCfg) if f.name not in STREAM_ONLY)
+PLACEMENT = frozenset({"cover_original"})
+LOOK_FIELDS = tuple(f.name for f in dataclasses.fields(StyleCfg) if f.name not in STREAM_ONLY | PLACEMENT)
 DEFAULT_BOX = (0.66, 0.17)  # ekrandaki kutunun ekrana oranı bilinmiyorsa (overlay.default_box ile aynı)
 
 SIDE_TEXT = {
@@ -83,6 +85,14 @@ HIGHLIGHT_TIP = ("Oyunda renkli yazılan kelimeler (yer, kişi, eşya adları) �
                  "de kapalıysa renkli kelime hiç aranmaz.")
 HIGHLIGHT_COLOR_TIP = "Oyunda renkli yazılan yer ve kişi adları çeviride bu renkle görünür."
 MASK_COLORS = [("#101010", "Siyah"), ("#2A2A2A", "Koyu gri"), ("#0B1A3A", "Lacivert")]
+COVER_TIP = "Oyunun İngilizce altyazısını koyu bir kutuyla örter, Türkçesini tam onun yerine, ortalı yazar."
+COVER_COLOR_TIP = "Kutu tamamen kapalıdır, İngilizce yazı arkadan görünmez."
+COVER_HINT = {
+    SCREEN: "Kutu her satırda oyunun altyazısının yerine ve genişliğine oturur. Ana sayfadaki 'Konumu ayarla' "
+            "bu kapalıyken geçerlidir.",
+    STREAM: "Altyazı OBS'te oyunun altyazısının yerine yazılır; alttan uzaklık, genişlik ve maske kullanılmaz. "
+            "Oyun görüntüsü OBS tuvalini tam kaplamalı (Ctrl+F).",
+}
 
 # --- düzen ölçüleri ----------------------------------------------------------------
 WIDE_MIN = 1080            # sayfa bu genişlikten itibaren iki sütun: ayarlar solda, önizleme sağda sabit
@@ -318,6 +328,19 @@ class StylePage(QWidget):
         bd.addWidget(self._field("Opaklık", self.bg_alpha, stretch=True, tip="Kutunun arkayı ne kadar kapattığı"))
         bc.add(self.bg_details)
         lay.addWidget(bc)
+
+        # --- yerleşim: oyun altyazısının üzerine (iki görünümde ayrı) ------------------------------
+        cov = Card("Yerleşim")
+        self.cover = Segmented([("Kapalı", False), ("Açık", True)])
+        self.cover.changed.connect(lambda v: self._set("cover_original", bool(v)))
+        self.cover_color = SwatchRow(MASK_COLORS)
+        self.cover_color.changed.connect(lambda c: self._set("mask_color", c))
+        cov.add(self._field("Oyun altyazısının üzerine", self.cover, tip=COVER_TIP))
+        self._cover_color_row = self._field("Kutu rengi", self.cover_color, tip=COVER_COLOR_TIP)
+        cov.add(self._cover_color_row)
+        self._cover_hint = label("", "muted", wrap=True)
+        cov.add(self._cover_hint)
+        lay.addWidget(cov)
 
         # --- konum ve genişlik (Yayınımda) / ölçek (Ekranımda) -----------------------------------
         pos = Card(SIDE_TEXT[STREAM]["pos_title"])
@@ -618,8 +641,8 @@ class StylePage(QWidget):
             self.show_orig.setValue(bool(st.show_original))
             self.orig_size.setValue(st.original_size_percent)
             self.mask.setValue(bool(st.mask_original))
-            self.mask_color.setColor(st.mask_color)
             self.mask_alpha.setValue(st.mask_opacity)
+            self.cover.setValue(bool(st.cover_original))
         finally:
             self._loading = False
         self._refresh_preview()
@@ -639,14 +662,25 @@ class StylePage(QWidget):
         self._hl_color_row.setVisible(bool(self.st.highlight))
         self._orig_row.setVisible(bool(self.st.show_original))
         stream = self._prof == STREAM  # OBS maskesi yalnız yayında
+        # "Oyun altyazısının üzerine": kutu rengi maske rengidir (iki seçici aynı alanı gösterir). Açıkken bu
+        # görünümün konumu (alttan uzaklık, genişlik) ve OBS maskesi kullanılmaz: denetimleri pasif.
+        cover = bool(self.st.cover_original)
+        self.mask_color.setColor(self.st.mask_color)
+        self.cover_color.setColor(self.st.mask_color)
+        self._cover_color_row.setVisible(cover)
+        self._cover_hint.setText(COVER_HINT[self._prof])
+        self._cover_hint.setVisible(cover)
+        for r in (self._bottom_row, self._maxw_row, self._mask_row):
+            r.setEnabled(not cover)
         self._mask_row.setVisible(stream)
-        self._mask_rows.setVisible(stream and bool(self.st.mask_original))
+        self._mask_rows.setVisible(stream and bool(self.st.mask_original) and not cover)
 
     def _set(self, attr: str, value) -> None:
         if self._loading:
             return
         setattr(self.st, attr, value)
-        if attr in ("bg_opacity", "outline_width", "show_original", "mask_original", "highlight"):
+        if attr in ("bg_opacity", "outline_width", "show_original", "mask_original", "highlight", "cover_original",
+                    "mask_color"):
             self._sync_bg()
         self._changed()
 
@@ -666,7 +700,8 @@ class StylePage(QWidget):
 
     def _copy_other(self) -> None:
         """Öbür görünümün yazı/renk/kenar/arka plan ayarlarını seçili görünüme kopyalar (yerinde; başka
-        bileşenler bu nesneleri tutar). Yalnız yayına ait konum, genişlik ve maske kopyalanmaz."""
+        bileşenler bu nesneleri tutar). Yalnız yayına ait konum, genişlik ve maske, bir de yerleşim ("oyun
+        altyazısının üzerine") kopyalanmaz."""
         src = self._style(STREAM if self._prof == SCREEN else SCREEN)
         for name in LOOK_FIELDS:
             setattr(self.st, name, getattr(src, name))

@@ -246,11 +246,14 @@ AI_BAR_W = 240
 
 def hybrid_tip(wait_ms: int) -> str:
     """Karma mod ipucu; bekleme süresi ayardan gelir (1200 ms → '~1,2 sn')."""
+    off = (" Kapalıyken her satırda yapay zekâ beklenir; hızlı çeviri yalnız model belleğe yüklenirken ya da "
+           "yapay zekâ yanıt vermezse görünür.")
     if wait_ms <= 0:
-        return "Önce hızlı yerel çeviri görünür; yapay zekânın çevirisi gelince üstüne yazılır."
+        return "Önce hızlı yerel çeviri görünür; yapay zekânın çevirisi gelince üstüne yazılır." + off
     sec = f"{wait_ms / 1000:.1f}".rstrip("0").rstrip(".").replace(".", ",")
     return (f"Yapay zekânın çevirisi ~{sec} sn içinde gelirse yalnız o görünür; gecikirse önce hızlı yerel çeviri "
-            "görünür, sonra yapay zekânınki üstüne yazılır.")
+            "görünür, sonra yapay zekânınki üstüne yazılır. Bilgisayar bu süreye yetişemiyorsa hızlı çeviri hiç "
+            "bekletilmeden görünür." + off)
 
 
 def model_title(model: str, presets: Sequence[tuple[str, str]] = OLLAMA_PRESETS) -> str:

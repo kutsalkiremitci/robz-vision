@@ -89,8 +89,11 @@ PC oyunları, PS Remote Play ve Xbox uygulaması gibi uzaktan oynatma pencereler
 - **Ücretsiz ve yerel.** OCR ve hızlı çeviri modeli (quickmt) bilgisayarınızda çalışır. Hesap, API anahtarı
   ya da abonelik gerekmez. Varsayılan ayarlarla internet yalnızca modelleri (yapay zekâyı seçerseniz Ollama'yı
   da) bir kez indirmek için kullanılır.
-- **Hızlı.** OCR yaklaşık 10 ms, hızlı çeviri işlemcide 20–60 ms, yapay zekâ çevirisi satır başına yaklaşık
-  1 sn sürer. Yapay zekâ gecikirse önce hızlı çeviri görünür, yapay zekânınki gelince yerine geçer.
+- **Hızlı.** Altyazı belirdikten ~0,1 sn sonra okunur; hızlı çeviri işlemcide 20–60 ms, yapay zekâ çevirisi
+  12 GB'lık ekran kartında satır başına ~0,35 sn sürer. Yapay zekâ gecikirse önce hızlı çeviri görünür, yapay
+  zekânınki gelince yerine geçer.
+- **Yalnız altyazı.** Plaka, tabela, duvar yazısı gibi oyun içi yazılar çevrilmez; yalnız altyazı biçimindeki yazı
+  okunur.
 - **İki ayrı çıktı.** Kendi ekranınızda taşıyıp boyutlandırabileceğiniz bir altyazı kutusu, izleyicileriniz
   için de bir OBS Tarayıcı Kaynağı. İkisinin konumu birbirinden bağımsızdır.
 - **Bölge ya da pencere.** Altyazının çıktığı alanı fareyle seçersiniz. İsterseniz belirli bir uygulama

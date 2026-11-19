@@ -33,7 +33,16 @@ ekrandaki kutu "Ekranımda" ayarlarını (Settings.screen_style) kullanır. Aray
 biri ya da akış ayarları (Settings.flow) değişince yalnızca push_style() çağırır.
 
 Vurgulu kelimeler: olayın `spans` alanı (Türkçe metindeki aralıklar) satırla birlikte iki çıktıya da gider; her
-çıktı onları kendi görünümünün vurgu rengiyle çizer (vurgu kapalıysa yazı renginde)."""
+çıktı onları kendi görünümünün vurgu rengiyle çizer (vurgu kapalıysa yazı renginde).
+
+"Oyun altyazısının üzerine" (StyleCfg.cover_original, iki görünümde ayrı): o görünüm akışı göstermez; oyunun şu an
+gösterdiği satırın çevirisi, oyunun İngilizce altyazısının tam yerine yazılır. Opak bir kutu İngilizceyi örter, Türkçe
+içinde ortalanır. Kutunun yeri okumanın `box` alanından gelir (bkz. textproc.subtitle_box): altyazının bölgedeki
+dikdörtgeni + pay (cover_area); yazı boyu oyunun satır yüksekliğinden (cover_fonts). Kutu OBS maskesiyle aynı kurala
+bağlıdır: oyun altyazıyı kaldırınca gizleme süresi sonunda, en geç üst sınırda kalkar; yeni satırın çevirisi gelince
+yeni yerine geçer. İki çıktıya aynı hesap gider: OBS'e yayın karesine oransal (set_cover), ekrandaki kutuya mantıksal
+piksel (ScreenOverlay.set_cover). Türkçenin kutuya sığdırılması (gerekirse küçültme, sonra satır kaydırıp yukarı
+büyütme) çizen tarafta aynı kuralla yapılır (render.cover_size, web/overlay.html)."""
 
 from __future__ import annotations
 
@@ -41,13 +50,14 @@ import logging
 import math
 import time
 from collections import OrderedDict, deque
+from collections.abc import Sequence
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 
 from altyazitr import APP_NAME
-from altyazitr.capture import monitor_fraction
+from altyazitr.capture import monitor_fraction, region_screen_rect
 from altyazitr.config import Settings
-from altyazitr.overlay import ScreenOverlay
+from altyazitr.overlay import ScreenOverlay, screen_area
 from altyazitr.render import stack_limit
 from altyazitr.server import AsyncBridge, OverlayServer, clean_spans, style_vars
 
@@ -59,6 +69,15 @@ _EPS = 0.005  # zamanlayıcı birkaç ms erken uyanırsa da süresi dolan satır
 _TEST_ID = -1_000_000  # örnek satırların kimlikleri (işlem hattınınkilerle ve kendi kimliklerimizle karışmaz)
 _LEFT_MAX = 32  # ekrandan çıkan satırlardan bu kadarı hatırlanır (geç gelen çeviriler için)
 _STUCK_MAX = 8  # üst sınırla kalkan yazılardan bu kadarı hatırlanır (oyun yazıyı kaldırana dek)
+
+# "Oyun altyazısının üzerine": ölçüler OCR'ın satır kutusu yüksekliğine (L) oranla. Ölçüm (GTA 6 altyazı kırpıntıları,
+# RapidOCR, 1x-3x büyütme): satır kutusu harflerin her yanından 0,1-0,3 L taşar; harfleri oyununkiyle aynı yükseklikte
+# olan Segoe UI Bold ~0,65 L boyundadır ve genişliği de oyununkiyle aynıdır (%96-99).
+COVER_PAD = (0.25, 0.12)  # kutunun OCR kutusundan taşma payı (yatay, dikey): gölge ve okumalar arası oynama da örtülür
+COVER_FONT = 0.65  # yazı boyu / L: Türkçe oyunun altyazısıyla aynı boyda görünür
+COVER_SHRINK = 0.75  # Türkçe sığmazsa yazı en çok bu orana küçülür, sonra satır kaydırılır
+COVER_MIN_PX = 16.0  # okunur alt sınır (1080p'ye göre piksel)
+_TEST_COVER = (0.15, 0.88, 0.7)  # örnek altyazının kapağı: bölgenin solundan, alt kenarı ve genişliği (oransal)
 
 # Test düğmesi, eskiden yeniye: (çeviri, konuşmacı, orijinal, vurgulu ifade). Akışta ayardaki satır sayısı kadar
 # en yenisi (varsayılan 3), tek satır modunda yalnızca sonuncusu gösterilir. Vurgulu ifade vurgu renginde çizilir.
@@ -87,6 +106,35 @@ def _text_key(text: str) -> str:
     return "".join(ch for ch in text.casefold() if ch.isalnum())
 
 
+def cover_area(box: dict | None) -> tuple[tuple[float, float, float, float], int, float | None]:
+    """"Üzerine yerleştir" kutusunun bölgeye (ROI) oransal yeri: oyunun altyazısının kutusu + COVER_PAD (bölgenin
+    dışına taşabilir), oyundaki satır sayısı ve satır yüksekliği (bölge yüksekliğine oransal). Yatay pay bölgenin
+    piksel oranıyla hesaplanır (pay her yanda aynı piksel). Altyazının yeri bilinmiyorsa bölgenin tamamı örtülür ve
+    yazı boyu görünümünkü olur (satır yüksekliği None)."""
+    whole = ((0.0, 0.0, 1.0, 1.0), 1, None)
+    if not isinstance(box, dict):
+        return whole
+    try:
+        x, y, w, h = (float(v) for v in box["rect"])
+        rows = max(1, int(box.get("rows") or 1))
+        lh = float(box.get("line_h") or 0.0) or h / rows
+        rw, rh = (float(v) for v in (box.get("roi") or (1, 1)))
+    except (KeyError, TypeError, ValueError):
+        return whole
+    if not (w > 0 and h > 0 and lh > 0 and rw > 0 and rh > 0) or not all(map(math.isfinite, (x, y, w, h, lh))):
+        return whole
+    px, py = COVER_PAD[0] * lh * rh / rw, COVER_PAD[1] * lh
+    return (x - px, y - py, w + 2 * px, h + 2 * py), rows, lh
+
+
+def cover_fonts(match: float, top: float, floor: float) -> tuple[float, float]:
+    """Kapak yazısının hedef ve en küçük boyu (aynı birimde): oyunun yazısıyla aynı boy (match) ama görünümün yazı
+    boyunu (top) geçmez; Türkçe sığmazsa hedefin COVER_SHRINK katına kadar küçülür, okunur alt sınırın (floor) altına
+    inmez (hedef zaten ondan küçükse hedefte kalır)."""
+    font = max(1e-6, min(match, top))
+    return font, min(font, max(font * COVER_SHRINK, floor))
+
+
 class SubtitleDisplay(QObject):
     visibility_changed = Signal(bool)
 
@@ -100,7 +148,7 @@ class SubtitleDisplay(QObject):
         self.visible = True
         # Ekrandaki satırlar, eskiden yeniye. Her biri: line (kimlik), text, speaker, original, born (ilk
         # göründüğü an), changed (yazının son değiştiği an), gone (oyunda kaybolduğu an; yalnız en yeni satır
-        # için anlamlı), until (yalnız örnek satırlar: kesin bitiş).
+        # için anlamlı), until (yalnız örnek satırlar: kesin bitiş), box (oyundaki altyazının yeri; bilinmiyorsa None).
         self.lines: list[dict] = []
         self._live: dict | None = None  # oyunun şu an gösterdiği satır (yığının en yenisi); gidince None
         self._hide = QTimer(self, singleShot=True, timeout=self._tick)  # bir sonraki süre dolumu
@@ -114,6 +162,11 @@ class SubtitleDisplay(QObject):
         self._pushed: tuple | None = None
         self._mask_key: tuple | None = None
         self._mask_frac: tuple[float, float, float, float] | None = None
+        # "Üzerine yerleştir": OBS'e ve ekrandaki kutuya en son gönderilen kapak (yalnız değişince gönderilir);
+        # ekrandaki kutunun akışta satır gösterip göstermediği (kapağa geçerken bir kez temizlenir)
+        self._cover_sent: dict | None = None
+        self._screen_cover_sent: dict | None = None
+        self._screen_flow_shown = False
         self.clock = time.monotonic  # testlerde sahte saatle değiştirilebilir
 
     @property
@@ -188,7 +241,8 @@ class SubtitleDisplay(QObject):
     def show_test(self) -> None:
         """Örnek altyazıyı 5 sn iki çıktıda birden gösterir; her biri kendi görünümüyle çizilir
         (OBS sayfası yayın görünümüyle, ekrandaki kutu ekran görünümüyle). Akışta ayardaki satır sayısı
-        kadar örnek satır alt alta görünür (varsayılan 3), tek satır modunda bir satır."""
+        kadar örnek satır alt alta görünür (varsayılan 3), tek satır modunda bir satır. "Oyun altyazısının üzerine"
+        açık görünümde en yeni örnek, seçilen bölgenin altında kapak kutusuyla gösterilir (bkz. _cover)."""
         now = self.clock()
         n = min(stack_limit(self.s.flow), len(TEST_LINES))
         first = len(TEST_LINES) - n
@@ -199,7 +253,7 @@ class SubtitleDisplay(QObject):
             text, speaker, original, phrase = TEST_LINES[j]
             self.lines.append({"line": _TEST_ID - j, "text": text, "speaker": speaker, "original": original,
                                "spans": _phrase_spans(text, phrase), "born": now, "changed": now, "gone": None,
-                               "until": now + TEST_S})
+                               "until": now + TEST_S, "box": None})
         self._refresh()
 
     def push_style(self) -> None:
@@ -233,19 +287,22 @@ class SubtitleDisplay(QObject):
     def _new_line(lid: int, ev: dict, text: str, original: str, now: float) -> dict:
         return {"line": lid, "text": text, "speaker": ev.get("speaker"), "original": original,
                 "spans": clean_spans(ev.get("spans"), len(text)), "born": now, "changed": now, "gone": None,
-                "until": None}
+                "until": None, "box": ev.get("box")}
 
     def _update(self, ln: dict, ev: dict, text: str, original: str, now: float) -> None:
         """Ekrandaki satırın güncellemesi: yeri ve süreleri korunur. Aynı okumanın daha iyi çevirisi (karma mod;
         oyun geçtikten sonra da gelebilir) yalnız yazıyı değiştirir. Oyundaki satırın yeni bir okuması (orijinal
         uzadı ya da düzeldi) oyunun onu hâlâ gösterdiğini bildirir: bekleyen gizleme iptal olur, okuma süresi
-        yeni yazıdan sayılır (akıştan önceki gibi)."""
+        yeni yazıdan sayılır (akıştan önceki gizleme kuralı). Okumanın altyazı kutusu da güncellenir (uzayan
+        altyazı büyür)."""
         if original != ln["original"] and ln is self._live:
             if text != ln["text"]:
                 ln["changed"] = now
             ln["gone"] = None
         ln.update(text=text, speaker=ev.get("speaker"), original=original,
                   spans=clean_spans(ev.get("spans"), len(text)))
+        if ev.get("box"):
+            ln["box"] = ev["box"]
 
     def _late_fits(self, lid: int) -> bool:
         """Daha yenisinden sonra ilk kez gelen eski satır gösterilebilir mi: tek satır modunda hayır; akışta
@@ -316,12 +373,24 @@ class SubtitleDisplay(QObject):
         return keep
 
     def _mask_on(self, now: float) -> bool:
-        """OBS maskesi açık mı: oyundaki altyazıya bağlı (yayın görünümünün ayarı), en geç üst sınırda kapanır."""
-        if not (self.visible and self.s.style.mask_original and self.lines):
+        """OBS maskesi açık mı: oyundaki altyazıya bağlı (yayın görünümünün ayarı), en geç üst sınırda kapanır.
+        "Oyun altyazısının üzerine" açıkken maske kullanılmaz: kapak altyazıyı zaten örter."""
+        if not (self.visible and self.s.style.mask_original and self.lines) or self.s.style.cover_original:
             return False
         if self._test_active:
             return True
         return self._live is not None and now < self._game_end(self._live)
+
+    def _cover_line(self, now: float) -> dict | None:
+        """"Üzerine yerleştir" kutusunda gösterilecek satır: oyunun şu an gösterdiği satır (en yeni), maskeyle aynı
+        kuralla (oyun kaldırınca gizleme süresi sonunda, en geç üst sınırda biter; bkz. _game_end); örnek gösterilirken
+        en yeni örnek satır."""
+        if not self.visible or not self.lines:
+            return None
+        if self._test_active:
+            return self.lines[-1]
+        ln = self._live
+        return ln if ln is not None and now < self._game_end(ln) else None
 
     def _refresh(self, force: bool = False) -> None:
         """Süresi dolan satırları çıkarır, iki çıktıyı günceller, zamanlayıcıyı bir sonraki süre dolumuna
@@ -338,8 +407,9 @@ class SubtitleDisplay(QObject):
             self._test_active = False
         self._push(now, force)
         nxt = min((self._deadline(x) for x in self.lines), default=math.inf)
-        if self._live is not None and self._mask_on(now):
-            nxt = min(nxt, self._game_end(self._live))
+        covering = self.s.style.cover_original or self.s.screen_style.cover_original
+        if self._live is not None and (self._mask_on(now) or (covering and self._cover_line(now) is self._live)):
+            nxt = min(nxt, self._game_end(self._live))  # maske / kapak oyundaki altyazıyla kalkar
         if math.isinf(nxt):
             self._hide.stop()
         else:
@@ -348,45 +418,127 @@ class SubtitleDisplay(QObject):
     def _tick(self) -> None:
         self._refresh()
 
-    def _mask_rect(self) -> list[float] | None:
-        """OBS'teki maske: bölgenin yayın karesindeki oransal konumu. Ekran modunda bölgenin
-        bulunduğu monitöre, pencere modunda pencerenin istemci alanına göre hesaplanır.
-        Maske yalnızca OBS'te olduğu için yayın görünümünü (s.style) kullanır."""
-        st = self.s.style
+    def _region_frac(self) -> tuple[float, float, float, float] | None:
+        """Bölgenin yayın karesindeki oransal konumu: ekran modunda bölgenin bulunduğu monitöre, pencere modunda
+        pencerenin istemci alanına göre (OBS tuvalinin oyun görüntüsüyle aynı olduğu kabul edilir)."""
         c = self.s.capture
         if c.mode == "window":
-            frac = tuple(c.region)
-        else:
-            key = tuple(c.rect)
-            if key != self._mask_key:
-                self._mask_key, self._mask_frac = key, monitor_fraction(c.rect)
-            frac = self._mask_frac
+            return tuple(c.region) if len(c.region) == 4 else None
+        key = tuple(c.rect)
+        if key != self._mask_key:
+            self._mask_key, self._mask_frac = key, monitor_fraction(c.rect)
+        return self._mask_frac
+
+    def _mask_rect(self) -> list[float] | None:
+        """OBS'teki maske: bölgenin yayın karesindeki oransal konumu (bkz. _region_frac) + pay.
+        Maske yalnızca OBS'te olduğu için yayın görünümünü (s.style) kullanır."""
+        frac = self._region_frac()
         if not frac:
             return None
         x, y, w, h = frac
-        pad = st.mask_pad_percent / 100.0
+        pad = self.s.style.mask_pad_percent / 100.0
         x0, y0 = max(0.0, x - pad), max(0.0, y - pad)
         x1, y1 = min(1.0, x + w + pad), min(1.0, y + h + pad)
         return [x0, y0, x1 - x0, y1 - y0]
 
+    @staticmethod
+    def _item(x: dict) -> dict:
+        """Çıktılara giden satır: {"line", "text", "speaker", "original"}, vurgu varsa "spans" (yoksa alan hiç yazılmaz:
+        eski tüketiciler için olay aynı kalır)."""
+        item = {"line": x["line"], "text": x["text"], "speaker": x["speaker"], "original": x["original"]}
+        if x.get("spans"):
+            item["spans"] = [list(sp) for sp in x["spans"]]
+        return item
+
+    def _cover(self, ln: dict, roi: Sequence[float], top: float, floor: float) -> dict:
+        """Kapak kutusunun bir çıktıdaki yeri ve yazı boyları (iki çıktıda aynı kural). roi: bölgenin o çıktıdaki yeri
+        (x, y, genişlik, yükseklik); top: görünümün yazı boyu, floor: okunur alt sınır (yükseklik biriminde). Kutu
+        oyunun altyazısı + pay (cover_area); yazı oyunun satırı boyunda (cover_fonts). Örnek satırın oyunda yeri
+        olmadığından kutusu bölgenin altında, görünümün yazı boyunda tek satırdır (_TEST_COVER)."""
+        x, y, w, h = (float(v) for v in roi)
+        if ln["until"] is not None:
+            left, bottom, width = _TEST_COVER
+            lh = min(bottom, top / COVER_FONT / h) if h > 0 else bottom
+            rect, rows = (left, bottom - lh, width, lh), 1
+        else:
+            rect, rows, lh = cover_area(ln.get("box"))
+        font, low = cover_fonts(COVER_FONT * lh * h if lh else top, top, floor)
+        line = self._item(ln)
+        line.pop("original")  # örtülen yazının kendisi: kapakta gösterilmez
+        return {"rect": [x + rect[0] * w, y + rect[1] * h, rect[2] * w, rect[3] * h], "rows": rows,
+                "font": font, "min": low, "line": line}
+
+    def _stream_cover(self, ln: dict) -> dict | None:
+        """OBS'teki kapak: yayın karesine oransal (bkz. _region_frac); yazı boyları kare yüksekliğine oransal."""
+        frac = self._region_frac()
+        if not frac:
+            return None
+        c = self._cover(ln, frac, float(self.s.style.font_size) / 1080.0, COVER_MIN_PX / 1080.0)
+        c["rect"] = [round(v, 5) for v in c["rect"]]
+        c["font"], c["min"] = round(c["font"], 5), round(c["min"], 5)
+        return c
+
+    def _screen_cover(self, ln: dict) -> dict | None:
+        """Ekrandaki kapak, mantıksal piksel: bölgenin ekrandaki yeri okumayla gelir (pencere modunda pencere taşınsa
+        da doğru), örnekte ayardan bulunur; Windows ölçeği ve çok ekran için screen_area. Yazının üst sınırı kutunun
+        normal boyutudur (görünümün boyu × ekran yüksekliği / 1080 × ölçek); bilinmiyorsa None."""
+        box = ln.get("box") if ln["until"] is None else None
+        phys = (box.get("screen") if isinstance(box, dict) else None) or region_screen_rect(self.s.capture)
+        area = screen_area(phys) if phys and len(phys) == 4 else None
+        if area is None:
+            return None
+        roi, bounds = area
+        k = bounds[3] / 1080.0
+        try:
+            scale = max(0.1, float(self.s.overlay.scale))
+        except (TypeError, ValueError):
+            scale = 1.0
+        c = self._cover(ln, roi, float(self.s.screen_style.font_size) * k * scale, COVER_MIN_PX * k)
+        c["bounds"] = list(bounds)
+        return c
+
     def _push(self, now: float | None = None, force: bool = False) -> None:
-        """Görünen satırları (eskiden yeniye) ve maskeyi iki çıktıya gönderir; değişiklik yoksa göndermez."""
+        """Görünen satırları (eskiden yeniye), maskeyi ve "üzerine yerleştir" kutularını iki çıktıya gönderir;
+        değişiklik yoksa göndermez. Kapak açık görünüm akışı göstermez (ekranda örneğin yeri bilinmiyorsa normal
+        kutuda gösterilir); kapak yalnız değişince gönderilir."""
         if now is None:
             now = self.clock()
-        shown = self.lines if self.visible else []
-        out = []
-        for x in shown:
-            item = {"line": x["line"], "text": x["text"], "speaker": x["speaker"], "original": x["original"]}
-            if x.get("spans"):  # vurgu yoksa alan hiç yazılmaz (eski tüketiciler için olay aynı kalır)
-                item["spans"] = [list(sp) for sp in x["spans"]]
-            out.append(item)
+        out = [self._item(x) for x in (self.lines if self.visible else [])]
+        st, sc = self.s.style, self.s.screen_style
+        cover_ln = self._cover_line(now) if (st.cover_original or sc.cover_original) else None
+        stream_cover = self._stream_cover(cover_ln) if st.cover_original and cover_ln else None
+        screen_cover = (self._screen_cover(cover_ln)
+                        if sc.cover_original and cover_ln and self.s.overlay.enabled else None)
+        screen_flow = not sc.cover_original or (self._test_active and screen_cover is None)
+        stream_lines, screen_lines = ([] if st.cover_original else out), (out if screen_flow else [])
         mask = self._mask_rect() if self._mask_on(now) else None  # yayın görünümü
-        if not force and (out, mask) == self._pushed:
+        state = (stream_lines, mask, stream_cover, screen_lines, screen_flow, screen_cover)
+        if not force and state == self._pushed:
             return
-        self._pushed = (out, mask)
-        self.bridge.submit(self.server.set_lines(out))
+        self._pushed = state
+        self.bridge.submit(self.server.set_lines(stream_lines))
         self.bridge.submit(self.server.set_mask(mask))
-        self._show_on_screen(out)
+        if stream_cover != self._cover_sent or (force and st.cover_original):
+            self._cover_sent = stream_cover
+            self.bridge.submit(self.server.set_cover(stream_cover))
+        if screen_flow:
+            if self._screen_cover_sent is not None:
+                self._screen_cover_sent = None
+                self._set_screen_cover(None)
+            self._show_on_screen(screen_lines)
+            self._screen_flow_shown = bool(screen_lines)
+            return
+        if self._screen_flow_shown:  # akıştan kapağa geçildi: kutudaki satırlar kalkar
+            self._screen_flow_shown = False
+            self._show_on_screen([])
+        if force or screen_cover != self._screen_cover_sent:
+            self._screen_cover_sent = screen_cover
+            self._set_screen_cover(screen_cover)
+
+    def _set_screen_cover(self, cover: dict | None) -> None:
+        put = getattr(self.overlay, "set_cover", None)  # testlerdeki sahte kutularda olmayabilir
+        if put is not None:
+            put(cover)
 
     def _show_on_screen(self, lines: list[dict]) -> None:
         show = getattr(self.overlay, "set_lines", None)

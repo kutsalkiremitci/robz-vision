@@ -170,7 +170,7 @@ def _stub_handler(seen: list[tuple[str, str]]) -> type[BaseHTTPRequestHandler]:
 
         def do_GET(self) -> None:  # noqa: N802 - http.server
             seen.append(("GET", self.path))
-            if self.path == "/api/tags":
+            if self.path in ("/api/tags", "/api/ps"):
                 self._json({"models": [{"name": "gemma4:12b"}]})
             else:
                 self.send_error(404)
@@ -348,17 +348,27 @@ def test_prepare_failure_while_stopping_is_silent(make_pipe):
 
 
 def test_without_hybrid_the_fallback_is_a_notice_too(make_pipe, monkeypatch):
-    """Karma kapalıyken asıl motor çeviri başlamadan hazırlanır. Yerel yapay zekâ hazırlanamaz ve hızlı çeviri
-    hazırsa hat onunla sürer: yine pencere açmayan bildirim."""
+    """Karma kapalıyken de asıl motor arka planda hazırlanır: hat onu beklemez (modelin belleğe yüklenmesi
+    dakikayı bulabilir), satırlar o sırada hızlı çeviriyle gelir. Yerel yapay zekâ hazırlanamazsa hat hızlı
+    çeviriyle sürer: yine pencere açmayan bildirim."""
     main, fast = FakeEngine(TranslatorError(T.missing_model_text("gemma4:e4b")), model="gemma4:e4b"), FakeQuick()
     monkeypatch.setattr(pl, "create_translator", lambda tc, glossary: main)
     monkeypatch.setattr(pl, "QuickMtTranslator", lambda glossary, device="cpu": fast)
     pipe = make_pipe(hybrid=False)
     w = _watch(pipe)
-    assert pipe._prepare_translators() == (fast, None)
+    pipe._run.set()  # hat çalışıyor
+    assert pipe._prepare_translators() == (main, fast)  # asıl motor burada hazırlanmaz: hata da burada çıkmaz
+    assert w.notices == w.errors == []
+    cx = TrContext(pipe.s.translate, main, fast)
+    assert cx.two_stage and not cx.ready
+    pipe._run.set()
+    pipe._remote_loop(cx)  # uzak iş parçacığının gövdesi: hazırlık hata verir, biter
     assert w.notices == ["Gemma 4 E4B hazırlanamadı; hızlı çeviri kullanılıyor.\n"
                          "Gemma 4 E4B indirilmedi; Çeviri sayfasındaki Önerilen kurulum'a basın."]
     assert w.errors == [] and pl.FALLBACK_STATUS in w.statuses
+    ev = pipe.tracker.on_text("Get in the car, now.", None, pipe.clock())
+    pipe._apply(pipe._translate_item(("sub", ev["t"], ev), cx))
+    assert [(s["engine"], s["text"]) for s in w.subs] == [(fast.label, "hızlı: Get in the car, now.")]
 
 
 def test_without_quick_translation_it_is_fatal(make_pipe, monkeypatch):
@@ -372,9 +382,29 @@ def test_without_quick_translation_it_is_fatal(make_pipe, monkeypatch):
     monkeypatch.setattr(pl, "QuickMtTranslator", broken_quick)
     pipe = make_pipe()
     w = _watch(pipe)
+    pipe._run.set()  # hat çalışıyor
     assert pipe._prepare_translators() == (None, None)
     assert w.notices == []
     assert w.errors == [T.missing_model_text("gemma4:12b"), "Yedek çeviri de hazırlanamadı: Hızlı çeviri modeli bozuk."]
+
+
+def test_prepare_cut_short_by_stop_is_silent_without_quick(make_pipe, monkeypatch):
+    """Hızlı çeviri yokken asıl motor çeviri iş parçacığında hazırlanır. Durdur o hazırlığı yarıda keserse
+    (Translator.abort) bu bir hata değildir: uyarı da bildirim de çıkmaz, yedek motor da kurulmaz."""
+    main = FakeEngine(TranslatorError("Yapay zekâ hazırlığı durduruldu."))
+    made: list[str] = []
+
+    def broken_quick(glossary, device="cpu"):
+        made.append("hızlı")
+        raise TranslatorError("Hızlı çeviri modeli bozuk.")
+
+    monkeypatch.setattr(pl, "create_translator", lambda tc, glossary: main)
+    monkeypatch.setattr(pl, "QuickMtTranslator", broken_quick)
+    pipe = make_pipe()
+    w = _watch(pipe)
+    assert pipe._prepare_translators() == (None, None)  # _run kurulu değil: hat durduruluyor
+    assert w.notices == w.errors == [] and pl.FALLBACK_STATUS not in w.statuses
+    assert main.closed and made == ["hızlı"]  # yedek için ikinci kez denenmedi
 
 
 # --- AppContext: bağlar ve bildirimler -----------------------------------------------------------------------------
@@ -547,6 +577,15 @@ def test_app_context_wires_ai_setup(qapp, parts, make_ctx):
     ctx.shutdown()
     assert ai.shutdowns == 1 and parts.saved == [ctx.s]
     assert parts.log.index("ai.shutdown") < parts.log.index("pipeline.stop_and_wait")
+
+
+def test_shutdown_frees_the_models_after_the_pipeline_stops(qapp, parts, make_ctx, monkeypatch):
+    """Hat dururken model bellekte bırakılır (yeniden Başlat hazır bulsun); uygulama kapanırken boşaltılır. Sıra:
+    önce hat durur (süren çeviri isteği bitmeden model atılmasın), sonra boşaltılır."""
+    monkeypatch.setattr(app, "release_ollama_models", lambda: parts.log.append("release_ollama_models"))
+    ctx = make_ctx(FakeAi())
+    ctx.shutdown()
+    assert parts.log.index("pipeline.stop_and_wait") < parts.log.index("release_ollama_models")
 
 
 def test_shutdown_cancels_pending_resume(qapp, parts, make_ctx):

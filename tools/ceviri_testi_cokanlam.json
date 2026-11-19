@@ -1,0 +1,1566 @@
+{
+  "aciklama": "Robz Vision çok anlamlı kelime testi (tools/ceviri_testi.py --dataset tools/ceviri_testi_cokanlam.json). Her kelime hem gündelik hem suç/çatışma bağlamında sınanır: suç dünyası profiliyle model gündelik anlamı silah, uyuşturucu ya da polis anlamına kaydırıyor mu (dergi yerine şarjör), kaydırmayı düzeltince suç anlamını kaçırıyor mu? Sahneler bu proje için özgün yazıldı; oyun senaryosundan ya da başka eserlerden alıntı yoktur. Sahne içindeki sıra anlamlıdır: her satır, aynı sahnede önceki satırlar bağlam olarak verilerek çevrilir. Puanlanan satırda şu alanlar vardır: kelime (sınanan kelime ya da deyim), anlam (gundelik: suç dışı anlam doğru; suc: suç, silah, uyuşturucu ya da polis anlamı doğru), zor (ipucu zayıf), dogru ve yanlis (doğru ve yanlış anlamın Türkçe kökleri). Kökler çeviride Türkçe büyük/küçük harf kuralıyla, alt dize olarak aranır; noktalama boşluk sayılır. Başında boşluk olan kök yalnız kelime başında, sonunda boşluk olan kök yalnız kelime sonunda eşleşir: ' ütü' 'bütün'de, ' kar ' 'kara'da eşleşmez. Yanlış kök geçiyorsa satır yanlıştır; geçmiyorsa ve doğru kök geçiyorsa doğrudur; ikisi de yoksa belirsizdir (elle bakılır).",
+  "sahneler": [
+    {
+      "id": "magazine_kogus",
+      "ad": "magazine: koğuşta dergi",
+      "aciklama": "Gündelik anlam. Hapishane koğuşunda biri dergi okuyor. Zor: suç dünyası ve 'fırlat' fiili şarjöre çekiyor, okuma ipucu yalnız 'sayfa'.",
+      "satirlar": [
+        {"en": "Count's done. Lights out in twenty.", "beklenen": "count = sayım; ışıklar yirmi dakikaya söner"},
+        {"en": "You've been stuck on that page for an hour."},
+        {
+          "en": "Toss me the magazine when you're done with it.",
+          "beklenen": "magazine = dergi ('şarjör' değil)",
+          "kelime": "magazine", "anlam": "gundelik", "zor": true,
+          "dogru": ["dergi", "magazin"],
+          "yanlis": ["şarjör", "mermi", "fişek", "fişeğ"]
+        }
+      ]
+    },
+    {
+      "id": "magazine_avukat",
+      "ad": "magazine: avukatı beklerken",
+      "aciklama": "Gündelik anlam. Avukat gecikiyor, vakit geçirmek için dergi. Zor: suç dünyası bağlamı var, okuma sözü yok.",
+      "satirlar": [
+        {"en": "Your lawyer's running late again."},
+        {
+          "en": "Grab a magazine. This could take a while.",
+          "beklenen": "magazine = dergi ('şarjör al' değil)",
+          "kelime": "magazine", "anlam": "gundelik", "zor": true,
+          "dogru": ["dergi", "magazin"],
+          "yanlis": ["şarjör", "mermi", "fişek", "fişeğ"]
+        }
+      ]
+    },
+    {
+      "id": "magazine_kuafor",
+      "ad": "magazine: kuaförde kapak",
+      "aciklama": "Gündelik anlam. Kuaförde ünlülerin kapağa çıktığı dergi.",
+      "satirlar": [
+        {"en": "Girl, guess who's on the cover this month."},
+        {
+          "en": "No way. Lemme see that magazine!",
+          "beklenen": "magazine = dergi",
+          "kelime": "magazine", "anlam": "gundelik",
+          "dogru": ["dergi", "magazin"],
+          "yanlis": ["şarjör", "mermi", "fişek", "fişeğ"]
+        }
+      ]
+    },
+    {
+      "id": "magazine_catisma",
+      "ad": "magazine: merdivende çatışma",
+      "aciklama": "Suç anlamı. Çatışmada şarjör değiştirme.",
+      "satirlar": [
+        {"en": "They're coming up the stairs!"},
+        {
+          "en": "Reloading! Throw me a fresh magazine!",
+          "beklenen": "magazine = şarjör",
+          "kelime": "magazine", "anlam": "suc",
+          "dogru": ["şarjör", "mermi", "fişek", "fişeğ", "kurşun"],
+          "yanlis": ["dergi", "magazin"]
+        }
+      ]
+    },
+    {
+      "id": "magazine_baskin",
+      "ad": "magazine: içeri girmeden önce",
+      "aciklama": "Suç anlamı. Baskından önce son kontrol. Zor: silah sözü geçmiyor.",
+      "satirlar": [
+        {"en": "Van's parked. Masks on."},
+        {
+          "en": "Check your magazine before we go in.",
+          "beklenen": "magazine = şarjör ('dergi' değil)",
+          "kelime": "magazine", "anlam": "suc", "zor": true,
+          "dogru": ["şarjör", "mermi", "fişek", "fişeğ", "kurşun", " silah"],
+          "yanlis": ["dergi", "magazin"]
+        }
+      ]
+    },
+    {
+      "id": "round_bar",
+      "ad": "round: barda ısmarlamak",
+      "aciklama": "Gündelik anlam. Barda bir sonraki içkiyi ısmarlamak.",
+      "satirlar": [
+        {"en": "Bartender! Over here!"},
+        {
+          "en": "Next round's on me, boys.",
+          "beklenen": "round = içki turu: 'sıradaki içkiler benden'",
+          "kelime": "round", "anlam": "gundelik",
+          "dogru": ["içki", "kadeh", " tur", " sıra", "ısmarl", " benden", " bira", " şişe"],
+          "yanlis": ["mermi", "kurşun", "şarjör", " raunt", " atış", " el ateş"]
+        }
+      ]
+    },
+    {
+      "id": "round_boks",
+      "ad": "round: boks salonu",
+      "aciklama": "Gündelik anlam. Boks antrenmanında bir raunt daha.",
+      "satirlar": [
+        {"en": "Keep your gloves up, champ."},
+        {
+          "en": "One more round, then we're done for today.",
+          "beklenen": "round = raunt/tur",
+          "kelime": "round", "anlam": "gundelik",
+          "dogru": [" raunt", " tur", " set", " el daha", " seri"],
+          "yanlis": ["mermi", "kurşun", "şarjör", " atış"]
+        }
+      ]
+    },
+    {
+      "id": "round_kamyon",
+      "ad": "round: kamyonun arkası",
+      "aciklama": "Suç anlamı. Saklanan adama ateş açılıyor.",
+      "satirlar": [
+        {"en": "He's hiding behind the truck!"},
+        {
+          "en": "I put three rounds in the engine block.",
+          "beklenen": "rounds = mermi/kurşun: 'motor bloğuna üç el ateş ettim'",
+          "kelime": "round", "anlam": "suc",
+          "dogru": ["mermi", "kurşun", " ateş", " sıkt", " el "],
+          "yanlis": [" üç tur", " tur at", " raunt", "kadeh", "içki"]
+        }
+      ]
+    },
+    {
+      "id": "piece_tatli",
+      "ad": "piece: büyükannenin tatlısı",
+      "aciklama": "Gündelik anlam. Tatlıdan bir dilim ayırmak.",
+      "satirlar": [
+        {"en": "Abuela made her famous flan."},
+        {
+          "en": "Save me a piece, okay?",
+          "beklenen": "piece = dilim/parça ('silah' değil)",
+          "kelime": "piece", "anlam": "gundelik",
+          "dogru": [" dilim", " parça", " biraz", " pay"],
+          "yanlis": [" silah", " tabanca", " demir", " alet"]
+        }
+      ]
+    },
+    {
+      "id": "piece_mobilya",
+      "ad": "piece: dolap kurmak",
+      "aciklama": "Gündelik anlam. Mobilya kurulumundan bir parça artmış.",
+      "satirlar": [
+        {"en": "Who wrote these instructions, a robot?"},
+        {
+          "en": "There's one piece left over. That's bad, right?",
+          "beklenen": "piece = parça",
+          "kelime": "piece", "anlam": "gundelik",
+          "dogru": [" parça"],
+          "yanlis": [" silah", " tabanca"]
+        }
+      ]
+    },
+    {
+      "id": "piece_kose",
+      "ad": "piece: köşede polis",
+      "aciklama": "Suç anlamı. Zor: tek ipucu köşede bekleyen polis.",
+      "satirlar": [
+        {"en": "Cops are setting up at the corner."},
+        {
+          "en": "You carrying a piece?",
+          "beklenen": "piece = silah ('parça' değil)",
+          "kelime": "piece", "anlam": "suc", "zor": true,
+          "dogru": [" silah", " tabanca", " demir", " alet", " patlar"],
+          "yanlis": [" parça", " dilim"]
+        }
+      ]
+    },
+    {
+      "id": "clip_video",
+      "ad": "clip: kaykay parkında video",
+      "aciklama": "Gündelik anlam. Arkadaşının düşüşünü çeken videoyu paylaşmak.",
+      "satirlar": [
+        {"en": "Yo, did you see Dani wipe out at the skate park?"},
+        {
+          "en": "Send me the clip, I'm posting it.",
+          "beklenen": "clip = video/klip ('şarjör' değil)",
+          "kelime": "clip", "anlam": "gundelik",
+          "dogru": [" klip", " klib", " video", " kesit", " görüntü", " kayd", " kayıt", " çekim"],
+          "yanlis": ["şarjör", "mermi", "fişek", "fişeğ"]
+        }
+      ]
+    },
+    {
+      "id": "clip_toka",
+      "ad": "clip: saç tokası",
+      "aciklama": "Gündelik anlam. Saçını toplamak için toka.",
+      "satirlar": [
+        {"en": "Hold on, let me put my hair up."},
+        {
+          "en": "Where'd my clip go?",
+          "beklenen": "clip = toka/klips",
+          "kelime": "clip", "anlam": "gundelik",
+          "dogru": [" toka", " klips", " mandal", " kıskaç", " saç"],
+          "yanlis": ["şarjör", "mermi", "fişek", "fişeğ", " klip ", " klibi", " video"]
+        }
+      ]
+    },
+    {
+      "id": "clip_kapi",
+      "ad": "clip: kapıyı tut",
+      "aciklama": "Suç anlamı. Çatışmada son şarjör.",
+      "satirlar": [
+        {"en": "Watch the door!"},
+        {
+          "en": "Last clip. Make it count.",
+          "beklenen": "clip = şarjör",
+          "kelime": "clip", "anlam": "suc",
+          "dogru": ["şarjör", "mermi", "fişek", "fişeğ", "kurşun"],
+          "yanlis": [" klip ", " klibi", " video", " toka", " ataç"]
+        }
+      ]
+    },
+    {
+      "id": "cell_motel",
+      "ad": "cell: motelde telefon",
+      "aciklama": "Gündelik anlam. Motelin telefonu bozuk, cep telefonundan arama.",
+      "satirlar": [
+        {"en": "The motel phone's broken."},
+        {
+          "en": "Just call my cell, okay?",
+          "beklenen": "cell = cep telefonu ('hücre' değil)",
+          "kelime": "cell", "anlam": "gundelik",
+          "dogru": [" cep", " ceb", " telefon", " mobil"],
+          "yanlis": [" hücre", " koğuş"]
+        }
+      ]
+    },
+    {
+      "id": "cell_sarj",
+      "ad": "cell: bütün gece neredeydin",
+      "aciklama": "Gündelik anlam. Telefonun şarjı bitmiş. Zor: 'telefon' sözü yok, ipucu yalnız 'aradım'.",
+      "satirlar": [
+        {"en": "Where were you all night? I called ten times."},
+        {
+          "en": "Sorry, my cell died.",
+          "beklenen": "cell = telefon: 'telefonumun şarjı bitti'",
+          "kelime": "cell", "anlam": "gundelik", "zor": true,
+          "dogru": [" telefon", " cep", " ceb", " şarj", " pil", " batarya", " kapandı"],
+          "yanlis": [" hücre", " koğuş"]
+        }
+      ]
+    },
+    {
+      "id": "cell_gardiyan",
+      "ad": "cell: gardiyan",
+      "aciklama": "Suç/hapishane anlamı. Gardiyan mahkûmu hücresine yolluyor.",
+      "satirlar": [
+        {"en": "Inmate, step away from the door."},
+        {
+          "en": "Back in your cell. Now.",
+          "beklenen": "cell = hücre/koğuş",
+          "kelime": "cell", "anlam": "suc",
+          "dogru": [" hücre", " koğuş", " içeri", " ranza", " yerine", " odana"],
+          "yanlis": [" telefon", " cep", " ceb"]
+        }
+      ]
+    },
+    {
+      "id": "heat_sahil",
+      "ad": "heat: sahilde bunaltı",
+      "aciklama": "Gündelik anlam. Nemli, sıcak hava.",
+      "satirlar": [
+        {"en": "Is it always this sticky down here?"},
+        {
+          "en": "This heat is killing me.",
+          "beklenen": "heat = sıcak ('polis' değil)",
+          "kelime": "heat", "anlam": "gundelik",
+          "dogru": [" sıcak", " sıcağ", " hava", " kavur", " bunal", " terle", " ısı"],
+          "yanlis": [" polis", " baskı", " silah", " aynasız", " takip"]
+        }
+      ]
+    },
+    {
+      "id": "heat_mutfak",
+      "ad": "heat: ocaktaki pilav",
+      "aciklama": "Gündelik anlam. Ocağın altını kısmak.",
+      "satirlar": [
+        {"en": "Something smells like it's burning."},
+        {
+          "en": "Turn down the heat under the rice!",
+          "beklenen": "heat = ocağın ateşi: 'pilavın altını kıs'",
+          "kelime": "heat", "anlam": "gundelik",
+          "dogru": [" altını kıs", " ateş", " ocağ", " ocak", " ısı", " kıs", " sıcaklı", " gaz"],
+          "yanlis": [" polis", " baskı", " silah", " aynasız", " takip"]
+        }
+      ]
+    },
+    {
+      "id": "heat_plaka",
+      "ad": "heat: plaka kamerada",
+      "aciklama": "Suç anlamı. Plakaları kameraya yakalanmış, polis peşlerine düşecek. Zor: polis sözü geçmiyor.",
+      "satirlar": [
+        {"en": "Somebody got our plates on camera."},
+        {
+          "en": "Then the heat's coming. Move.",
+          "beklenen": "heat = polis/baskı ('sıcak' değil)",
+          "kelime": "heat", "anlam": "suc", "zor": true,
+          "dogru": [" polis", " aynasız", " baskı", " takip", " peşimiz", " başımız", " ortalık", " aran", " bela", " tehlike", " sıkıntı", " kızış", " ısın", " kolluk"],
+          "yanlis": [" sıcaklık", " sıcak hava", " sıcak gel", " hava ", " havalar"]
+        }
+      ]
+    },
+    {
+      "id": "heat_marina",
+      "ad": "heat: marinada takas",
+      "aciklama": "Suç anlamı. Gece yarısı alışverişe silahla gitmek. Zor: silah sözü geçmiyor.",
+      "satirlar": [
+        {"en": "Deal's at the marina. Midnight."},
+        {
+          "en": "Don't forget to bring the heat.",
+          "beklenen": "heat = silah ('sıcak' değil)",
+          "kelime": "heat", "anlam": "suc", "zor": true,
+          "dogru": [" silah", " tabanca", " demir", " alet", " cephane", " patlar"],
+          "yanlis": [" sıcak", " sıcağ", " ısıt", " ateşi getir"]
+        }
+      ]
+    },
+    {
+      "id": "shot_foto",
+      "ad": "shot: sahilde fotoğraf",
+      "aciklama": "Gündelik anlam. Grup fotoğrafı.",
+      "satirlar": [
+        {"en": "Okay, everybody squeeze in and smile!"},
+        {
+          "en": "Great shot! Send it to the group chat.",
+          "beklenen": "shot = fotoğraf/kare ('atış' değil)",
+          "kelime": "shot", "anlam": "gundelik",
+          "dogru": [" fotoğraf", " foto", " kare", " çek", " poz", " resim", " çıkmış", " görüntü"],
+          "yanlis": [" atış", " kurşun", " vuruş", " isabet", " nişan", " ateş"]
+        }
+      ]
+    },
+    {
+      "id": "shot_veteriner",
+      "ad": "shot: veteriner aradı",
+      "aciklama": "Gündelik anlam. Köpeğin aşıları.",
+      "satirlar": [
+        {"en": "The vet called about Biscuit."},
+        {
+          "en": "Did he get all his shots?",
+          "beklenen": "shots = aşılar ('kurşun' değil)",
+          "kelime": "shot", "anlam": "gundelik",
+          "dogru": [" aşı oldu", " aşıla", " aşısı", " aşıyı", " aşı yap", " iğne"],
+          "yanlis": [" vurul", " kurşun", " ateş", " atış"]
+        }
+      ]
+    },
+    {
+      "id": "shot_keskin",
+      "ad": "shot: su kulesinde keskin nişancı",
+      "aciklama": "Suç anlamı. Temiz bir atış açısı yok.",
+      "satirlar": [
+        {"en": "Sniper on the water tower!"},
+        {
+          "en": "I don't have a clean shot from here.",
+          "beklenen": "shot = atış",
+          "kelime": "shot", "anlam": "suc",
+          "dogru": [" atış", " vur", " nişan", " isabet", " ateş", " açı", " hedef", " göremiyorum", " sık"],
+          "yanlis": [" fotoğraf", " foto", " kadeh", " kare", " aşı"]
+        }
+      ]
+    },
+    {
+      "id": "joint_burger",
+      "ad": "joint: iskele yanında burgerci",
+      "aciklama": "Gündelik anlam. Yemek yiyecek bir mekân.",
+      "satirlar": [
+        {"en": "I'm starving. Where do you wanna eat?"},
+        {
+          "en": "There's a burger joint by the pier.",
+          "beklenen": "joint = mekân/burgerci ('esrar' değil)",
+          "kelime": "joint", "anlam": "gundelik",
+          "dogru": [" burgerci", " hamburgerci", " mekan", " dükkan", " restoran", " lokanta", " büfe", " yer", " köfteci"],
+          "yanlis": [" esrar", " joint", " sarma", " cigara", " eklem", " ot "]
+        }
+      ]
+    },
+    {
+      "id": "joint_bar",
+      "ad": "joint: eski bar",
+      "aciklama": "Gündelik anlam. Yıllardır değişmeyen bar. Zor: suç dünyasının barında 'bu mekân'.",
+      "satirlar": [
+        {"en": "Two beers. Cold ones this time."},
+        {
+          "en": "Man, this joint hasn't changed in twenty years.",
+          "beklenen": "joint = burası/mekân",
+          "kelime": "joint", "anlam": "gundelik", "zor": true,
+          "dogru": [" burası", " mekan", " yer", " bar", " dükkan", " meyhane", " batakhane"],
+          "yanlis": [" esrar", " joint", " sarma", " cigara", " ot "]
+        }
+      ]
+    },
+    {
+      "id": "joint_bataklik",
+      "ad": "joint: bataklıkta mola",
+      "aciklama": "Suç anlamı. Esrarlı sigara sarmak.",
+      "satirlar": [
+        {"en": "Relax, nobody comes out here."},
+        {
+          "en": "Roll a joint and pass it over.",
+          "beklenen": "joint = esrarlı sigara ('mekân' değil)",
+          "kelime": "joint", "anlam": "suc",
+          "dogru": [" esrar", " joint", " sarma", " cigara", " ot ", " otu", " marihuana", " kenevir", " sar"],
+          "yanlis": [" mekan", " eklem", " lokanta", " restoran"]
+        }
+      ]
+    },
+    {
+      "id": "iron_gomlek",
+      "ad": "iron: buruşuk gömlek",
+      "aciklama": "Gündelik anlam. İş görüşmesinden önce ütü.",
+      "satirlar": [
+        {"en": "Big interview tomorrow morning."},
+        {
+          "en": "Where's the iron? This shirt's a mess.",
+          "beklenen": "iron = ütü ('silah' değil)",
+          "kelime": "iron", "anlam": "gundelik",
+          "dogru": [" ütü"],
+          "yanlis": [" silah", " tabanca", " demir"]
+        }
+      ]
+    },
+    {
+      "id": "iron_liman",
+      "ad": "iron: limandan gelenler",
+      "aciklama": "Suç anlamı. Rakip ekip gelmeden silahlanmak.",
+      "satirlar": [
+        {"en": "Those boys from the docks are coming tonight."},
+        {
+          "en": "Everybody bring your iron.",
+          "beklenen": "iron = silah ('ütü' değil)",
+          "kelime": "iron", "anlam": "suc",
+          "dogru": [" silah", " tabanca", " demir", " alet", " patlar"],
+          "yanlis": [" ütü"]
+        }
+      ]
+    },
+    {
+      "id": "case_kilif",
+      "ad": "case: telefon kılıfı",
+      "aciklama": "Gündelik anlam. Telefon düştü, kılıf korudu.",
+      "satirlar": [
+        {"en": "Dropped my phone again. Screen's fine, though."},
+        {
+          "en": "Good thing I got that new case.",
+          "beklenen": "case = kılıf ('dava' değil)",
+          "kelime": "case", "anlam": "gundelik",
+          "dogru": [" kılıf", " kapak", " koruma"],
+          "yanlis": [" dava", " kasa", " çanta", " vaka", " olay"]
+        }
+      ]
+    },
+    {
+      "id": "case_savci",
+      "ad": "case: savcının elinde ne var",
+      "aciklama": "Suç/hukuk anlamı. Tanık yoksa dava da yok.",
+      "satirlar": [
+        {"en": "The DA's got nothing on us."},
+        {
+          "en": "No witness, no case.",
+          "beklenen": "case = dava",
+          "kelime": "case", "anlam": "suc",
+          "dogru": [" dava", " dosya"],
+          "yanlis": [" kasa", " çanta", " kılıf", " kutu"]
+        }
+      ]
+    },
+    {
+      "id": "case_para",
+      "ad": "case: para çantası",
+      "aciklama": "Gündelik (eşya) anlam. Suç sahnesinde para dolu çanta. Zor: suç dünyası 'dava'ya çekebilir.",
+      "satirlar": [
+        {"en": "Is it all there?"},
+        {
+          "en": "Every dollar. Open the case and count it.",
+          "beklenen": "case = çanta/kasa ('dava' değil)",
+          "kelime": "case", "anlam": "gundelik", "zor": true,
+          "dogru": [" çanta", " valiz", " bavul", " kasa", " kutu", " kapağı"],
+          "yanlis": [" dava", " dosya", " kılıf"]
+        }
+      ]
+    },
+    {
+      "id": "bars_sinyal",
+      "ad": "bars: bataklıkta çekmiyor",
+      "aciklama": "Gündelik anlam. Telefonun çekim çizgileri. Zor: 'telefon' sözü yok.",
+      "satirlar": [
+        {"en": "Hello? Hello? You're breaking up."},
+        {
+          "en": "No bars out here. It's all swamp.",
+          "beklenen": "bars = çekim/sinyal: 'burada çekmiyor' ('bar' ya da 'parmaklık' değil)",
+          "kelime": "bars", "anlam": "gundelik", "zor": true,
+          "dogru": [" çek", " sinyal", " şebeke", " çizgi", " kapsama", " servis"],
+          "yanlis": [" bar", " parmaklık", " demir", " meyhane", " hapis"]
+        }
+      ]
+    },
+    {
+      "id": "bars_hakim",
+      "ad": "bars: hâkimin verdiği ceza",
+      "aciklama": "Suç anlamı. Parmaklıklar ardında.",
+      "satirlar": [
+        {"en": "Fifteen years. That's what the judge gave him."},
+        {
+          "en": "He'll be behind bars till he's forty.",
+          "beklenen": "behind bars = parmaklıklar ardında/hapiste",
+          "kelime": "bars", "anlam": "suc",
+          "dogru": [" parmaklık", " hapis", " haps", " içeri", " hücre", " cezaevi", " yatacak", " yatar", " kodes", " mapus"],
+          "yanlis": [" bar", " meyhane", " pub"]
+        }
+      ]
+    },
+    {
+      "id": "charge_lokanta",
+      "ad": "charge: lokantada tazeleme",
+      "aciklama": "Gündelik anlam. Kahve tazelemesinin ücreti yok. Zor: 'no charge' suç dünyasında 'suçlama yok'a kayabilir.",
+      "satirlar": [
+        {"en": "Can I get a refill?"},
+        {
+          "en": "Sure, hon. There's no charge for refills.",
+          "beklenen": "charge = ücret ('suçlama' değil)",
+          "kelime": "charge", "anlam": "gundelik", "zor": true,
+          "dogru": [" ücret", " para", " bedava", " parasız", " bizden", " ikram", " ödeme", " fiyat"],
+          "yanlis": [" suçlama", " suç", " itham", " şarj", " dava"]
+        }
+      ]
+    },
+    {
+      "id": "charge_pil",
+      "ad": "charge: yüzde iki pil",
+      "aciklama": "Gündelik anlam. Telefonu şarj etmek.",
+      "satirlar": [
+        {"en": "Battery's at two percent."},
+        {
+          "en": "Give it a full charge before we leave.",
+          "beklenen": "charge = şarj",
+          "kelime": "charge", "anlam": "gundelik",
+          "dogru": [" şarj"],
+          "yanlis": [" suçlama", " suç", " itham", " saldır", " hücum", " ücret", "şarjör"]
+        }
+      ]
+    },
+    {
+      "id": "charge_avukat",
+      "ad": "charge: avukat geldi",
+      "aciklama": "Suç/hukuk anlamı. Suçlamalar düşürüldü.",
+      "satirlar": [
+        {"en": "Your lawyer's here."},
+        {
+          "en": "They dropped the charges. You're free to go.",
+          "beklenen": "charges = suçlamalar",
+          "kelime": "charge", "anlam": "suc",
+          "dogru": [" suçlama", " suç", " dava", " itham", " iddia"],
+          "yanlis": [" şarj", " ücret", " masraf", " hücum", " fatura"]
+        }
+      ]
+    },
+    {
+      "id": "deck_tekne",
+      "ad": "deck: tekne",
+      "aciklama": "Gündelik anlam. Teknenin güvertesi.",
+      "satirlar": [
+        {"en": "Grab the cooler, we're pulling out in five."},
+        {
+          "en": "Meet me up on the deck.",
+          "beklenen": "deck = güverte",
+          "kelime": "deck", "anlam": "gundelik",
+          "dogru": [" güverte", " teras", " veranda", " yukarı", " üst kat", " balkon"],
+          "yanlis": [" yumruk", " deste", " döv", " yere ser"]
+        }
+      ]
+    },
+    {
+      "id": "deck_kogus",
+      "ad": "deck: koğuşta kâğıt oyunu",
+      "aciklama": "Gündelik anlam. Hapishanede iskambil destesi.",
+      "satirlar": [
+        {"en": "Count's over. Who's playing?"},
+        {
+          "en": "Shuffle the deck. Loser does my laundry.",
+          "beklenen": "deck = deste",
+          "kelime": "deck", "anlam": "gundelik",
+          "dogru": [" deste", " kart", " kağıt", " iskambil"],
+          "yanlis": [" güverte", " yumruk", " döv"]
+        }
+      ]
+    },
+    {
+      "id": "deck_borc",
+      "ad": "deck: borçlu palyaço",
+      "aciklama": "Argo/şiddet anlamı. Yumrukla yere sermek tehdidi.",
+      "satirlar": [
+        {"en": "That clown still owes me two grand."},
+        {
+          "en": "Say one more word and I'll deck you.",
+          "beklenen": "deck = yumrukla yere sermek ('güverte' değil)",
+          "kelime": "deck", "anlam": "suc",
+          "dogru": [" yere ser", " yere yapış", " yumruk", " döv", " dağıt", " indir", " geçir", " patlat", " çak", " vur", " yık", " devir", " gebert", " ağzını", " suratını", " dişlerini", " yüzünü", " kafanı", " burnunu", " yerle bir"],
+          "yanlis": [" güverte", " deste"]
+        }
+      ]
+    },
+    {
+      "id": "fire_depo",
+      "ad": "fire: depoda uyuklarken",
+      "aciklama": "Gündelik anlam. Müdür onu işten kovacak.",
+      "satirlar": [
+        {"en": "The manager caught me napping in the stockroom."},
+        {
+          "en": "He's gonna fire me. I just know it.",
+          "beklenen": "fire = işten kovmak ('ateş etmek' değil)",
+          "kelime": "fire", "anlam": "gundelik",
+          "dogru": [" kov", " işten at", " işten çıkar", " kapı dışarı", " işimden ol", " işsiz"],
+          "yanlis": [" ateş", " vur", " öldür", " yangın", " kovala"]
+        }
+      ]
+    },
+    {
+      "id": "fire_kulup",
+      "ad": "fire: kayıp sevkiyat",
+      "aciklama": "Gündelik anlam. Kulüp sahibi adamını kovuyor. Zor: suç sahnesi 'vuruldun'a çekebilir.",
+      "satirlar": [
+        {"en": "You lost the whole shipment?"},
+        {
+          "en": "You're fired. Get out of my club.",
+          "beklenen": "you're fired = kovuldun ('vuruldun' değil)",
+          "kelime": "fire", "anlam": "gundelik", "zor": true,
+          "dogru": [" kov", " işten", " kapı dışarı"],
+          "yanlis": [" vurul", " ateş", " öldür", " yandın"]
+        }
+      ]
+    },
+    {
+      "id": "fire_tekne",
+      "ad": "fire: teknenin arkası",
+      "aciklama": "Suç anlamı. Emir gelene kadar ateş etmemek.",
+      "satirlar": [
+        {"en": "They're pinned behind the boat!"},
+        {
+          "en": "Hold your fire till I say so.",
+          "beklenen": "hold your fire = ateş etmeyin",
+          "kelime": "fire", "anlam": "suc",
+          "dogru": [" ateş", " sıkma", " vurma", " tetiğ", " kurşun"],
+          "yanlis": [" kov", " yangın", " işten"]
+        }
+      ]
+    },
+    {
+      "id": "toast_kahvalti",
+      "ad": "toast: kahvaltı",
+      "aciklama": "Gündelik anlam. Tost ya da kızarmış ekmek.",
+      "satirlar": [
+        {"en": "You want eggs or what?"},
+        {
+          "en": "Just toast and coffee, thanks.",
+          "beklenen": "toast = tost/kızarmış ekmek",
+          "kelime": "toast", "anlam": "gundelik",
+          "dogru": [" tost", " kızarmış ekmek", " ekmek", " kızartma"],
+          "yanlis": [" işi bitti", " yandı", " kadeh", " şerefe", " öldü"]
+        }
+      ]
+    },
+    {
+      "id": "toast_dugun",
+      "ad": "toast: düğün",
+      "aciklama": "Gündelik anlam. Mutlu çift için kadeh kaldırmak.",
+      "satirlar": [
+        {"en": "Everybody grab a glass."},
+        {
+          "en": "A toast to the happy couple!",
+          "beklenen": "toast = kadeh kaldırmak: 'mutlu çiftin şerefine'",
+          "kelime": "toast", "anlam": "gundelik",
+          "dogru": [" kadeh", " şerefe", " şerefine", " sağlığına", " içelim", " serefe", " onuruna"],
+          "yanlis": [" tost", " ekmek", " işi bitti"]
+        }
+      ]
+    },
+    {
+      "id": "toast_federal",
+      "ad": "toast: federallerle konuşan",
+      "aciklama": "Argo/suç anlamı. İspiyoncunun işi bitti.",
+      "satirlar": [
+        {"en": "Kenny's been talking to the feds."},
+        {
+          "en": "Then Kenny's toast.",
+          "beklenen": "toast = işi bitti ('tost' değil)",
+          "kelime": "toast", "anlam": "suc",
+          "dogru": [" işi bitti", " bitti", " öldü", " yandı", " mahvol", " ölü", " geberdi", " gitti", " hapı yuttu", " sonu", " tarih oldu", " temizle", " bitik"],
+          "yanlis": [" tost", " ekmek", " kadeh", " şerefe"]
+        }
+      ]
+    },
+    {
+      "id": "cooked_mutfak",
+      "ad": "cooked: tavuk",
+      "aciklama": "Gündelik anlam. Tavuk iyice pişti mi?",
+      "satirlar": [
+        {"en": "Dinner in five. Wash your hands."},
+        {
+          "en": "Is the chicken cooked all the way through?",
+          "beklenen": "cooked = pişmiş ('yandık' değil)",
+          "kelime": "cooked", "anlam": "gundelik",
+          "dogru": [" piş"],
+          "yanlis": [" yandık", " bittik", " mahvol", " yandı"]
+        }
+      ]
+    },
+    {
+      "id": "cooked_iz",
+      "ad": "cooked: parmak izleri",
+      "aciklama": "Suç anlamı. Minibüs parmak izleriyle bulundu.",
+      "satirlar": [
+        {"en": "They found the van. Our prints are all over it."},
+        {
+          "en": "We're cooked, man.",
+          "beklenen": "cooked = yandık ('piştik' değil)",
+          "kelime": "cooked", "anlam": "suc",
+          "dogru": [" yandık", " bittik", " mahvolduk", " işimiz bitti", " hapı yuttuk", " battık", " boku yedik", " sıçtık", " bitik", " bitmiş", " yandı", " enselen", " yakalan"],
+          "yanlis": [" piş"]
+        }
+      ]
+    },
+    {
+      "id": "score_mac",
+      "ad": "score: maç yayını",
+      "aciklama": "Gündelik anlam. Maç kaç kaç?",
+      "satirlar": [
+        {"en": "Turn it up, the Gators game is on!"},
+        {
+          "en": "What's the score?",
+          "beklenen": "score = skor: 'maç kaç kaç'",
+          "kelime": "score", "anlam": "gundelik",
+          "dogru": [" skor", " kaç kaç", " sonuç", " durum", " puan", " maç"],
+          "yanlis": [" vurgun", " soygun", " ganimet", " mal "]
+        }
+      ]
+    },
+    {
+      "id": "score_zirhli",
+      "ad": "score: zırhlı araç",
+      "aciklama": "Suç anlamı. Hayat boyu yetecek vurgun.",
+      "satirlar": [
+        {"en": "Armored truck, every Thursday, one guard."},
+        {
+          "en": "That's the score that sets us up for life.",
+          "beklenen": "score = vurgun ('skor' değil)",
+          "kelime": "score", "anlam": "suc",
+          "dogru": [" vurgun", " soygun", " iş", " ganimet", " köşe", " kazanç", " para"],
+          "yanlis": [" skor", " puan", " gol"]
+        }
+      ]
+    },
+    {
+      "id": "job_vardiya",
+      "ad": "job: çift vardiya",
+      "aciklama": "Gündelik anlam. Yorucu bir iş (meslek).",
+      "satirlar": [
+        {"en": "You look dead on your feet."},
+        {
+          "en": "Double shift again. This job is killing me.",
+          "beklenen": "job = iş ('soygun' değil)",
+          "kelime": "job", "anlam": "gundelik",
+          "dogru": [" iş", " çalış", " meslek"],
+          "yanlis": [" soygun", " vurgun", " operasyon", " görev"]
+        }
+      ]
+    },
+    {
+      "id": "job_plan",
+      "ad": "job: herkes rolünü biliyor",
+      "aciklama": "Suç anlamı. İşten (soygundan) sonra kimse konuşmayacak.",
+      "satirlar": [
+        {"en": "Everybody knows their part?"},
+        {
+          "en": "Good. Nobody talks about the job after tonight.",
+          "beklenen": "job = iş/soygun",
+          "kelime": "job", "anlam": "suc",
+          "dogru": [" iş", " soygun", " vurgun", " olay", " operasyon"],
+          "yanlis": [" meslek", " çalıştığ", " işyeri", " mesai"]
+        }
+      ]
+    },
+    {
+      "id": "hit_radyo",
+      "ad": "hit: radyoda eski şarkı",
+      "aciklama": "Gündelik anlam. Zamanında çok tutulan şarkı.",
+      "satirlar": [
+        {"en": "Turn this up, I love this one!"},
+        {
+          "en": "This song was a huge hit back in the day.",
+          "beklenen": "hit = hit/çok tutulan şarkı ('suikast' değil)",
+          "kelime": "hit", "anlam": "gundelik",
+          "dogru": [" hit", " popüler", " sevil", " patla", " ses getir", " liste", " tutmuş", " tuttu", " meşhur", " ünlü", " bomba", " furor", " fırtına", " olay", " dinlen", " çalın"],
+          "yanlis": [" suikast", " vuruş", " darbe", " cinayet", " infaz"]
+        }
+      ]
+    },
+    {
+      "id": "hit_odul",
+      "ad": "hit: kellesine para",
+      "aciklama": "Suç anlamı. Kiralık katil işi.",
+      "satirlar": [
+        {"en": "Somebody put money on Reggie's head."},
+        {
+          "en": "It's a hit. A professional one.",
+          "beklenen": "hit = suikast/kiralık katil işi ('hit şarkı' değil)",
+          "kelime": "hit", "anlam": "suc",
+          "dogru": [" suikast", " infaz", " cinayet", " kiralık", " tetikçi", " öldürme", " temizle", " sözleşme", " ısmarlama", " iş"],
+          "yanlis": [" hit", " şarkı", " vuruş", " darbe", " popüler"]
+        }
+      ]
+    },
+    {
+      "id": "dope_ayakkabi",
+      "ad": "dope: yeni ayakkabılar",
+      "aciklama": "Gündelik/argo anlam. 'Harika, efsane'.",
+      "satirlar": [
+        {"en": "Check out my new kicks."},
+        {
+          "en": "Yo, those are dope!",
+          "beklenen": "dope = harika/efsane ('uyuşturucu' değil)",
+          "kelime": "dope", "anlam": "gundelik",
+          "dogru": [" harika", " efsane", " efso", " süper", " müthiş", " çok iyi", " havalı", " cool", " şahane", " fena", " acayip", " mükemmel", " güzel", " bomba", " kral", " şık", " karizma", " çılgın", " ateş", " sağlam", " jilet", " canavar"],
+          "yanlis": [" uyuşturucu", " esrar", " mal ", " malı", " eroin", " kokain", " ot ", " aptal", " salak"]
+        }
+      ]
+    },
+    {
+      "id": "dope_baskin",
+      "ad": "dope: Tito'ya baskın",
+      "aciklama": "Suç anlamı. Bagaj dolusu uyuşturucu.",
+      "satirlar": [
+        {"en": "Cops raided Tito's place last night."},
+        {
+          "en": "Found a trunk full of dope.",
+          "beklenen": "dope = uyuşturucu/mal",
+          "kelime": "dope", "anlam": "suc",
+          "dogru": [" uyuşturucu", " mal ", " malı", " esrar", " eroin", " kokain", " ot ", " otla", " madde", " zehir"],
+          "yanlis": [" harika", " efsane", " aptal", " salak", " süper"]
+        }
+      ]
+    },
+    {
+      "id": "plant_cicek",
+      "ad": "plant: hafta sonu ablada",
+      "aciklama": "Gündelik anlam. Bitkileri sulamak.",
+      "satirlar": [
+        {"en": "I'm at my sister's all weekend."},
+        {
+          "en": "Can you water the plants while I'm gone?",
+          "beklenen": "plants = bitkiler/çiçekler",
+          "kelime": "plant", "anlam": "gundelik",
+          "dogru": [" bitki", " çiçek", " saksı"],
+          "yanlis": [" fabrika", " tesis", " yerleştir", " bomba", " kanıt", " delil"]
+        }
+      ]
+    },
+    {
+      "id": "plant_seker",
+      "ad": "plant: babanın eski işi",
+      "aciklama": "Gündelik anlam. Şeker fabrikası.",
+      "satirlar": [
+        {"en": "My dad never talks about the old days."},
+        {
+          "en": "Thirty years at the sugar plant, then they shut it down.",
+          "beklenen": "plant = fabrika ('bitki' değil)",
+          "kelime": "plant", "anlam": "gundelik",
+          "dogru": [" fabrika", " tesis", " rafineri", " santral", " şirket"],
+          "yanlis": [" bitki", " yerleştir", " kanıt", " delil"]
+        }
+      ]
+    },
+    {
+      "id": "plant_delil",
+      "ad": "plant: üstünden çıkan",
+      "aciklama": "Suç anlamı. Polis delili kendisi yerleştirmiş.",
+      "satirlar": [
+        {"en": "They didn't find anything on him at first."},
+        {
+          "en": "So they planted it. Classic.",
+          "beklenen": "plant = (delil) yerleştirmek ('ekmek, dikmek' değil)",
+          "kelime": "plant", "anlam": "suc",
+          "dogru": [" yerleştir", " koy", " sıkıştır", " bırakt", " tuzak", " komplo", " sokuştur", " soktu", " attılar", " uydur", " kurdu", " ayarla", " tezgah", " yerleş"],
+          "yanlis": [" bitki", " ekti", " ekmiş", " dikti", " dikmiş", " fabrika"]
+        }
+      ]
+    },
+    {
+      "id": "bank_timsah",
+      "ad": "bank: bataklıkta timsah",
+      "aciklama": "Gündelik anlam. Nehir kıyısı. Zor: suç dünyasında 'banka' çok yakın.",
+      "satirlar": [
+        {"en": "Careful, there's a gator in the water."},
+        {
+          "en": "Stay up on the bank and keep quiet.",
+          "beklenen": "bank = kıyı ('banka' değil)",
+          "kelime": "bank", "anlam": "gundelik", "zor": true,
+          "dogru": [" kıyı", " sahil", " karşı yaka", " kenar", " set", " yukarı", " kara"],
+          "yanlis": [" banka"]
+        }
+      ]
+    },
+    {
+      "id": "bank_kasa",
+      "ad": "bank: kasa dairesi",
+      "aciklama": "Suç anlamı. Banka soygunu.",
+      "satirlar": [
+        {"en": "Masks on. Vault opens at nine sharp."},
+        {
+          "en": "Nobody leaves this bank until we're done.",
+          "beklenen": "bank = banka",
+          "kelime": "bank", "anlam": "suc",
+          "dogru": [" banka"],
+          "yanlis": [" kıyı", " sahil"]
+        }
+      ]
+    },
+    {
+      "id": "jam_kahvalti",
+      "ad": "jam: kahvaltı masası",
+      "aciklama": "Gündelik anlam. Reçel. Zor: tek ipucu tereyağı.",
+      "satirlar": [
+        {"en": "Pass the butter, babe."},
+        {
+          "en": "And the jam, too.",
+          "beklenen": "jam = reçel",
+          "kelime": "jam", "anlam": "gundelik", "zor": true,
+          "dogru": [" reçel", " marmelat"],
+          "yanlis": [" tutukluk", " sıkış", " tıka", " trafik"]
+        }
+      ]
+    },
+    {
+      "id": "jam_kopru",
+      "ad": "jam: köprüde trafik",
+      "aciklama": "Gündelik anlam. Trafik sıkışıklığı.",
+      "satirlar": [
+        {"en": "Where the hell have you been?"},
+        {
+          "en": "Stuck in a jam on the causeway for an hour.",
+          "beklenen": "jam = trafik sıkışıklığı",
+          "kelime": "jam", "anlam": "gundelik",
+          "dogru": [" trafik", " sıkış", " tıkan", " yoğun", " kuyruk", " kilit", " mahsur", " takıl"],
+          "yanlis": [" reçel", " tutukluk", " marmelat"]
+        }
+      ]
+    },
+    {
+      "id": "jam_tutukluk",
+      "ad": "jam: şarjör değiştirirken",
+      "aciklama": "Suç anlamı. Silah tutukluk yaptı.",
+      "satirlar": [
+        {"en": "Cover me, I'm reloading!"},
+        {
+          "en": "Damn it, it's jammed!",
+          "beklenen": "jammed = tutukluk yaptı/sıkıştı",
+          "kelime": "jam", "anlam": "suc",
+          "dogru": [" tutukluk", " tutukluğ", " sıkış", " tıkan", " takıl", " ateş almı", " kilitlen", " bozul", " çalışmıyor"],
+          "yanlis": [" reçel", " trafik", " marmelat"]
+        }
+      ]
+    },
+    {
+      "id": "lift_servis",
+      "ad": "lift: araba serviste",
+      "aciklama": "Gündelik anlam. Arabayla işe bırakmak.",
+      "satirlar": [
+        {"en": "My car's in the shop again."},
+        {
+          "en": "Can you give me a lift to work?",
+          "beklenen": "lift = arabayla bırakmak ('çalmak' değil)",
+          "kelime": "lift", "anlam": "gundelik",
+          "dogru": [" bırak", " götür", " arabayla", " atar mısın", " atabilir", " atsana", " yolcu"],
+          "yanlis": [" arakla", " asansör", " kaldır", " yürüt"]
+        }
+      ]
+    },
+    {
+      "id": "lift_saat",
+      "ad": "lift: turistin saati",
+      "aciklama": "Suç anlamı. Saati bir turistten araklamış.",
+      "satirlar": [
+        {"en": "Nice watch. Where'd you get it?"},
+        {
+          "en": "Lifted it off a tourist on the boardwalk.",
+          "beklenen": "lifted = çaldım/arakladım",
+          "kelime": "lift", "anlam": "suc",
+          "dogru": [" çaldım", " çalmış", " çaldı", " arakla", " yürüt", " aşır", " kaldır", " kaptım", " kapmış", " cebinden", " cepledim", " çarptım", " çarpmış", " çalıntı"],
+          "yanlis": [" asansör", " bıraktım", " arabayla"]
+        }
+      ]
+    },
+    {
+      "id": "trip_izin",
+      "ad": "trip: bir hafta izin",
+      "aciklama": "Gündelik anlam. Adalara gezi.",
+      "satirlar": [
+        {"en": "We finally got a week off."},
+        {
+          "en": "Let's take a trip down to the Keys.",
+          "beklenen": "trip = gezi/tatil",
+          "kelime": "trip", "anlam": "gundelik",
+          "dogru": [" gezi", " yolculuk", " seyahat", " tatil", " gidelim", " tur", " gezme", " kaçamak", " yol"],
+          "yanlis": [" kafayı bul", " trip at", " halüsinasyon"]
+        }
+      ]
+    },
+    {
+      "id": "trip_duvar",
+      "ad": "trip: duvarlar nefes alıyor",
+      "aciklama": "Uyuşturucu anlamı. Kafası güzel, halüsinasyon görüyor.",
+      "satirlar": [
+        {"en": "Bro, the walls are breathing."},
+        {
+          "en": "Yeah, you're tripping hard. Sit down.",
+          "beklenen": "tripping = (uyuşturucuyla) kafası güzel ('yolculuk' değil)",
+          "kelime": "trip", "anlam": "suc",
+          "dogru": [" kafan", " kafayı", " kafası", " kafa", " uçuyor", " uçmuş", " uçtun", " halüsinasyon", " sanrı", " etki", " trip", " sarhoş", " madde"],
+          "yanlis": [" gezi", " yolculuk", " seyahat", " tökezle", " tatil"]
+        }
+      ]
+    },
+    {
+      "id": "juice_buzdolabi",
+      "ad": "juice: kahvaltı",
+      "aciklama": "Gündelik anlam. Meyve suyu.",
+      "satirlar": [
+        {"en": "Kids, breakfast's ready!"},
+        {
+          "en": "Grab a juice from the fridge.",
+          "beklenen": "juice = meyve suyu",
+          "kelime": "juice", "anlam": "gundelik",
+          "dogru": [" meyve suyu", " suyu", " su al", " su getir", " içecek", " juice", " meyve", " portakal", " limonata"],
+          "yanlis": [" torpil", " nüfuz", " güç", " enerji", " elektrik", " doping", " steroid", " bağlantı"]
+        }
+      ]
+    },
+    {
+      "id": "juice_hakim",
+      "ad": "juice: hâkimle bağlantı",
+      "aciklama": "Suç/argo anlamı. Torpil, nüfuz.",
+      "satirlar": [
+        {"en": "How'd he walk out so fast?"},
+        {
+          "en": "His uncle's got juice with the judge.",
+          "beklenen": "juice = torpil/nüfuz ('meyve suyu' değil)",
+          "kelime": "juice", "anlam": "suc",
+          "dogru": [" torpil", " bağlantı", " nüfuz", " tanıdık", " tanış", " tanır", " ilişki", " arka", " arası", " sözü geç", " ayar", " ahbap", " kanka", " iltimas", " güç", " etki", " yakın", " samimi", " eli", " kolu", " dost"],
+          "yanlis": [" suyu", " meyve", " juice", " içecek", " su "]
+        }
+      ]
+    },
+    {
+      "id": "blow_pasta",
+      "ad": "blow: doğum günü pastası",
+      "aciklama": "Gündelik anlam. Mumları üflemek.",
+      "satirlar": [
+        {"en": "Make a wish, sweetie!"},
+        {
+          "en": "Now blow out the candles!",
+          "beklenen": "blow out = üflemek",
+          "kelime": "blow", "anlam": "gundelik",
+          "dogru": [" üfle", " söndür"],
+          "yanlis": [" kokain", " patlat", " havaya uç", " uçur", " çek"]
+        }
+      ]
+    },
+    {
+      "id": "blow_yat",
+      "ad": "blow: yat partisi",
+      "aciklama": "Suç anlamı. Kokain.",
+      "satirlar": [
+        {"en": "The yacht party's tonight. Big clients."},
+        {
+          "en": "Bring the blow. The good stuff.",
+          "beklenen": "blow = kokain",
+          "kelime": "blow", "anlam": "suc",
+          "dogru": [" kokain", " kok ", " mal ", " malı", " toz", " beyaz", " uyuşturucu", " zehir", " madde"],
+          "yanlis": [" darbe", " üfle", " rüzgar", " esinti", " patlayıcı", " bomba"]
+        }
+      ]
+    },
+    {
+      "id": "blow_firsat",
+      "ad": "blow: son şans",
+      "aciklama": "Gündelik/argo anlam. Fırsatı berbat etmek. Zor: suç sahnesi 'patlatmak' ya da 'kokain'e çekebilir.",
+      "satirlar": [
+        {"en": "Last time you panicked and ran."},
+        {
+          "en": "Don't blow it again.",
+          "beklenen": "blow it = berbat etmek/batırmak",
+          "kelime": "blow", "anlam": "gundelik", "zor": true,
+          "dogru": [" berbat", " mahvet", " batır", " boz", " yüzüne gözüne", " eline yüzüne", " kaçırma", " harcama", " çuvalla", " sıçma", " rezil", " heba", " yakma", " bok", " saçmala", " hata", " rezalet"],
+          "yanlis": [" kokain", " üfle", " patlat", " havaya uç"]
+        }
+      ]
+    },
+    {
+      "id": "grass_park",
+      "ad": "grass: yoldan çekilin",
+      "aciklama": "Gündelik anlam. Çimenlerde oynamak.",
+      "satirlar": [
+        {"en": "Kids, stay off the road!"},
+        {
+          "en": "Go play on the grass.",
+          "beklenen": "grass = çimen",
+          "kelime": "grass", "anlam": "gundelik",
+          "dogru": [" çim", " yeşil", " bahçe", " çayır", " otlar", " otlu"],
+          "yanlis": [" esrar", " ispiyon", " muhbir", " ot iç", " ot çek", " marihuana"]
+        }
+      ]
+    },
+    {
+      "id": "grass_canta",
+      "ad": "grass: çantada ne var",
+      "aciklama": "Suç anlamı. Ot, esrar.",
+      "satirlar": [
+        {"en": "What's in the bag?"},
+        {
+          "en": "Just a little grass. Relax.",
+          "beklenen": "grass = ot/esrar ('çimen' değil)",
+          "kelime": "grass", "anlam": "suc",
+          "dogru": [" ot ", " otu", " esrar", " marihuana", " kenevir", " uyuşturucu", " mal ", " ganja"],
+          "yanlis": [" çim", " yeşillik", " ispiyon", " çayır"]
+        }
+      ]
+    },
+    {
+      "id": "rat_mutfak",
+      "ad": "rat: duvardaki ses",
+      "aciklama": "Gündelik anlam. Mutfakta fare.",
+      "satirlar": [
+        {"en": "What's that noise in the wall?"},
+        {
+          "en": "There's a rat in the kitchen! A big one!",
+          "beklenen": "rat = fare/sıçan ('muhbir' değil)",
+          "kelime": "rat", "anlam": "gundelik",
+          "dogru": [" fare", " sıçan"],
+          "yanlis": [" muhbir", " ispiyon", " köstebek", " hain", " gammaz", " jurnal", " ötücü"]
+        }
+      ]
+    },
+    {
+      "id": "rat_yatak",
+      "ad": "rat: delik yatak",
+      "aciklama": "Gündelik anlam. Hapishanede yatağı kemiren fare. Zor: koğuşta 'muhbir' anlamı çok yakın.",
+      "satirlar": [
+        {"en": "Hey, CO! Something chewed a hole in my mattress!"},
+        {
+          "en": "There's a rat in this block, I swear.",
+          "beklenen": "rat = fare (yatağı kemiren hayvan)",
+          "kelime": "rat", "anlam": "gundelik", "zor": true,
+          "dogru": [" fare", " sıçan"],
+          "yanlis": [" muhbir", " ispiyon", " köstebek", " hain", " gammaz", " jurnal", " ötücü"]
+        }
+      ]
+    },
+    {
+      "id": "rat_ekip",
+      "ad": "rat: federaller nereden bildi",
+      "aciklama": "Suç anlamı. Ekipte bir muhbir var.",
+      "satirlar": [
+        {"en": "The feds knew exactly where the cash was."},
+        {
+          "en": "Somebody in this crew is a rat.",
+          "beklenen": "rat = muhbir/köstebek ('fare' değil)",
+          "kelime": "rat", "anlam": "suc",
+          "dogru": [" muhbir", " ispiyon", " köstebek", " hain", " gammaz", " ötüyor", " ötmüş", " öttü", " ötücü", " jurnal"],
+          "yanlis": [" fare", " sıçan"]
+        }
+      ]
+    },
+    {
+      "id": "snow_kuzey",
+      "ad": "snow: Liberty City'de kar",
+      "aciklama": "Gündelik anlam. Kar yağışı.",
+      "satirlar": [
+        {"en": "Mom called from Liberty City."},
+        {
+          "en": "Says it's been snowing for three days straight.",
+          "beklenen": "snow = kar",
+          "kelime": "snow", "anlam": "gundelik",
+          "dogru": [" kar yağ", " kar ", " karlar", " karlı"],
+          "yanlis": [" kokain", " mal ", " toz", " uyuşturucu"]
+        }
+      ]
+    },
+    {
+      "id": "snow_tekne",
+      "ad": "snow: gece yarısı tekne",
+      "aciklama": "Suç anlamı. Balık kasalarında kokain. Zor: uyuşturucu sözü geçmiyor.",
+      "satirlar": [
+        {"en": "Boat comes in at midnight."},
+        {
+          "en": "Forty kilos of snow, packed in fish crates.",
+          "beklenen": "snow = kokain ('kar' değil)",
+          "kelime": "snow", "anlam": "suc", "zor": true,
+          "dogru": [" kokain", " kok ", " mal ", " malı", " toz", " beyaz", " uyuşturucu", " madde"],
+          "yanlis": [" kar ", " kar yağ", " karlar"]
+        }
+      ]
+    },
+    {
+      "id": "imout_poker",
+      "ad": "I'm out: poker masası",
+      "aciklama": "Gündelik anlam. Oyundan çekilmek.",
+      "satirlar": [
+        {"en": "Want me to deal you in again?"},
+        {
+          "en": "Nah, I'm out. Early shift tomorrow.",
+          "beklenen": "I'm out = ben yokum/çekiliyorum ('mermim bitti' değil)",
+          "kelime": "I'm out", "anlam": "gundelik",
+          "dogru": [" yokum", " çekil", " gidiyorum", " kalk", " bırakıyorum", " oynamıyorum", " ben yok", " pas", " gitmem", " kaç", " gideyim", " çıkıyorum", " çıkayım", " devam etmiyorum", " yeter", " istemiyorum", " bu kadar"],
+          "yanlis": [" mermi", " şarjör", " cephane", " kurşun", " hapisten", " boşaldı"]
+        }
+      ]
+    },
+    {
+      "id": "imout_ates",
+      "ad": "I'm out: ateşe devam",
+      "aciklama": "Suç anlamı. Mermi bitti.",
+      "satirlar": [
+        {"en": "Keep shooting, keep shooting!"},
+        {
+          "en": "I can't, I'm out!",
+          "beklenen": "I'm out = mermim bitti ('ben yokum' değil)",
+          "kelime": "I'm out", "anlam": "suc",
+          "dogru": [" mermi", " şarjör", " cephane", " kurşun", " kalmadı", " boşaldı", " boş"],
+          "yanlis": [" gidiyorum", " yokum", " çekil", " dışarı", " çıkıyorum", " bırakıyorum", " gideyim", " pes", " kaç"]
+        }
+      ]
+    },
+    {
+      "id": "bust_muze",
+      "ad": "bust: sıkıcı müze",
+      "aciklama": "Gündelik anlam. Büstün yanında fotoğraf.",
+      "satirlar": [
+        {"en": "This museum is so boring."},
+        {
+          "en": "Take a picture of me next to that bust.",
+          "beklenen": "bust = büst/heykel ('baskın' değil)",
+          "kelime": "bust", "anlam": "gundelik",
+          "dogru": [" büst", " heykel"],
+          "yanlis": [" baskın", " operasyon", " yakala", " tutukla", " enselen", " polis"]
+        }
+      ]
+    },
+    {
+      "id": "bust_klima",
+      "ad": "bust: motelde klima",
+      "aciklama": "Gündelik anlam. Klima bozuk. Zor: suç dünyası 'baskın'a çekebilir.",
+      "satirlar": [
+        {"en": "It's like a hundred degrees in this room."},
+        {
+          "en": "Yeah, the AC's bust. Again.",
+          "beklenen": "bust = bozuk",
+          "kelime": "bust", "anlam": "gundelik", "zor": true,
+          "dogru": [" bozul", " bozuk", " arıza", " çalışmıyor", " gitti", " patla", " öldü", " çöktü"],
+          "yanlis": [" baskın", " yakala", " büst", " operasyon", " enselen", " tutukla", " polis"]
+        }
+      ]
+    },
+    {
+      "id": "bust_depo",
+      "ad": "bust: depo önünde ekip arabaları",
+      "aciklama": "Suç anlamı. Polis baskını.",
+      "satirlar": [
+        {"en": "Six squad cars outside the warehouse."},
+        {
+          "en": "It's a bust! Everybody out the back!",
+          "beklenen": "bust = baskın ('büst' ya da 'fiyasko' değil)",
+          "kelime": "bust", "anlam": "suc",
+          "dogru": [" baskın", " operasyon", " yakala", " enselen", " polis", " tuzak", " basıldı", " bastı", " basıyor", " gözaltı", " tutukla", " patladık", " yandık"],
+          "yanlis": [" büst", " bozul", " iflas", " heykel", " fiyasko"]
+        }
+      ]
+    },
+    {
+      "id": "packing_ucus",
+      "ad": "packing: sabah uçuşu",
+      "aciklama": "Gündelik anlam. Bavul hazırlamak.",
+      "satirlar": [
+        {"en": "Flight's at six tomorrow."},
+        {
+          "en": "I'm still packing. Don't rush me.",
+          "beklenen": "packing = bavul hazırlamak ('silahlı' değil)",
+          "kelime": "packing", "anlam": "gundelik",
+          "dogru": [" bavul", " valiz", " topluyorum", " topla", " toparla", " eşya", " hazırlan", " hazırlıyorum", " çanta"],
+          "yanlis": [" silah", " tabanca", " demir"]
+        }
+      ]
+    },
+    {
+      "id": "packing_gomlek",
+      "ad": "packing: kırmızı gömlekli",
+      "aciklama": "Suç anlamı. Ceketin altında silah taşıyor.",
+      "satirlar": [
+        {"en": "Careful with the guy in the red shirt."},
+        {
+          "en": "He's packing. Left side, under the jacket.",
+          "beklenen": "packing = silahlı",
+          "kelime": "packing", "anlam": "suc",
+          "dogru": [" silah", " tabanca", " demir", " alet", " patlar", " beylik"],
+          "yanlis": [" bavul", " valiz", " eşya", " topluyor", " paketl", " hazırlan", " çanta"]
+        }
+      ]
+    },
+    {
+      "id": "smoke_hava",
+      "ad": "smoke: hava almak",
+      "aciklama": "Gündelik anlam. Sigara içmeye çıkmak.",
+      "satirlar": [
+        {"en": "I need some air."},
+        {
+          "en": "Going out for a smoke. Want one?",
+          "beklenen": "smoke = sigara",
+          "kelime": "smoke", "anlam": "gundelik",
+          "dogru": [" sigara", " tüttür", " içmeye", " içeyim", " fırt", " nefes", " duman"],
+          "yanlis": [" temizle", " öldür", " vur", " gebert", " indir"]
+        }
+      ]
+    },
+    {
+      "id": "smoke_barmen",
+      "ad": "smoke: tezgâhın altı",
+      "aciklama": "Suç anlamı. Barmen silaha uzanırsa vurmak.",
+      "satirlar": [
+        {"en": "Keep your eyes on the bartender."},
+        {
+          "en": "If he reaches under the counter, smoke him.",
+          "beklenen": "smoke him = vur/temizle ('sigara' değil)",
+          "kelime": "smoke", "anlam": "suc",
+          "dogru": [" temizle", " öldür", " vur", " gebert", " indir", " harca", " sık", " hallet", " ortadan kaldır", " yok et", " delik deşik", " kurşun", " ateş"],
+          "yanlis": [" sigara", " duman", " tüttür"]
+        }
+      ]
+    },
+    {
+      "id": "strap_canta",
+      "ad": "strap: çanta askısı",
+      "aciklama": "Gündelik anlam. Askı koptu.",
+      "satirlar": [
+        {"en": "Ugh, not again."},
+        {
+          "en": "The strap on my bag just snapped.",
+          "beklenen": "strap = askı/kayış ('silah' değil)",
+          "kelime": "strap", "anlam": "gundelik",
+          "dogru": [" askı", " kayış", " sap", " kulp", " şerit", " bant", " kemer"],
+          "yanlis": [" silah", " tabanca", " demir"]
+        }
+      ]
+    },
+    {
+      "id": "strap_marina",
+      "ad": "strap: marinada buluşma",
+      "aciklama": "Suç anlamı. Silahını yanında tut. Zor: silah sözü geçmiyor.",
+      "satirlar": [
+        {"en": "We're meeting Benny's people at the marina."},
+        {
+          "en": "Keep your strap close tonight.",
+          "beklenen": "strap = silah",
+          "kelime": "strap", "anlam": "suc", "zor": true,
+          "dogru": [" silah", " tabanca", " demir", " alet", " patlar"],
+          "yanlis": [" askı", " kayış", " kemer", " şerit", " bant"]
+        }
+      ]
+    },
+    {
+      "id": "burner_sos",
+      "ad": "burner: taşan sos",
+      "aciklama": "Gündelik anlam. Ocağın arka gözü.",
+      "satirlar": [
+        {"en": "The sauce is boiling over!"},
+        {
+          "en": "Turn off the back burner!",
+          "beklenen": "burner = ocak gözü ('telefon' değil)",
+          "kelime": "burner", "anlam": "gundelik",
+          "dogru": [" ocak", " ocağ", " göz", " ateş", " altını", " brülör", " fırın"],
+          "yanlis": [" telefon", " hat"]
+        }
+      ]
+    },
+    {
+      "id": "burner_mesaj",
+      "ad": "burner: normal telefon olmaz",
+      "aciklama": "Suç anlamı. Kayıt dışı telefon.",
+      "satirlar": [
+        {"en": "Don't call me on my regular phone."},
+        {
+          "en": "Text me on the burner.",
+          "beklenen": "burner = kayıt dışı telefon",
+          "kelime": "burner", "anlam": "suc",
+          "dogru": [" telefon", " hat", " kayıt dışı", " kayıtsız", " ikinci", " yedek", " gizli", " tek kullanımlık", " burner"],
+          "yanlis": [" ocak", " ocağ", " brülör", " göz"]
+        }
+      ]
+    },
+    {
+      "id": "hood_motor",
+      "ad": "hood: motordan ses",
+      "aciklama": "Gündelik anlam. Arabanın kaputu.",
+      "satirlar": [
+        {"en": "Car's making that noise again."},
+        {
+          "en": "Pop the hood, let me take a look.",
+          "beklenen": "hood = kaput ('mahalle' değil)",
+          "kelime": "hood", "anlam": "gundelik",
+          "dogru": [" kaput", " motor", " kapağ", " kapak"],
+          "yanlis": [" mahalle", " kapüşon", " semt"]
+        }
+      ]
+    },
+    {
+      "id": "hood_yagmur",
+      "ad": "hood: sağanak",
+      "aciklama": "Gündelik anlam. Kapüşon.",
+      "satirlar": [
+        {"en": "It's pouring out there."},
+        {
+          "en": "Put your hood up or you'll get soaked.",
+          "beklenen": "hood = kapüşon",
+          "kelime": "hood", "anlam": "gundelik",
+          "dogru": [" kapüşon", " başlık", " kukuleta"],
+          "yanlis": [" mahalle", " kaput", " semt"]
+        }
+      ]
+    },
+    {
+      "id": "hood_satici",
+      "ad": "hood: yabancı satıcılar",
+      "aciklama": "Suç anlamı. Mahalle.",
+      "satirlar": [
+        {"en": "Those boys ain't from around here."},
+        {
+          "en": "Nobody sells in my hood without my say.",
+          "beklenen": "hood = mahalle",
+          "kelime": "hood", "anlam": "suc",
+          "dogru": [" mahalle", " bölge", " semt", " sokak", " çevre"],
+          "yanlis": [" kaput", " kapüşon", " başlık"]
+        }
+      ]
+    },
+    {
+      "id": "whip_krema",
+      "ad": "whip: pasta kreması",
+      "aciklama": "Gündelik anlam. Kremayı çırpmak.",
+      "satirlar": [
+        {"en": "Okay, frosting time."},
+        {
+          "en": "Whip the cream till it's stiff.",
+          "beklenen": "whip = çırpmak ('araba' değil)",
+          "kelime": "whip", "anlam": "gundelik",
+          "dogru": [" çırp", " köpürt", " kabart", " mikser"],
+          "yanlis": [" araba", " kırbaç", " kırbac", " otomobil"]
+        }
+      ]
+    },
+    {
+      "id": "whip_junior",
+      "ad": "whip: Junior'ın yeni arabası",
+      "aciklama": "Suç/argo anlamı. Araba.",
+      "satirlar": [
+        {"en": "You seen what Junior's driving now?"},
+        {
+          "en": "Yeah, that whip's definitely stolen.",
+          "beklenen": "whip = araba ('kırbaç' değil)",
+          "kelime": "whip", "anlam": "suc",
+          "dogru": [" araba", " araç", " otomobil", " tekerlek", " cip"],
+          "yanlis": [" kırbaç", " kırbac", " krema", " çırp"]
+        }
+      ]
+    },
+    {
+      "id": "turf_stadyum",
+      "ad": "turf: yeni sezon",
+      "aciklama": "Gündelik anlam. Stadyumun çim zemini.",
+      "satirlar": [
+        {"en": "The stadium looks brand new."},
+        {
+          "en": "Yeah, they put down fresh turf for the season.",
+          "beklenen": "turf = çim zemin ('bölge' değil)",
+          "kelime": "turf", "anlam": "gundelik",
+          "dogru": [" çim", " zemin", " halı saha", " yeşil"],
+          "yanlis": [" bölge", " mahalle"]
+        }
+      ]
+    },
+    {
+      "id": "turf_sokak",
+      "ad": "turf: Fifth Street",
+      "aciklama": "Suç anlamı. Çetenin bölgesi.",
+      "satirlar": [
+        {"en": "Swamp Kings are selling on Fifth Street now."},
+        {
+          "en": "That's our turf. Handle it.",
+          "beklenen": "turf = bölge",
+          "kelime": "turf", "anlam": "suc",
+          "dogru": [" bölge", " mahalle", " arazi", " toprak", " sokak", " alan", " mekan", " yer"],
+          "yanlis": [" çim", " yeşil", " halı saha"]
+        }
+      ]
+    },
+    {
+      "id": "cut_el",
+      "ad": "cut: kanayan el",
+      "aciklama": "Gündelik anlam. Küçük bir kesik.",
+      "satirlar": [
+        {"en": "Whoa, your hand's bleeding."},
+        {
+          "en": "It's nothing. Just a small cut.",
+          "beklenen": "cut = kesik ('pay' değil)",
+          "kelime": "cut", "anlam": "gundelik",
+          "dogru": [" kesik", " kesiğ", " yara", " çizik", " sıyrık", " kesil"],
+          "yanlis": [" pay", " hisse", " komisyon", " yüzde"]
+        }
+      ]
+    },
+    {
+      "id": "cut_para",
+      "ad": "cut: para sayıldı",
+      "aciklama": "Suç anlamı. Soygundan düşen pay.",
+      "satirlar": [
+        {"en": "Job's done. Money's counted."},
+        {
+          "en": "So where's my cut?",
+          "beklenen": "cut = pay",
+          "kelime": "cut", "anlam": "suc",
+          "dogru": [" pay", " hisse", " kısmım", " yüzde", " parça"],
+          "yanlis": [" kesik", " kesiğ", " yara", " çizik"]
+        }
+      ]
+    },
+    {
+      "id": "plug_tv",
+      "ad": "plug: televizyon açılmıyor",
+      "aciklama": "Gündelik anlam. Fiş.",
+      "satirlar": [
+        {"en": "The TV won't turn on."},
+        {
+          "en": "Did you check the plug?",
+          "beklenen": "plug = fiş ('tedarikçi' değil)",
+          "kelime": "plug", "anlam": "gundelik",
+          "dogru": [" fiş", " priz", " kablo"],
+          "yanlis": [" tedarikçi", " satıcı", " torbacı", " dağıtıcı"]
+        }
+      ]
+    },
+    {
+      "id": "plug_mal",
+      "ad": "plug: mal azaldı",
+      "aciklama": "Suç anlamı. Uyuşturucu tedarikçisi.",
+      "satirlar": [
+        {"en": "We're running low on product."},
+        {
+          "en": "Call the plug. Tell him we need more.",
+          "beklenen": "plug = tedarikçi/bağlantı ('fiş' değil)",
+          "kelime": "plug", "anlam": "suc",
+          "dogru": [" bağlantı", " tedarikçi", " satıcı", " torbacı", " adam", " kaynak", " toptancı", " dağıtıcı"],
+          "yanlis": [" fiş", " priz", " tıkaç"]
+        }
+      ]
+    }
+  ]
+}

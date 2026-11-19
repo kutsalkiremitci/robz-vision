@@ -21,6 +21,7 @@
     --orig-size: .55em;
     --orig-display: none;
     --mask: rgba(16,16,16,.92);
+    --cover: rgba(16,16,16,1);
   }
   html, body {
     margin: 0; padding: 0; width: 100vw; height: 100vh;
@@ -32,6 +33,17 @@
     transition: opacity var(--fade) ease; opacity: 0;
   }
   #mask.on { opacity: 1; }
+  /* Oyun altyazısının üzerine: oyunun İngilizce altyazısını opak bir kutuyla örter, çeviriyi içinde ortalar. Yeri ve
+     yazı boyu uygulamadan gelir (kareye oransal); yazı sığmazsa küçülür, sonra satır kaydırılıp kutu yukarı büyür
+     (bkz. showCover; köşe ve iç pay render.COVER_RADIUS / COVER_INNER ile aynı). */
+  #cover {
+    position: absolute; display: none; box-sizing: border-box; overflow: hidden; pointer-events: none;
+    flex-direction: column; justify-content: center; align-items: center;
+    background: var(--cover); border-radius: .18em;
+    transition: opacity var(--fade) ease; opacity: 0;
+  }
+  #cover.on { opacity: 1; }
+  #cover .tx { text-align: center; -webkit-text-stroke-width: calc(var(--stroke) * var(--k, 1)); }
   /* Akış: son satırlar alt alta, en yenisi altta. Yığın alta yaslı; eskiler yukarı kayar. */
   #stack {
     position: absolute; left: 0; right: 0; bottom: var(--bottom);
@@ -99,19 +111,22 @@
 <body>
 <div id="mask"></div>
 <div id="stack"></div>
+<div id="cover"><div class="tx"><span class="sp"></span><span class="t"></span></div></div>
 <div id="status">Robz Vision bağlantısı yok</div>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const stack = $('stack'), mask = $('mask'), status = $('status');
+  const stack = $('stack'), mask = $('mask'), cover = $('cover'), status = $('status');
   const root = document.documentElement, css = root.style;
   const params = new URLSearchParams(location.search);
   const host = location.protocol === 'http:' ? location.host : '127.0.0.1:8765';
   const WS = `ws://${host}/ws`;
   const DIM = [1, .65, .45, .32];  // alttan yukarı: en yeni tam, eskiler soluk
+  const COVER_INNER = [0.3, 0.12];  // kapakta yazının kutu kenarına uzaklığı, yazı boyuna oranla (render.COVER_INNER)
+  const LINE_H = 1.28;  // .tx satır yüksekliği
   const still = matchMedia('(prefers-reduced-motion: reduce)');
   const live = new Map();  // satır kimliği → öğe (çıkmakta olanlar hariç), eskiden yeniye
-  let delay = 300, everConnected = false;
+  let delay = 300, everConnected = false, coverMsg = null;
 
   const fadeMs = () => parseFloat(getComputedStyle(root).getPropertyValue('--fade')) || 0;
 
@@ -243,6 +258,52 @@
     requestAnimationFrame(() => mask.classList.add('on'));
   }
 
+  // Kapak yazısının boyu (render.cover_size ile aynı kural): oyunun satır sayısına (rows) sığdığı en büyük boy,
+  // hedeften (font) 1 px adımlarla en küçüğe (low) kadar; orada da sığmazsa o satır sayısıyla yazılabilen en büyük boy.
+  function coverSize(linesAt, rows, font, low) {
+    low = Math.min(low, font);
+    const sizes = [];
+    for (let i = 0; font - i >= low; i++) sizes.push(font - i);
+    if (sizes[sizes.length - 1] > low) sizes.push(low);
+    for (const s of sizes) if (linesAt(s) <= rows) return s;
+    const n = linesAt(low);
+    return sizes.find((s) => linesAt(s) <= n);
+  }
+
+  // c: {rect: [x, y, w, h] kareye oransal (oyunun altyazısı + pay), rows, font / min (kare yüksekliğine oransal),
+  // line: {text, speaker, spans}}; null: kutu kalkar. Kutu alttan sabittir, yazı sığmazsa yukarı büyür.
+  function showCover(c) {
+    coverMsg = c || null;
+    if (!c || !c.line || !c.line.text || !Array.isArray(c.rect)) { cover.classList.remove('on'); return; }
+    const W = innerWidth, H = innerHeight;
+    const [x, y, w, h] = [c.rect[0] * W, c.rect[1] * H, c.rect[2] * W, c.rect[3] * H];
+    const tx = cover.querySelector('.tx');
+    tx.querySelector('.sp').textContent = c.line.speaker ? c.line.speaker + ': ' : '';
+    paintText(tx.querySelector('.t'), String(c.line.text), c.line.spans);
+    cover.style.display = 'flex';
+    const measured = new Map();
+    const linesAt = (s) => {
+      cover.style.fontSize = s + 'px';
+      tx.style.width = Math.max(1, w - 2 * COVER_INNER[0] * s) + 'px';
+      const n = Math.max(1, Math.round(tx.getBoundingClientRect().height / (s * LINE_H)));
+      measured.set(s, n);
+      return n;
+    };
+    const s = coverSize((v) => measured.get(v) ?? linesAt(v), Math.max(1, c.rows | 0), c.font * H, c.min * H);
+    const n = linesAt(s);  // seçilen boy uygulanır
+    const bw = Math.min(W, w), bh = Math.min(H, Math.max(h, n * s * LINE_H + 2 * COVER_INNER[1] * s));
+    Object.assign(cover.style, {
+      left: Math.min(Math.max(x, 0), W - bw) + 'px', top: Math.min(Math.max(y + h - bh, 0), H - bh) + 'px',
+      width: bw + 'px', height: bh + 'px'
+    });
+    // kenar kalınlığı görünümdeki yazı / kenar oranıyla (--stroke görünümün yazı boyuna göredir)
+    const viewPx = (parseFloat(getComputedStyle(root).getPropertyValue('--size')) || 4.074) * H / 100;
+    cover.style.setProperty('--k', String(s / viewPx));
+    requestAnimationFrame(() => cover.classList.add('on'));
+  }
+
+  window.onresize = () => { if (coverMsg) showCover(coverMsg); };
+
   function connect() {
     let ws;
     try { ws = new WebSocket(WS); } catch (e) { setTimeout(connect, delay); return; }
@@ -250,13 +311,17 @@
     ws.onmessage = (e) => {
       let m; try { m = JSON.parse(e.data); } catch (_) { return; }
       if (m.type === 'lines') showLines(m.lines);
-      else if (m.type === 'style') { for (const [k, v] of Object.entries(m.vars || {})) css.setProperty('--' + k, v); }
+      else if (m.type === 'style') {
+        for (const [k, v] of Object.entries(m.vars || {})) css.setProperty('--' + k, v);
+        if (coverMsg) showCover(coverMsg);  // yazı tipi ya da boyu değişti: kutu yeniden ölçülür
+      }
       else if (m.type === 'mask') showMask(m.rect);
+      else if (m.type === 'cover') showCover(m.cover);
       // 'sub' yalnız eski sayfa kopyaları içindir (en yeni satır); bu sayfa 'lines' ile çizer
     };
     ws.onclose = () => {
       // Uygulama kapanırsa ekranda eski yazı kalmasın (hiç bağlanmadıysa ?ornek örneği kalır)
-      if (everConnected) { showLines([]); mask.classList.remove('on'); }
+      if (everConnected) { showLines([]); mask.classList.remove('on'); showCover(null); }
       if (everConnected && params.has('durum')) status.style.display = 'block';
       setTimeout(connect, delay);
       delay = Math.min(delay * 2, 4000);

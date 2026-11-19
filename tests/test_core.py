@@ -37,6 +37,8 @@ def test_norm_key():
 
 def test_split_speaker():
     assert split_speaker("LUCIA: Get in the car.") == ("LUCIA", "Get in the car.")
+    assert split_speaker("LUClA: Get in.")[0] == split_speaker("LUclA: Go.")[0] == "LUCIA"  # OCR harf büyüklüğü
+    assert split_speaker("JASoN: Relax.")[0] == "JASON"
     assert split_speaker("Big Mike: Yo.") == ("Big Mike", "Yo.")
     assert split_speaker("Objective: Go to the bank.") == (None, "Objective: Go to the bank.")
     assert split_speaker("Mission failed: you died") == (None, "Mission failed: you died")
@@ -62,6 +64,17 @@ def test_assemble_speaker_and_hyphen():
     text, speaker, _ = assemble(lines)
     assert speaker == "JASON"
     assert text == "we gotta retreat now"
+
+
+def test_short_replies_are_valid():
+    """Kısa yanıtlar ("No.", "Go!") altyazıdır: tamamı bilinen İngilizce kelimeyse ve güvenle okunduysa geçer.
+    Tek harf, sözlükte olmayan kısa parça ve düşük güvenli okuma geçmez."""
+    for text in ("No.", "Go!", "Hi.", "OK."):
+        assert is_valid(text, [0.95], 3, english_score(text)), text
+    assert not is_valid("No.", [0.5], 3, english_score("No."))
+    assert not is_valid("Xq", [0.99], 3, english_score("Xq"))
+    assert not is_valid("A.", [0.99], 3, english_score("A."))
+    assert not is_valid("No.", [0.99])  # İngilizce puanı bilinmiyorsa en az harf kuralı geçerli
 
 
 def test_is_valid():
@@ -388,7 +401,7 @@ def test_ai_settings_defaults():
     from altyazitr.translate import RECOMMENDED_OLLAMA_MODEL
 
     s = Settings()
-    assert s.settings_version == 4 and isinstance(s.ai, AiCfg)
+    assert s.settings_version == 5 and isinstance(s.ai, AiCfg)
     assert (s.ai.choice, s.ai.pending_model, s.ai.failed, s.ai.failed_kind) == ("", "", "", "")
     assert s.ai.pause_while_running and not s.ai.installed_ollama and not s.ai.invite_pending and s.ai.speed_ms == 0
     assert TranslateCfg().ollama_model == RECOMMENDED_OLLAMA_MODEL
@@ -413,7 +426,7 @@ def test_ai_invite_migration(tmp_path, monkeypatch, data, invite):
     monkeypatch.setattr(cfg, "SETTINGS_FILE", path)
     path.write_text(json.dumps(data), encoding="utf-8")
     s = cfg.load_settings()
-    assert s.ai.invite_pending is invite and s.settings_version == 4
+    assert s.ai.invite_pending is invite and s.settings_version == Settings.settings_version
     s.ai.invite_pending = False  # arayüz daveti gösterdi
     cfg.save_settings(s)
     assert cfg.load_settings().ai.invite_pending is False  # bir kez
@@ -430,7 +443,36 @@ def test_ai_settings_round_trip(tmp_path, monkeypatch):
     s.ai.pause_while_running = False
     cfg.save_settings(s)
     assert cfg.load_settings().ai == s.ai
-    assert cfg.load_settings().settings_version == 4
+    assert cfg.load_settings().settings_version == Settings.settings_version
+
+
+@pytest.mark.parametrize(("data", "fps", "stable", "mode"), [
+    pytest.param({"settings_version": 4, "capture": {"fps": 10}, "ocr": {"stable_frames": 2}}, 20, 1, "smart",
+                 id="1.2.1 varsayılanları: yenilere geçer"),
+    pytest.param({"settings_version": 4, "capture": {"fps": 10}, "ocr": {"detect_mode": "interval", "interval_ms": 500,
+                                                                        "stable_frames": 2}}, 20, 1, "interval",
+                 id="sabit aralık seçen: kip ve aralık korunur, tarama hızı yeni"),
+    pytest.param({"settings_version": 4, "capture": {"fps": 15}, "ocr": {"stable_frames": 3}}, 15, 3, "smart",
+                 id="kendi seçtiği tarama hızı ve kararlılık korunur"),
+    pytest.param({"settings_version": 5, "capture": {"fps": 10}, "ocr": {"stable_frames": 2}}, 10, 2, "smart",
+                 id="v5 dosyasında 10 kare/sn kullanıcının seçimidir"),
+    pytest.param({}, 20, 1, "smart", id="eksik alanlar yeni varsayılanla"),
+])
+def test_fast_detection_migration(tmp_path, monkeypatch, data, fps, stable, mode):
+    """v5 geçişi: eski varsayılan tarama hızı (10 kare/sn) ve kararlılık (2 kare) bir kez yenilerine (20, 1) geçer;
+    kullanıcının seçtiği değerler ve algılama kipi korunur."""
+    import json
+
+    from altyazitr import config as cfg
+
+    path = tmp_path / "ayarlar.json"
+    monkeypatch.setattr(cfg, "SETTINGS_FILE", path)
+    path.write_text(json.dumps(data), encoding="utf-8")
+    s = cfg.load_settings()
+    assert (s.capture.fps, s.ocr.stable_frames, s.ocr.detect_mode) == (fps, stable, mode)
+    assert s.settings_version == Settings.settings_version
+    if mode == "interval":
+        assert s.ocr.interval_ms == 500
 
 
 def test_english_mass_ignores_background_words():
