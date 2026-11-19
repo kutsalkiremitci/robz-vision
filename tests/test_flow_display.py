@@ -333,7 +333,7 @@ def test_tek_satir_modu_eskisi_gibi(make_display):
     _advance(d, clock, 0.75)
     assert _texts(box) == []
     d.show_test()
-    assert len(box.last) == 1 and "test altyazısıdır" in box.last[0]["text"]
+    assert len(box.last) == 1 and "test mesajıdır" in box.last[0]["text"]
 
 
 def test_gorunurluk_temizle_ve_test(make_display):
@@ -349,7 +349,7 @@ def test_gorunurluk_temizle_ve_test(make_display):
 
     d.show_test()  # akışta 3 örnek satır: iki konuşmacılı + bir düz satır, en yenisi test cümlesi
     lines = box.last
-    assert len(lines) == 3 and "test altyazısıdır" in lines[-1]["text"]
+    assert len(lines) == 3 and "test mesajıdır" in lines[-1]["text"] and "kick.com/robzsogood" in lines[-1]["text"]
     assert sum(1 for x in lines if x["speaker"]) == 2 and any(x["speaker"] is None for x in lines)
     assert any(ch in "".join(x["text"] for x in lines) for ch in "ğüşıöçĞÜŞİÖÇ")
     d.on_gone()  # örnek gösterilirken oyun olayları onu kaldırmaz

@@ -165,6 +165,18 @@ class AiCfg:
 
 
 @dataclass
+class UpdateCfg:
+    """Güncellemeler (altyazitr.updater, altyazitr.update_service). Eski ayar dosyasında yoksa varsayılanlar geçer."""
+
+    auto_check: bool = True  # yeni sürüm saatte bir denetlensin (GitHub'a kimlik doğrulamasız tek istek)
+    skipped_version: str = ""  # "Bu sürümü atla" denen sürüm ("1.3.1"); daha yenisi çıkınca yine bildirilir
+    last_check: float = 0.0  # son başarılı denetimin zamanı (Unix sn); 0: hiç
+    # Güncelleme başlatılırken çalışan sürüm: yeni sürüm açılınca sonuç bir kez bildirilir ("güncellendi" ya da sürüm
+    # aynı kaldıysa "kurulamadı") ve alan boşalır.
+    updating_from: str = ""
+
+
+@dataclass
 class Settings:
     capture: CaptureCfg = field(default_factory=CaptureCfg)
     ocr: OcrCfg = field(default_factory=OcrCfg)
@@ -179,6 +191,7 @@ class Settings:
     server: ServerCfg = field(default_factory=ServerCfg)
     hotkeys: HotkeyCfg = field(default_factory=HotkeyCfg)
     ai: AiCfg = field(default_factory=AiCfg)  # yerel yapay zekâ kurulumu
+    update: UpdateCfg = field(default_factory=UpdateCfg)  # güncelleme denetimi
     first_run: bool = True
     tour_seen: bool = False  # tanıtım turu tamamlandı mı ("Daha sonra" denirse bir sonraki açılışta yine gösterilir)
     minimize_to_tray: bool = True

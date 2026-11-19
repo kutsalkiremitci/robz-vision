@@ -1,12 +1,13 @@
 """README ve kullanım kılavuzu görsellerini üretir (docs/gorseller/).
 
-Kullanım:  python tools/readme_gorselleri.py [banner] [demo] [arayuz]
-           (bölüm adı verilmezse hepsi üretilir)
+Kullanım:  python tools/readme_gorselleri.py [banner] [demo] [arayuz] [gta6] [--kaynak KLASÖR ...]
+           (bölüm adı verilmezse hepsi üretilir; gta6 bölümü yalnız --kaynak verilince çalışır)
 
 Çıktı:
   banner.png          1280×640 tanıtım görseli; GitHub "Social preview" olarak da yüklenebilir
   ayirici.png         README bölümleri arasındaki ince ufuk çizgisi (saydam zemin)
   indir.png           README'deki "Hemen indir" düğmesi (2x çözünürlük, saydam köşeler)
+  kick_takip.png      README'deki "Robz so good'u Kick'te takip et" düğmesi (2x, Kick yeşili; logo değiştirilmeden)
   demo.gif           sahte oyun sahnesi: İngilizce altyazı → Türkçe çeviri kutusu (döngü)
   demo_once.png       aynı sahnenin çevirisiz hâli
   demo_sonra.png      aynı sahnenin çevirili hâli
@@ -16,6 +17,23 @@ Kullanım:  python tools/readme_gorselleri.py [banner] [demo] [arayuz]
   bolge_secimi.png    bölge seçici (sahte oyun sahnesinin üstünde)
   konum_ayari.png     "Konumu ayarla" modundaki ekran altyazısı kutusu
   obs_yardim.png      "OBS'e nasıl eklenir?" penceresi
+
+  gta6 bölümü (resmî GTA VI tanıtım görselleri üzerinde; görseller --kaynak ile verilen klasörde aranır):
+  gta6_kahraman.png   1280×640 README başı ve GitHub "Social preview": sahne + İngilizce altyazı + Türkçe kutu + ad
+  gta6_once.png       İngilizce altyazılı sahne
+  gta6_sonra.png      aynı sahne, üstünde Robz Vision'ın Türkçe kutusu (ekrandaki kutu, varsayılan görünüm)
+  gta6_ustune.png     "Oyun altyazısının üzerine" kipi: üstte oyunun altyazısı, altta onu örten Türkçe kutu
+  gta6_demo.gif       beş satırlık döngü (GTA6_DEMO): satır belirir → Türkçesi gelir → sonraki satır
+  gta6_bolge_secimi.png  bölge seçici, sahnenin üstünde (ayrı süreçte; yalnız seçici ve ekran kutusu kurulur)
+  gta6_konum_ayari.png   "Konumu ayarla" modundaki ekran altyazısı kutusu, sahnenin üstünde
+  site/img/gta6_*.webp ve site/img/og.jpg (1200×630 sosyal önizleme) aynı çizimlerden
+
+  Örnek:  python tools/readme_gorselleri.py gta6 --kaynak "C:\\...\\Gorseller\\gta6"
+
+  Kaynak JPEG'ler depoya kopyalanmaz; yalnız bu çizimler girer. Altyazı cümleleri projeye özgüdür, oyunun
+  senaryosundan alıntı değildir. Türkçe kutu uygulamanın kendi çizim koduyla (render.paint_subtitle,
+  render.paint_cover; kapak kutusunun yeri ve yazı boyu display.cover_area / cover_fonts ve
+  ScreenOverlay._place_cover ile) çizilir.
 
 Arayüz yeniden tasarlandığında bu betiği yeniden çalıştırmanız yeterlidir.
 
@@ -36,6 +54,7 @@ import runpy
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,9 +105,16 @@ def _to_pil(img):
     return Image.open(io.BytesIO(bytes(buf.data()))).convert("RGB")
 
 
+def _goreli(path: Path) -> Path:
+    try:
+        return path.relative_to(ROOT)
+    except ValueError:
+        return path
+
+
 def _save_png(im, path: Path) -> None:
     im.save(path, optimize=True)
-    print(f"  {path.relative_to(ROOT)}  {im.width}×{im.height}  {path.stat().st_size // 1024} KB")
+    print(f"  {_goreli(path)}  {im.width}×{im.height}  {path.stat().st_size // 1024} KB")
 
 
 @contextlib.contextmanager
@@ -601,13 +627,56 @@ def indir_dugmesi_ciz(olcek: int = 2):
     return img
 
 
+def kick_dugmesi_ciz(olcek: int = 2):
+    """README'deki "Robz so good'u Kick'te takip et" düğmesi: Kick yeşili zemin, koyu yazı; solda gece yarısı rengi bir
+    kare içinde Kick logosu (data/kick.svg, rengi ve oranı değiştirilmeden). Boyu "Hemen indir" düğmesiyle aynı.
+
+    `olcek` kat çözünürlükte çizilir; README'de mantıksal genişlikle (img width) gösterilir."""
+    from PySide6.QtCore import QPointF, QRectF, Qt
+    from PySide6.QtGui import QColor, QFont, QFontMetricsF, QImage, QPainter, QPainterPath
+
+    from altyazitr.gui.developer import KICK_GREEN, kick_pixmap
+    from altyazitr.gui.tokens import C, F
+
+    _qt_app()
+    font = QFont()
+    font.setFamilies([F.DISPLAY_SEMIBOLD, F.DISPLAY, F.BODY_FALLBACK])
+    font.setPixelSize(20 * olcek)
+    fm = QFontMetricsF(font)
+    metin = "Robz so good'u Kick'te takip et"
+    kare, ara, yan, H = 34 * olcek, 12 * olcek, 9 * olcek, 52 * olcek
+    W = int(yan + kare + ara + fm.horizontalAdvance(metin) + 22 * olcek)
+    img = QImage(W, H, QImage.Format.Format_ARGB32_Premultiplied)
+    img.fill(Qt.GlobalColor.transparent)
+    p = QPainter(img)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+    zemin = QPainterPath()
+    zemin.addRoundedRect(QRectF(0, 0, W, H), 6 * olcek, 6 * olcek)  # DESIGN.md: düğmeler 6 px
+    p.fillPath(zemin, QColor(KICK_GREEN))
+    rozet = QPainterPath()
+    rozet.addRoundedRect(QRectF(yan, (H - kare) / 2, kare, kare), 5 * olcek, 5 * olcek)
+    p.fillPath(rozet, QColor(C.BG))
+    logo = 20 * olcek
+    pm = kick_pixmap(logo, 1.0)
+    if not pm.isNull():
+        p.drawPixmap(QPointF(yan + (kare - logo) / 2, (H - logo) / 2), pm)
+    p.setFont(font)
+    p.setPen(QColor(C.BG))
+    p.drawText(QPointF(yan + kare + ara, (H + fm.capHeight()) / 2), metin)
+    p.end()
+    return img
+
+
 def banner() -> None:
     from PIL import Image
 
     _qt_app()
     print("Banner:")
     _save_png(_to_pil(banner_ciz()), OUT / "banner.png")
-    for ad, qimg in (("ayirici.png", ayirici_ciz()), ("indir.png", indir_dugmesi_ciz())):
+    for ad, qimg in (("ayirici.png", ayirici_ciz()), ("indir.png", indir_dugmesi_ciz()),
+                     ("kick_takip.png", kick_dugmesi_ciz())):
         buf = io.BytesIO(bytes(_qimage_png(qimg)))
         _save_png(Image.open(buf).convert("RGBA"), OUT / ad)
 
@@ -773,6 +842,558 @@ def _has_app() -> bool:
     return QCoreApplication.instance() is not None
 
 
+# --- GTA 6 sahneleri ------------------------------------------------------------------------------------------------
+# Resmî GTA VI tanıtım görsellerinin üzerinde Robz Vision. Kaynak görseller depoda değildir: --kaynak ile verilen
+# klasörlerde (alt klasörler dahil) adıyla aranır; bulunamazsa bölüm atlanır. Depoya yalnız buradaki çizimler girer
+# (oyun görseli © Rockstar Games / Take-Two Interactive; atıf README'de, sitede ve THIRD_PARTY_NOTICES.md'de).
+# Rockstar'ın logoları kullanılmaz. İngilizce cümleler projeye özgüdür, oyunun senaryosundan alıntı değildir.
+SITE_IMG = ROOT / "site" / "img"
+
+
+@dataclass(frozen=True)
+class Gta6Sahne:
+    dosya: str                  # kaynak klasördeki dosya adı
+    odak: tuple[float, float]   # kırpılırken korunacak nokta (görsele oransal x, y)
+    ingilizce: str              # oyunun altyazısı (özgün cümle)
+    ing_vurgu: str              # oyunun pembe yazdığı kelime
+    turkce: str                 # Robz Vision'ın çevirisi
+    tr_vurgu: str               # vurgulu kelimenin çevirideki karşılığı
+
+
+GTA6_SAHNELER = {
+    "araba": Gta6Sahne("Jason_Duval_02.jpg", (0.5, 0.3),
+                       "You've got two minutes. If the cops show up, I'm gone.", "cops",
+                       "İki dakikan var. Polis gelirse basar giderim.", "Polis"),
+    "araba2": Gta6Sahne("Jason_Duval_02.jpg", (0.5, 0.3),
+                        "Relax. I've done this a hundred times.", "",
+                        "Sakin ol. Bunu yüz kere yaptım.", ""),
+    "ikili": Gta6Sahne("Jason_and_Lucia_01.jpg", (0.5, 0.0),
+                       "Stay close. If this goes wrong, we meet at the marina.", "marina",
+                       "Yanımdan ayrılma. İş ters giderse marinada buluşuruz.", "marinada"),
+    "ikili2": Gta6Sahne("Jason_and_Lucia_01.jpg", (0.5, 0.0),
+                        "Then don't be late this time, Jason.", "",
+                        "O zaman bu sefer geç kalma, Jason.", ""),
+    "gece": Gta6Sahne("Jason_and_Lucia_14.jpg", (0.5, 0.5),
+                      "Forget the job for one night. Tonight, Vice City is ours.", "Vice City",
+                      "Bir geceliğine işi unut. Bu gece Vice City bizim.", "Vice City"),
+}
+# Döngünün sırası: (sahne, son kare). Her satır: altyazısız → İngilizce → çevirisiyle; son satır "üzerine" kipinde.
+GTA6_DEMO = (("araba", "kutu"), ("araba2", "kutu"), ("ikili", "kutu"), ("ikili2", "kutu"), ("gece", "kapak"))
+GTA6_YAZI = 0.036      # oyunun altyazısının yazı boyu (kare yüksekliğine oranla; 1080p'de ~39 px)
+GTA6_TABAN = 0.915     # son satırın taban çizgisi (oransal y)
+GTA6_GENISLIK = 0.64   # altyazının en geniş satırı (kare genişliğine oranla)
+SLOGAN_GTA6 = "GTA 6'yı Türkçe oyna."
+ACIKLAMA_GTA6 = "Oyundaki İngilizce altyazıyı okur, anında Türkçeye çevirir."
+KICK_ADRES = "kick.com/robzsogood"
+
+
+def _gta6_bul(klasorler: list[Path], ad: str) -> Path | None:
+    for k in klasorler:
+        if (k / ad).is_file():
+            return k / ad
+        for f in sorted(k.rglob(ad)):
+            return f
+    return None
+
+
+def _gta6_zemin(yol: Path, W: int, H: int, odak: tuple[float, float]):
+    """Kaynak görsel: W×H'yi tam kaplayacak biçimde ölçeklenir, odak noktası çevresinden kırpılır (PIL, RGB)."""
+    from PIL import Image
+
+    im = Image.open(yol).convert("RGB")
+    s = max(W / im.width, H / im.height)
+    nw, nh = max(W, round(im.width * s)), max(H, round(im.height * s))
+    im = im.resize((nw, nh), Image.Resampling.LANCZOS)
+    x = round(min(max(odak[0] * nw - W / 2, 0), nw - W))
+    y = round(min(max(odak[1] * nh - H / 2, 0), nh - H))
+    return im.crop((x, y, x + W, y + H))
+
+
+def _vurgu_araligi(metin: str, ifade: str) -> list[list[int]]:
+    i = metin.find(ifade) if ifade else -1
+    return [[i, i + len(ifade)]] if i >= 0 else []
+
+
+def _gta_altyazi(p, W: int, H: int, metin: str, vurgu: str, taban: float = GTA6_TABAN) -> tuple[dict, float]:
+    """Oyunun İngilizce altyazısı, GTA tarzı: beyaz, ince koyu kenar ve yumuşak gölge, ortalı; `vurgu` kelimesi pembe
+    (oyunun görev yazısındaki gibi; uygulamanın varsayılan vurgu rengi). Dönüş: OCR'ın bu altyazı için vereceği kutu
+    (textproc.subtitle_box biçiminde, kareye oransal; kapak kutusu bundan hesaplanır) ve yazının üst kenarı (ekrandaki
+    Türkçe kutu bunun üstüne konur). Satır kutusunun yüksekliği L: display.COVER_FONT ölçümüne göre Segoe UI Bold'un
+    harfleri L'nin 0,65'i boyundadır, OCR kutusu harflerin her yanından ~0,15 L taşar."""
+    from PySide6.QtCore import QPointF, Qt
+    from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPainterPath, QPen
+
+    from altyazitr.config import StyleCfg
+    from altyazitr.display import COVER_FONT
+    from altyazitr.render import wrap_text
+
+    px = max(10, round(H * GTA6_YAZI))
+    font = QFont("Segoe UI")
+    font.setPixelSize(px)
+    font.setWeight(QFont.Weight.Bold)
+    fm = QFontMetricsF(font)
+    satirlar = wrap_text(fm, metin, W * GTA6_GENISLIK)
+    ara = fm.lineSpacing()
+    tabanlar = [H * taban - (len(satirlar) - 1 - i) * ara for i in range(len(satirlar))]
+    # Satır parçalara bölünür (vurgudan önce, vurgu, sonra); kenar, gölge ve dolgu aynı parçalardan çizilir, böylece
+    # pembe kelime küçük boylarda da kendi kenarının içinde kalır.
+    beyaz, renkli = QPainterPath(), QPainterPath()
+    kenarlar: list[tuple[float, float]] = []
+    for satir, taban in zip(satirlar, tabanlar):
+        g = fm.horizontalAdvance(satir)
+        x0 = (W - g) / 2
+        kenarlar.append((x0, x0 + g))
+        i = satir.find(vurgu) if vurgu else -1
+        parcalar = ((0, len(satir), beyaz),) if i < 0 else (
+            (0, i, beyaz), (i, i + len(vurgu), renkli), (i + len(vurgu), len(satir), beyaz))
+        for s, e, hedef in parcalar:
+            if e > s:
+                hedef.addText(QPointF(x0 + fm.horizontalAdvance(satir[:s]), taban), font, satir[s:e])
+    yazi = beyaz.united(renkli)
+
+    kenar = max(1.5, px * 0.1)
+
+    def golge(q, c):
+        q.translate(0, px * 0.07)
+        q.fillPath(yazi, c)
+        q.strokePath(yazi, QPen(c, kenar * 2.4, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap,
+                                Qt.PenJoinStyle.RoundJoin))
+
+    p.drawImage(0, 0, _isilti(W, H, golge, "#000000", px * 0.16, 0.8))
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.strokePath(yazi, QPen(QColor(0, 0, 0, 225), kenar, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap,
+                            Qt.PenJoinStyle.RoundJoin))
+    p.fillPath(beyaz, QColor("#FFFFFF"))
+    p.fillPath(renkli, QColor(StyleCfg().highlight_color))
+
+    L = px / COVER_FONT
+    pay = 0.15 * L
+    merkezler = [t - fm.capHeight() / 2 + px * 0.06 for t in tabanlar]
+    x0, x1 = min(a for a, _ in kenarlar) - pay, max(b for _, b in kenarlar) + pay
+    y0, y1 = merkezler[0] - L / 2, merkezler[-1] + L / 2
+    kutu = {"rect": [x0 / W, y0 / H, (x1 - x0) / W, (y1 - y0) / H], "rows": len(satirlar), "line_h": L / H,
+            "roi": [W, H]}
+    return kutu, tabanlar[0] - fm.ascent()
+
+
+def _ekran_kutusu(p, W: int, H: int, metin: str, spans, alt: float) -> None:
+    """Robz Vision'ın ekrandaki Türkçe kutusu (varsayılan "Ekranımda" görünümü), alt kenarı `alt`ta. Uygulamadaki
+    kutuyla aynı kod: render.paint_subtitle, in_box=True, yazı boyu ekran yüksekliğine göre (demo_kare gibi)."""
+    from altyazitr.config import Settings
+    from altyazitr.render import paint_subtitle
+
+    bw, bh = W * 0.8, H * 0.3
+    p.save()
+    p.translate((W - bw) / 2, alt - bh)
+    paint_subtitle(p, bw, bh, Settings().screen_style, metin, None, in_box=True, ref_height=H, spans=spans)
+    p.restore()
+
+
+def _kapak(p, W: int, H: int, kutu: dict, metin: str, spans) -> None:
+    """"Oyun altyazısının üzerine" kipi, uygulamadaki hesapla: kutunun yeri ve yazı boyları SubtitleDisplay._cover ve
+    _screen_cover'daki gibi (display.cover_area, cover_fonts; bölge bütün kare, ölçek 1), Türkçenin kutuya sığdırılması
+    ScreenOverlay._place_cover, çizim render.paint_cover (varsayılan "Ekranımda" görünümü)."""
+    from types import SimpleNamespace
+
+    from altyazitr.config import Settings
+    from altyazitr.display import COVER_FONT, COVER_MIN_PX, cover_area, cover_fonts
+    from altyazitr.overlay import ScreenOverlay
+    from altyazitr.render import paint_cover
+
+    st = Settings().screen_style
+    k = H / 1080.0
+    rect, rows, lh = cover_area(kutu)
+    ust = float(st.font_size) * k
+    font, low = cover_fonts(COVER_FONT * lh * H if lh else ust, ust, COVER_MIN_PX * k)
+    line = {"text": metin, "speaker": None, "spans": spans}
+    cover = {"rect": [rect[0] * W, rect[1] * H, rect[2] * W, rect[3] * H], "bounds": [0, 0, W, H], "rows": rows,
+             "font": font, "min": low, "line": line}
+    # _place_cover yalnız görünümü (self.look) kullanır; pencere açmadan aynı yerleştirme kuralı
+    yer = ScreenOverlay._place_cover(SimpleNamespace(look=st), cover)
+    if yer is None:
+        raise RuntimeError("kapak kutusu yerleştirilemedi")
+    r, boy = yer
+    p.save()
+    p.translate(r.x(), r.y())
+    paint_cover(p, r.width(), r.height(), st, line, boy)
+    p.restore()
+
+
+def _gta6_katman(p, W: int, H: int, sahne: Gta6Sahne, kip: str) -> None:
+    """kip: "bos" (altyazısız), "ingilizce", "kutu" (İngilizce + Türkçe kutu), "kapak" (İngilizce örtülü)."""
+    if kip == "bos":
+        return
+    kutu, ust = _gta_altyazi(p, W, H, sahne.ingilizce, sahne.ing_vurgu)
+    spans = _vurgu_araligi(sahne.turkce, sahne.tr_vurgu)
+    if kip == "kutu":
+        _ekran_kutusu(p, W, H, sahne.turkce, spans, ust - H * 0.022)
+    elif kip == "kapak":
+        _kapak(p, W, H, kutu, sahne.turkce, spans)
+
+
+def gta6_kare(kaynak: Path, sahne: Gta6Sahne, W: int, H: int, kip: str):
+    from PySide6.QtGui import QImage, QPainter
+
+    _qt_app()
+    img = QImage(W, H, QImage.Format.Format_RGB32)
+    p = QPainter(img)
+    p.drawImage(0, 0, _pil_to_qimage(_gta6_zemin(kaynak, W, H, sahne.odak)))
+    _gta6_katman(p, W, H, sahne, kip)
+    p.end()
+    return img
+
+
+def gta6_arayuz(zemin: Path, kutu_zemini: Path) -> None:
+    """Bölge seçici ve "Konumu ayarla" kutusu, GTA VI sahnesinin üstünde (ayrı süreçte, _gta6_arayuz_alt_sureci)."""
+    from PIL import Image
+
+    with tempfile.TemporaryDirectory(prefix="robz_gta6_arayuz_") as tmp:
+        env = dict(os.environ, PYTHONIOENCODING="utf-8")
+        r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--_gta6_arayuz", tmp, str(zemin),
+                            str(kutu_zemini)],
+                           cwd=str(ROOT), env=env, capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=300)
+        log = (r.stdout + r.stderr).strip()
+        if log:
+            print("  " + log.replace("\n", "\n  "))
+        for src_name, dst_name, crop in (("secici.png", "gta6_bolge_secimi.png", (0.08, 0.58, 0.92, 1.0)),
+                                         ("overlay_ayar.png", "gta6_konum_ayari.png", None)):
+            src = Path(tmp) / src_name
+            if not src.exists():
+                print(f"  EKSİK: {src_name} üretilmedi; {dst_name} güncellenmedi.")
+                continue
+            im = Image.open(src).convert("RGB")
+            if crop:
+                x0, y0, x1, y1 = crop
+                im = im.crop((int(im.width * x0), int(im.height * y0), int(im.width * x1), int(im.height * y1)))
+            _save_png(im, OUT / dst_name)
+
+
+def _gta6_arayuz_alt_sureci(out_dir: str, zemin_yolu: str, kutu_zemini: str) -> None:
+    """Ayrı süreç: uygulamanın bölge seçicisi ve "Konumu ayarla" kipindeki ekran kutusu, GTA VI sahnesinin üstünde.
+    Yalnız bu iki pencere kurulur, WA_DontShowOnScreen ile masaüstünde görünmez; ana pencere, OBS sunucusu ve çeviri
+    sayfası kurulmaz, Ollama'ya ya da ağa istek gitmez. Ekran yakalayan işlevler yine de kapatılır: görüntüye
+    masaüstünden hiçbir şey giremez (pencerelerin kendi çizimi grab() ile alınır, zemine sahne çizilir)."""
+    import time
+
+    import numpy as np
+    from PySide6.QtCore import QPoint, QRect, Qt
+    from PySide6.QtGui import QImage, QPainter
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QApplication
+
+    import altyazitr.capture as cap
+
+    class Kapali:
+        def __init__(self, *a, **k):
+            raise cap.CaptureError("Görsel üretiminde ekran yakalama kapalı")
+
+    cap.grab_screen_rect = lambda rect: np.zeros((max(1, int(rect[3])), max(1, int(rect[2])), 3), np.uint8)
+    cap.snapshot_window = lambda *a, **k: None
+    cap.WindowCapturer = Kapali  # type: ignore[misc]
+    cap._new_mss = Kapali
+
+    from altyazitr.config import Settings
+    from altyazitr.gui import region_picker as rp
+    from altyazitr.gui.theme import apply_theme
+    from altyazitr.overlay import ScreenOverlay
+
+    app = QApplication(sys.argv[:1])
+    apply_theme(app)
+
+    def pump(sec: float) -> None:
+        end = time.time() + sec
+        while time.time() < end:
+            app.processEvents()
+            time.sleep(0.01)
+
+    out, zemin = Path(out_dir), Path(zemin_yolu)
+    sahne = GTA6_SAHNELER["ikili"]
+    gizli = Qt.WidgetAttribute.WA_DontShowOnScreen
+
+    # bölge seçici: altyazının çevresine çizilmiş seçim (tools/arayuz_goruntusu.py'deki sürüklemeyle aynı oranlar)
+    picker = rp.ScreenRegionPicker([])
+    for w in picker._wins:
+        w.setAttribute(gizli, True)
+    picker.start()
+    pump(0.2)
+    w0 = picker._wins[0]
+    W, H = w0.width(), w0.height()
+    a, b = QPoint(round(W * 0.156), round(H * 0.741)), QPoint(round(W * 0.781), round(H * 0.889))
+    sol = Qt.MouseButton.LeftButton
+    QTest.mousePress(w0, sol, Qt.KeyboardModifier.NoModifier, a)
+    QTest.mouseMove(w0, b)
+    QTest.mouseRelease(w0, sol, Qt.KeyboardModifier.NoModifier, b)
+    pump(0.1)
+    img = QImage(W, H, QImage.Format.Format_RGB32)
+    p = QPainter(img)
+    p.drawImage(0, 0, _pil_to_qimage(_gta6_zemin(zemin, W, H, sahne.odak)))
+    _gta_altyazi(p, W, H, sahne.ingilizce, sahne.ing_vurgu, taban=0.86)
+    p.drawPixmap(QRect(0, 0, W, H), w0.grab())
+    p.end()
+    img.save(str(out / "secici.png"))
+    picker.finish(None)
+
+    # "Konumu ayarla": 1080p ekrandaki varsayılan kutu (ScreenOverlay.default_box), arkasında gece sahnesinin o kesiti
+    ov = ScreenOverlay(Settings())
+    ov.setAttribute(gizli, True)
+    ov.setGeometry(QRect(0, 0, 1267, 302))
+    ov.set_editing(True)
+    pump(0.3)
+    w, h = ov.width(), ov.height()
+    SW, SH = 1920, 1080
+    img = QImage(w, h, QImage.Format.Format_RGB32)
+    p = QPainter(img)
+    p.translate(-(SW - w) / 2, -(SH - h - SH * 0.05))
+    p.drawImage(0, 0, _pil_to_qimage(_gta6_zemin(Path(kutu_zemini), SW, SH, GTA6_SAHNELER["gece"].odak)))
+    p.resetTransform()
+    p.drawPixmap(QRect(0, 0, w, h), ov.grab())
+    p.end()
+    img.save(str(out / "overlay_ayar.png"))
+    ov.set_editing(False)
+    ov.hide()
+    print("Arayüz (GTA VI zemin): bölge seçici ve konum ayarı alındı.")
+
+
+def _sag_ust_karartma(im):
+    """Sağ üst köşeyi gece yarısı rengine doğru karartır (ad ve slogan okunsun; yüzler ve altyazı alanı açık kalır)."""
+    import numpy as np
+    from PIL import Image
+
+    W, H = im.size
+    x = np.linspace(0.0, 1.0, W)[None, :]
+    y = np.linspace(0.0, 1.0, H)[:, None]
+
+    def yumusak(a, b, t):
+        t = np.clip((t - a) / (b - a), 0.0, 1.0)
+        return t * t * (3 - 2 * t)
+
+    alfa = 0.8 * yumusak(0.47, 0.72, x) * (1.0 - yumusak(0.48, 0.80, y))
+    zemin = np.asarray(im, dtype=np.float32)
+    gece = np.array([12, 11, 29], dtype=np.float32)
+    out = zemin * (1 - alfa[..., None]) + gece * alfa[..., None]
+    return Image.fromarray(np.clip(out + 0.5, 0, 255).astype(np.uint8), "RGB")
+
+
+def gta6_kahraman_ciz(kaynak: Path, W: int = BANNER_W, H: int = BANNER_H):
+    """README'nin başı ve GitHub "Social preview": GTA VI sahnesi, altta oyunun İngilizce altyazısı ve üstünde Robz
+    Vision'ın Türkçe kutusu; sağ üstte logo, ad, slogan ve Kick adresi (Kick logosu, değiştirilmeden)."""
+    from PySide6.QtCore import QPointF, QRectF
+    from PySide6.QtGui import QColor, QFont, QFontMetricsF, QImage, QPainter, QPainterPath, QPen
+
+    from altyazitr.gui.developer import kick_pixmap
+    from altyazitr.gui.tokens import C, F
+    from altyazitr.render import wrap_text
+
+    _qt_app()
+    sahne = GTA6_SAHNELER["ikili"]
+    img = QImage(W, H, QImage.Format.Format_RGB32)
+    p = QPainter(img)
+    for hint in (QPainter.RenderHint.Antialiasing, QPainter.RenderHint.SmoothPixmapTransform,
+                 QPainter.RenderHint.TextAntialiasing):
+        p.setRenderHint(hint)
+    p.drawImage(0, 0, _pil_to_qimage(_sag_ust_karartma(_gta6_zemin(kaynak, W, H, sahne.odak))))
+    _gta6_katman(p, W, H, sahne, "kutu")
+
+    k = H / 640.0
+    kenar_payi = 50 * k
+    logo_kenar = 80 * k
+    ad_font = QFont()
+    ad_font.setFamilies([F.DISPLAY_SEMIBOLD, F.DISPLAY, F.BODY_FALLBACK])
+    ad_font.setPixelSize(round(54 * k))
+    afm = QFontMetricsF(ad_font)
+    slogan_font = QFont(ad_font)
+    slogan_font.setPixelSize(round(40 * k))
+    sfm = QFontMetricsF(slogan_font)
+    acik_font = QFont()
+    acik_font.setFamilies([F.BODY, F.BODY_FALLBACK])
+    acik_font.setPixelSize(round(19 * k))
+    acfm = QFontMetricsF(acik_font)
+    kick_font = QFont(ad_font)
+    kick_font.setPixelSize(round(20 * k))
+    kfm = QFontMetricsF(kick_font)
+
+    ad_ara = 18 * k
+    blok_w = max(logo_kenar + ad_ara + afm.horizontalAdvance("Robz Vision"), sfm.horizontalAdvance(SLOGAN_GTA6))
+    sol = W - kenar_payi - blok_w
+    ust = kenar_payi
+
+    logo = QImage(str(ROOT / "altyazitr" / "data" / "logo.png"))
+    p.drawImage(QRectF(sol, ust, logo_kenar, logo_kenar), logo)
+    ad_taban = ust + logo_kenar / 2 + afm.capHeight() / 2
+    ad = _baslik_yolu(ad_font, sol + logo_kenar + ad_ara, ad_taban, "Robz Vision")
+    p.drawImage(0, 0, _isilti(W, H, lambda q, c: q.fillPath(ad, c), C.PINK, 12 * k, 0.8))
+    p.fillPath(ad, _dogrusal(0, ad_taban - afm.capHeight(), 0, ad_taban, ((0.0, "#FFFFFF"), (1.0, "#FFDCEB"))))
+
+    slogan_taban = ust + logo_kenar + 30 * k + sfm.capHeight()
+    on, vurgu, son = "GTA 6'yı ", "Türkçe", " oyna."
+    x = sol
+    for parca, renk in ((on, C.TEXT), (vurgu, C.PINK), (son, C.TEXT)):
+        yol = QPainterPath()
+        yol.addText(QPointF(x, slogan_taban), slogan_font, parca)
+        p.fillPath(yol, QColor(renk))
+        x += sfm.horizontalAdvance(parca)
+
+    p.setFont(acik_font)
+    p.setPen(_renk(C.TEXT, 0.88))
+    y = slogan_taban + 16 * k + acfm.ascent()
+    for satir in wrap_text(acfm, ACIKLAMA_GTA6, blok_w):
+        p.drawText(QPointF(sol, y), satir)
+        y += acfm.lineSpacing()
+
+    # Kick adresi: gece yarısı zeminli hap; Kick yeşili yalnız logoda
+    hap_h, ic, logo_px = 40 * k, 14 * k, 20 * k
+    hap = QRectF(sol, y - acfm.ascent() + 22 * k, ic + logo_px + 10 * k + kfm.horizontalAdvance(KICK_ADRES) + ic, hap_h)
+    yol = QPainterPath()
+    yol.addRoundedRect(hap, hap_h / 2, hap_h / 2)
+    p.fillPath(yol, _renk(C.BG, 0.82))
+    p.strokePath(yol, QPen(QColor(C.LINE_STRONG), max(1.0, k)))
+    pm = kick_pixmap(round(logo_px), 3.0)
+    if not pm.isNull():
+        p.drawPixmap(QPointF(hap.x() + ic, hap.y() + (hap_h - logo_px) / 2), pm)
+    p.setFont(kick_font)
+    p.setPen(QColor(C.TEXT))
+    p.drawText(QPointF(hap.x() + ic + logo_px + 10 * k, hap.y() + (hap_h + kfm.capHeight()) / 2), KICK_ADRES)
+    p.end()
+    return img
+
+
+def _etiketli(im, etiket: str):
+    """Görselin sol üstüne küçük bir ad etiketi (gece yarısı zemin, Bahnschrift)."""
+    from PySide6.QtCore import QPointF, QRectF
+    from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPainterPath, QPen
+
+    from altyazitr.gui.tokens import C, F
+
+    img = _pil_to_qimage(im)
+    p = QPainter(img)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+    font = QFont()
+    font.setFamilies([F.DISPLAY_SEMIBOLD, F.DISPLAY, F.BODY_FALLBACK])
+    font.setPixelSize(22)
+    fm = QFontMetricsF(font)
+    h, ic = 38.0, 14.0
+    r = QRectF(20, 18, fm.horizontalAdvance(etiket) + 2 * ic, h)
+    yol = QPainterPath()
+    yol.addRoundedRect(r, 6, 6)
+    p.fillPath(yol, _renk(C.BG, 0.84))
+    p.strokePath(yol, QPen(QColor(C.LINE_STRONG), 1.0))
+    p.setFont(font)
+    p.setPen(QColor(C.TEXT))
+    p.drawText(QPointF(r.x() + ic, r.y() + (h + fm.capHeight()) / 2), etiket)
+    p.end()
+    return _to_pil(img)
+
+
+def _foto_png(im, path: Path) -> None:
+    """Fotoğraf içerikli PNG: tam renkli dosya büyükse 256 renge indirilir (Floyd–Steinberg); ~1,5 MB sınırı."""
+    from PIL import Image
+
+    buf = io.BytesIO()
+    im.save(buf, "PNG", optimize=True)
+    if buf.tell() > 1_400_000:
+        im = im.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG)
+    _save_png(im, path)
+
+
+def _webp(im, path: Path, kalite: int = 80) -> None:
+    im.save(path, "WEBP", quality=kalite, method=6)
+    print(f"  {_goreli(path)}  {im.width}×{im.height}  {path.stat().st_size // 1024} KB")
+
+
+def gta6(klasorler: list[Path]) -> None:
+    from PIL import Image
+
+    print("GTA 6 sahneleri:")
+    if not klasorler:
+        print("  atlandı: resmî GTA VI görsellerinin klasörünü --kaynak KLASÖR ile verin (görseller depoda yok).")
+        return
+    kaynak: dict[str, Path] = {}
+    for ad, sahne in GTA6_SAHNELER.items():
+        yol = _gta6_bul(klasorler, sahne.dosya)
+        if yol is None:
+            print(f"  atlandı: {sahne.dosya} bulunamadı ({', '.join(str(k) for k in klasorler)}).")
+            return
+        kaynak[ad] = yol
+    _qt_app()
+    SITE_IMG.mkdir(parents=True, exist_ok=True)
+
+    kahraman = _to_pil(gta6_kahraman_ciz(kaynak["ikili"]))
+    _foto_png(kahraman, OUT / "gta6_kahraman.png")
+    og = _to_pil(gta6_kahraman_ciz(kaynak["ikili"], 1200, 630))
+    og.save(SITE_IMG / "og.jpg", "JPEG", quality=86, optimize=True, progressive=True)
+    print(f"  {_goreli(SITE_IMG / 'og.jpg')}  1200×630  {(SITE_IMG / 'og.jpg').stat().st_size // 1024} KB")
+
+    araba = GTA6_SAHNELER["araba"]
+    for kip, ad in (("ingilizce", "gta6_once"), ("kutu", "gta6_sonra")):
+        im = _to_pil(gta6_kare(kaynak["araba"], araba, 1280, 720, kip))
+        _foto_png(im, OUT / f"{ad}.png")
+        _webp(im, SITE_IMG / f"{ad}.webp")
+
+    # Üzerine yazma: aynı sahnenin alt kısmı, üstte oyunun altyazısı, altta onu örten Türkçe kutu
+    gece = GTA6_SAHNELER["gece"]
+    W, H, kes = 1280, 720, 236
+    bantlar = [_etiketli(_to_pil(gta6_kare(kaynak["gece"], gece, W, H, kip)).crop((0, kes, W, H)), etiket)
+               for kip, etiket in (("ingilizce", "Oyunun altyazısı"),
+                                   ("kapak", "Robz Vision: Oyun altyazısının üzerine"))]
+    ara = 8
+    ustune = Image.new("RGB", (W, 2 * (H - kes) + ara), (12, 11, 29))
+    ustune.paste(bantlar[0], (0, 0))
+    ustune.paste(bantlar[1], (0, H - kes + ara))
+    _foto_png(ustune, OUT / "gta6_ustune.png")
+    _webp(ustune, SITE_IMG / "gta6_ustune.webp")
+
+    gta6_arayuz(kaynak["ikili"], kaynak["gece"])
+
+    # Döngü (GTA6_DEMO): her satır altyazısız → İngilizce → çevirisiyle; son satır "üzerine" kipinde. Kareler 1080p
+    # çizilip yarıya küçültülür: küçük yazı boylarındaki ipucu (hinting) kaymaları görünmez, kenarlar yumuşak olur.
+    DW, DH = 960, 540
+    gruplar: list[list[Image.Image]] = []  # aynı görselin kareleri (tek paletle kodlanır)
+    durations: list[int] = []
+    onceki = None
+    for ad, son in GTA6_DEMO:
+        sahne = GTA6_SAHNELER[ad]
+        if sahne.dosya != onceki:
+            gruplar.append([])
+            onceki = sahne.dosya
+        for kip, ms in (("bos", 450), ("ingilizce", 900), (son, 2900)):
+            kare = _to_pil(gta6_kare(kaynak[ad], sahne, DW * 2, DH * 2, kip))
+            gruplar[-1].append(kare.resize((DW, DH), Image.Resampling.LANCZOS))
+            durations.append(ms)
+    # Aynı görselin kareleri tek paletle: yalnız altyazı bölgesinde farklıdırlar, GIF bu farkı küçük bir dikdörtgen
+    # olarak kodlar. Palet o görselin altyazılı karelerinden çıkarılır; yazı renkleri (beyaz, kenar siyahı, vurgu
+    # pembesi, kapak zemini) ve kenar geçişleri paletin sonuna tam değerleriyle eklenir: yoksa birkaç piksellik pembe
+    # kelime paletten pay alamaz, titreşimle (dither) bozulur.
+    from altyazitr.config import StyleCfg
+
+    st = StyleCfg()
+
+    def rgb(h: str) -> tuple[int, int, int]:
+        return tuple(int(h.lstrip("#")[k:k + 2], 16) for k in (0, 2, 4))
+
+    def karisim(a, b, t):
+        return tuple(round(x * (1 - t) + y * t) for x, y in zip(a, b))
+
+    beyaz, siyah, pembe, kapak = rgb(st.text_color), (0, 0, 0), rgb(st.highlight_color), rgb(st.mask_color)
+    sabit = [beyaz, siyah, pembe, kapak] + [karisim(c, z, t) for c in (beyaz, pembe) for z in (siyah, kapak)
+                                             for t in (0.33, 0.66)]
+    q = []
+    for kareler in gruplar:
+        altyazili = [k for i, k in enumerate(kareler) if i % 3]  # her satırın 2. ve 3. karesi
+        src = Image.new("RGB", (DW, DH * len(altyazili)))
+        for j, k in enumerate(altyazili):
+            src.paste(k, (0, j * DH))
+        taban = src.quantize(colors=256 - len(sabit), method=Image.Quantize.MEDIANCUT, kmeans=2)
+        renkler = taban.getpalette()[:(256 - len(sabit)) * 3] + [v for c in sabit for v in c]
+        palette = Image.new("P", (1, 1))
+        palette.putpalette(renkler)
+        q += [f.quantize(palette=palette, dither=Image.Dither.FLOYDSTEINBERG) for f in kareler]
+    gif = OUT / "gta6_demo.gif"
+    q[0].save(gif, save_all=True, append_images=q[1:], duration=durations, loop=0, optimize=True, disposal=1)
+    print(f"  {_goreli(gif)}  {DW}×{DH}  {len(q)} kare  {gif.stat().st_size // 1024} KB")
+
+
 def main() -> int:
     for stream in (sys.stdout, sys.stderr):
         with contextlib.suppress(AttributeError, ValueError):
@@ -780,10 +1401,26 @@ def main() -> int:
     if len(sys.argv) > 2 and sys.argv[1] == "--_arayuz":
         _arayuz_alt_sureci(sys.argv[2])
         return 0
-    parts = [a for a in sys.argv[1:] if not a.startswith("-")] or ["banner", "demo", "arayuz"]
-    unknown = set(parts) - {"banner", "demo", "arayuz"}
+    if len(sys.argv) > 4 and sys.argv[1] == "--_gta6_arayuz":
+        _gta6_arayuz_alt_sureci(sys.argv[2], sys.argv[3], sys.argv[4])
+        return 0
+    args, kaynaklar = sys.argv[1:], []
+    while "--kaynak" in args:  # --kaynak KLASÖR (birden çok kez verilebilir)
+        i = args.index("--kaynak")
+        if i + 1 >= len(args):
+            print("--kaynak bir klasör ister")
+            return 2
+        kaynaklar.append(Path(args[i + 1]).expanduser())
+        del args[i:i + 2]
+    eksik = [str(k) for k in kaynaklar if not k.is_dir()]
+    if eksik:
+        print("Klasör bulunamadı:", ", ".join(eksik))
+        return 2
+    gecerli = ("banner", "demo", "arayuz", "gta6")
+    parts = [a for a in args if not a.startswith("-")] or list(gecerli)
+    unknown = set(parts) - set(gecerli)
     if unknown:
-        print("Bilinmeyen bölüm:", ", ".join(sorted(unknown)), "(geçerli: banner, demo, arayuz)")
+        print("Bilinmeyen bölüm:", ", ".join(sorted(unknown)), f"(geçerli: {', '.join(gecerli)})")
         return 2
     OUT.mkdir(parents=True, exist_ok=True)
     if "arayuz" in parts:  # önce: ayrı süreç kendi QApplication'ını kurar
@@ -792,6 +1429,8 @@ def main() -> int:
         banner()
     if "demo" in parts:
         demo()
+    if "gta6" in parts:
+        gta6(kaynaklar)
     print("Bitti:", OUT)
     return 0
 

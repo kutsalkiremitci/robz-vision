@@ -102,6 +102,13 @@ Kurallar:
 - Kenar çubuğu: ikon + metin (dar pencerede yalnız ikon); seçili sayfa pembe değil, 3 px **camgöbeği**
   sol çizgi + `RAISED` zemin. Alt kısımda canlı durum ve OBS bağlantı durumu. Kenar çubuğu kendi yerel
   stil sayfasıyla çizilir.
+- Geliştirici bağlantısı (`gui/developer.py`): kenar çubuğunun en altında Kick logosu + "Robz so good"
+  (`TEXT_2`, üzerine gelince `TEXT`; yapay zekâ satırı gibi tıklanabilir satır) ve *Ayarlar → Uygulama →
+  Geliştirici*. Kick yeşili (`#53FC18`) yalnız logoda; logo değiştirilmez. Açılır pencere ya da bildirim yok.
+  Yayın çıktısına (OBS sayfası) ve ekrandaki altyazı kutusuna bağlantı ya da logo girmez.
+- Güncelleme (`update_service.py`, `gui/update_dialog.py`): yeni sürüm varsa kenar çubuğunda "Güncelleme var"
+  satırı ve tıklanabilir tek bir bildirim; çeviri çalışırken, pencere gizliyken ya da tur açıkken bildirim bekler,
+  tepsi balonu çıkmaz.
 - En küçük pencere 780×560; metin taşmaz.
 
 ## Bileşen sözleşmesi (QSS seçicileri — gui/theme.py)

@@ -93,8 +93,8 @@ def test_test_dugmesi_obs_kaynagina_ulasir(live):
                 assert len(server.obs_clients) == 1
                 display.show_test()  # Görünüm/Ana sayfa "Test" düğmesinin çağırdığı yol
                 m = await _next_sub(ws)
-                assert "test altyazısıdır" in m["text"]
-                assert m["original"].startswith("This is a test subtitle")
+                assert "test mesajıdır" in m["text"]
+                assert m["original"].startswith("This is a test message")
 
     asyncio.run(senaryo())
     end = time.monotonic() + 3
@@ -113,7 +113,7 @@ def test_gec_baglanan_obs_gorunen_altyaziyi_alir(live):
             async with http.ws_connect(_ws_url(server), headers={"User-Agent": OBS_UA}) as ws:
                 return await _next_sub(ws)
 
-    assert "test altyazısıdır" in asyncio.run(senaryo())["text"]
+    assert "test mesajıdır" in asyncio.run(senaryo())["text"]
 
 
 def test_tarayici_sekmesi_obs_sayilmaz_ama_altyaziyi_alir(live):
@@ -127,7 +127,7 @@ def test_tarayici_sekmesi_obs_sayilmaz_ama_altyaziyi_alir(live):
                 display.show_test()
                 return await _next_sub(ws)
 
-    assert "test altyazısıdır" in asyncio.run(senaryo())["text"]
+    assert "test mesajıdır" in asyncio.run(senaryo())["text"]
     assert counts and not any(counts)  # durum rozeti "OBS bağlı" göstermez
 
 

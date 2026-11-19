@@ -51,3 +51,20 @@ adları yalnızca çeviride korunsun diye listelenir; sahiplerine aittir. Profil
 
 Robz Vision; Rockstar Games, Take-Two, Sony Interactive Entertainment, OBS Project,
 Kick, Google, Ollama veya DeepL ile bağlantılı değildir. Adı geçen markalar sahiplerine aittir.
+
+**Kick markası:** Kick adı ve logosu (`altyazitr/data/kick.svg`, yeşil "K" işareti) Kick'e aittir. Uygulamada,
+README'de ve web sitesinde yalnız geliştiricinin Kick kanalına (https://kick.com/robzsogood) bağlantı vermek için,
+Kick'in marka yönergelerine uygun olarak, oranı ve rengi değiştirilmeden kullanılır. README'deki "Robz so good'u
+Kick'te takip et" düğmesinde (`docs/gorseller/kick_takip.png`) ve tanıtım görselinde logo, koyu bir zemin üzerinde
+yine değiştirilmeden durur; düğmenin zemini Kick yeşilidir. Logo, Robz Vision'ın MIT lisansının kapsamında
+değildir. Robz Vision'ın geliştiricisi Kick'te yayın yapar; uygulama Kick'in bir ürünü değildir ve Kick tarafından
+desteklenmez.
+
+**Oyun görselleri:** README'deki, kullanım kılavuzundaki ve web sitesindeki örnek görsellerin
+(`docs/gorseller/gta6_*`, `site/img/gta6_*`, `site/img/og.jpg`) zemini Grand Theft Auto VI'nın resmî tanıtım
+görselleridir. Oyun görseli © Rockstar Games / Take-Two Interactive. Robz Vision bağımsız bir hayran projesidir,
+Rockstar Games ile bağlantılı değildir ve onlarca desteklenmez. Görseller yalnız uygulamanın ne yaptığını
+göstermek için kullanılır; Robz Vision'ın MIT lisansının kapsamında değildir ve programla birlikte dağıtılmaz.
+Üzerlerindeki İngilizce altyazılar ve Türkçe çeviriler projeye özgü örneklerdir, oyunun metninden alıntı
+değildir; Rockstar Games'in logoları kullanılmaz. Kaynak görseller depoda yoktur; `tools/readme_gorselleri.py`
+onları yalnız `--kaynak` ile verilen klasörden okur.

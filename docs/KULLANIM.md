@@ -7,9 +7,11 @@ Kurulum için [README'deki Kurulum bölümüne](../README.md#kurulum) bakın.
 
 | Oyunun kendi altyazısı | Robz Vision açıkken |
 |---|---|
-| ![Sahte oyun sahnesinde yalnızca İngilizce altyazı](gorseller/demo_once.png) | ![Aynı sahnede İngilizce altyazının üstünde Türkçe çevirisi](gorseller/demo_sonra.png) |
+| ![GTA VI sahnesi, Jason arabada: altta yalnızca İngilizce altyazı](gorseller/gta6_once.png) | ![Aynı sahnede İngilizce altyazının üstünde Robz Vision'ın Türkçe kutusu](gorseller/gta6_sonra.png) |
 
-<sub>Görüntüler depodaki sahte test sahnesinden (`tools/test_penceresi.py`) alınmıştır.</sub>
+<sub>Oyun görseli © Rockstar Games / Take-Two Interactive (GTA VI resmî tanıtım görseli); Robz Vision bağımsız bir
+hayran projesidir, Rockstar Games ile bir bağlantısı yoktur. Altyazı cümleleri örnektir, oyundan alıntı değildir;
+Türkçe kutu uygulamanın kendi çizim koduyla çizilmiştir (`tools/readme_gorselleri.py`).</sub>
 
 ## İçindekiler
 
@@ -105,7 +107,7 @@ Ana sayfadaki **Çevrilecek bölge** bölümünde iki yol var:
 **Bölge seç**'e bastığınızda ekran kararır, oyun arkada akmaya devam eder. Altyazının çıktığı alanı fareyle
 çizin ve **Onayla**'ya basın.
 
-![Bölge seçici: altyazı satırının çevresine çizilmiş çerçeve ve altında Onayla, Yeniden seç, İptal düğmeleri](gorseller/bolge_secimi.png)
+![Bölge seçici GTA VI sahnesinin üstünde: altyazı satırının çevresine çizilmiş çerçeve ve altında Onayla, Yeniden seç, İptal düğmeleri](gorseller/gta6_bolge_secimi.png)
 
 İyi bir bölge için:
 
@@ -154,7 +156,7 @@ Ana sayfadaki **Ekranımda** bölümü kendi ekranınızdaki altyazı kutusunu y
 3. Kutuyu sürükleyerek taşıyın, kenarlarından boyutlandırın.
 4. Bitirmek için kutuya çift tıklayın ya da **Konumu kaydet**'e basın.
 
-![Konum ayarı: kesik çizgili çerçeve içinde örnek Türkçe altyazı ve "Sürükleyerek taşıyın" ipucu](gorseller/konum_ayari.png)
+![Konum ayarı: GTA VI sahnesinin üstünde kesik çizgili çerçeve, içinde örnek Türkçe altyazılar ve "Sürükleyerek taşıyın" ipucu](gorseller/gta6_konum_ayari.png)
 
 Konum ipuçları:
 
@@ -262,7 +264,7 @@ Gemma 4, Ollama ile bilgisayarınızda çalışan bir dil modelidir.
 - OCR'ın yanlış okuduğu harfleri düzeltir, tuş ipuçlarını ("Hold L2 to …") ayırır.
 - En az 8 GB belleği olan bir NVIDIA ya da AMD ekran kartı ve Windows 10 22H2 ya da daha yenisi gerekir.
   12 GB'lık kartta Gemma 4 12B (`gemma4:12b`, 8,0 GB), 8 GB'lık kartta daha hafif Gemma 4 E4B (`gemma4:e4b`,
-  6,6 GB) kurulur. 12 GB bellekli kartta satır başına yaklaşık 1 sn sürer.
+  6,6 GB) kurulur. 12 GB bellekli kartta satır başına yaklaşık 0,35 sn sürer.
 
 Ollama'yı ayrıca kurmanız gerekmez; Robz Vision kendisi kurar. İlk açılışta *Yapay zekâ ile*'yi seçtiyseniz
 kurulum zaten yapılır ([İlk açılış](#1-başlamadan-önce)). Sonradan kurmak için:
@@ -452,6 +454,33 @@ bitince *Çeviri* sayfasındaki adres de buna göre ayarlanır. Değişkeni Robz
 okunur. Kurulum yalnız bu bilgisayardaki Ollama'yla çalışır. Başka bir bilgisayardaki Ollama'yı kullanmak için
 modeli o bilgisayarda indirin ve adresini *Çeviri* sayfasının *Ollama* bölümüne yazın.
 
+### Güncellemeler
+
+Robz Vision açıkken yeni bir sürüm çıkıp çıkmadığına kendisi bakar: açılıştan kısa süre sonra ve sonra saatte
+bir GitHub'a kısa bir istek gönderir. Yalnız son sürümün numarası okunur, kişisel bilgi gönderilmez. Yeni sürüm
+varsa kenar çubuğunda **Güncelleme var** satırı belirir ve bir kez kısa bir bildirim çıkar. Çeviri çalışırken
+bildirim beklenir; yayınınıza tepsi balonu düşmez. Satıra ya da bildirime tıklayınca neler yeni olduğunu
+görürsünüz:
+
+- **Güncelle:** yeni sürüm iner ve doğrulanır. Boyutu ve SHA256 özeti GitHub'daki sürüm kaydıyla
+  karşılaştırılır; tutmazsa dosya silinir, çalıştırılmaz. Sonra Robz Vision kapanır, yeni sürüm kurulur ve
+  kendiliğinden açılır. Çeviri çalışıyorsa önce sorar.
+- **Sonra:** pencere kapanır; kenar çubuğundaki satır kalır, sonraki açılışta yine hatırlatılır.
+- **Bu sürümü atla:** bu sürüm bir daha bildirilmez; daha yeni bir sürüm çıkınca yine bildirilir.
+
+**Ayarlarınız korunur.** Güncelleme yalnız program klasörünü değiştirir; ayarlara (`%APPDATA%\RobzVision`),
+indirilen modellere ve Ollama'ya dokunmaz. Kurulumdan önce ayar dosyası aynı klasöre
+`ayarlar.yedek-<eski sürüm>.json` adıyla yedeklenir (son üç yedek kalır). Masaüstü kısayolunu sildiyseniz
+güncelleme onu geri getirmez.
+
+**Taşınabilir sürüm** kendini güncelleyemez: **İndir** sürüm sayfasını tarayıcıda açar; yeni sürümü eski
+klasörün yerine çıkarın, ayarlarınız yine korunur. Robz Vision'ı tüm kullanıcılar için kurduysanız da yeni
+sürümü indirip kendiniz kurun.
+
+Denetimi *Ayarlar → Uygulama → Güncellemeler*'den kapatabilir, **Şimdi denetle** ile elle bakabilirsiniz
+(atladığınız sürüm de gösterilir). Uygulama içinden güncelleme 1.3.0'dan sonraki sürümle geldi; 1.3.0 ve
+öncesini bir kez elle güncellemeniz gerekir.
+
 ### Kaldırma
 
 Robz Vision'ı *Ayarlar → Uygulamalar*'dan kaldırırsınız. Program dosyaları ve indirilmiş Ollama kurulum
@@ -469,3 +498,6 @@ modelleri de silmeyi önerir (*Remove models* kutusu). Modeller `%USERPROFILE%\.
 Başka bir sorun mu yaşıyorsunuz? Önce [README'deki SSS](../README.md#sss-ve-sorun-giderme) bölümüne bakın.
 Çözülmezse günlük dosyasıyla birlikte (`%LOCALAPPDATA%\RobzVision\Logs`) bir hata kaydı açın:
 [CONTRIBUTING.md](../CONTRIBUTING.md#hata-bildirmek).
+
+Robz Vision'ı Kick yayıncısı Robz so good geliştiriyor; güncellemeler yayınlarda duyurulur:
+<a href="https://kick.com/robzsogood"><img src="../altyazitr/data/kick.svg" height="14" alt=""> kick.com/robzsogood</a>

@@ -167,10 +167,27 @@ def find_window(exe: str = "", title: str = "") -> WindowInfo | None:
 
 
 _mutex_handle = None
+_mutex_name = ""
 
 
 def acquire_single_instance(name: str) -> bool:
     """Uygulamanın ikinci kez açılmasını engeller. True: ilk örnek."""
-    global _mutex_handle
+    global _mutex_handle, _mutex_name
+    _mutex_name = name
     _mutex_handle = kernel32.CreateMutexW(None, False, name)
     return ctypes.get_last_error() != ERROR_ALREADY_EXISTS
+
+
+def release_single_instance() -> None:
+    """Tek örnek kilidini bırakır (güncelleme: kurulum programı AppMutex'i görüp durmasın diye, kurulumu başlatmadan
+    hemen önce). Kilit yoksa bir şey yapmaz."""
+    global _mutex_handle
+    if _mutex_handle:
+        kernel32.CloseHandle(_mutex_handle)
+        _mutex_handle = None
+
+
+def reacquire_single_instance() -> None:
+    """Bırakılan kilidi yeniden alır (kurulum başlatılamadıysa uygulama açık kalır)."""
+    if _mutex_name and not _mutex_handle:
+        acquire_single_instance(_mutex_name)

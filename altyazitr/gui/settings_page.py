@@ -1,4 +1,8 @@
-"""Ayarlar sayfası: altyazı akışı, metin okuma (OCR), kısayollar, OBS, uygulama.
+"""Ayarlar sayfası: altyazı akışı, metin okuma (OCR), kısayollar, OBS, uygulama (güncellemeler, sürüm, lisanslar,
+geliştiricinin Kick ve YouTube bağlantıları).
+
+Güncellemeler (`ctx.updater`, altyazitr.update_service): "Yeni sürümleri denetle" (saatte bir; kapatılabilir), Şimdi
+denetle ve son denetimin sonucu; yeni sürüm varken "Güncelle…" güncelleme penceresini açar.
 
 Form düzeni (etiket sütunu, durum satırı, bağlantı düğmesi) Çeviri sayfasıyla ortaktır.
 
@@ -16,12 +20,14 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QWidget
 
 from altyazitr import APP_NAME, __version__
+from altyazitr.gui import developer
 from altyazitr.gui.common import _tip
 from altyazitr.gui.controls import Collapsible, HotkeyEdit, Segmented
 from altyazitr.gui.dialogs import show_obs_help
 from altyazitr.gui.icons import icon
 from altyazitr.gui.tokens import C, F, SPACE
 from altyazitr.gui.translate_page import FIELD_W, LABEL_W, StatusLine, add_row, form, hbox, link_button, with_icon
+from altyazitr.gui.update_dialog import settings_status
 from altyazitr.gui.widgets import Card, bind_check, bind_combo, bind_spin, page, row
 from altyazitr.ocr import ENGINES
 from altyazitr.paths import CONFIG_DIR, LOG_DIR, MODEL_DIR, resource_dir
@@ -39,6 +45,8 @@ FLOW_LINES_TIP = ("Aynı anda en fazla kaç çeviri alt alta dursun. Yeni satır
 FLOW_MIN_TIP = "Her çeviri, oyun sonraki satıra geçse de en az bu kadar ekranda kalır. Yetişemiyorsanız artırın."
 FLOW_MAX_TIP = ("Oyundaki yazı ekranda dursa bile çeviri en fazla bu kadar görünür. Uzun satırlara okuma süresi "
                 "kadar pay tanınır.")
+UPDATE_CHECK_TIP = ("Saatte bir GitHub'a kısa bir istek gönderir; yalnız son sürümün numarası okunur, kişisel bilgi "
+                    "gönderilmez. Yeni sürüm yalnız siz Güncelle'ye basınca iner ve kurulur.")
 MIN_SHOW_RANGE = (1.5, 6.0)  # en az gösterim (sn)
 MAX_SHOW_RANGE = (3.0, 20.0)  # en uzun kalma (sn)
 
@@ -227,6 +235,25 @@ class SettingsPage(QWidget):
                                                     self.ctx.save_later,
                                                     tip="İşaretli değilse pencereyi kapatmak uygulamadan çıkar"))
 
+        # güncellemeler: saatte bir denetim (kapatılabilir), Şimdi denetle, son denetimin sonucu
+        self._upd = getattr(self.ctx, "updater", None)  # araçlarda ve bazı testlerde yok
+        self.update_check = bind_check("Yeni sürümleri denetle", s.update, "auto_check", self._update_auto_changed,
+                                       tip=UPDATE_CHECK_TIP)
+        self.update_check.setAccessibleName("Yeni sürümleri denetle")
+        add_row(f, "Güncellemeler", self.update_check)
+        self.update_now = with_icon(QPushButton("Şimdi denetle"), "refresh")
+        self.update_now.setToolTip("GitHub'da yeni sürüm olup olmadığına şimdi bakar")
+        self.update_now.clicked.connect(self._check_updates_now)
+        self.update_open = with_icon(QPushButton("Güncelle…"), "download")
+        self.update_open.setToolTip("Güncelleme penceresini açar: neler yeni, güncelle")
+        self.update_open.clicked.connect(self._open_update)
+        add_row(f, "", layout=hbox(self.update_now, self.update_open, None, spacing=SPACE["m"]))
+        self.update_line = StatusLine(auto_hide=False)
+        add_row(f, "", self.update_line)
+        if self._upd is not None:
+            self._upd.changed.connect(self._sync_update_status)
+        self._sync_update_status()
+
         def opener(path):
             return lambda: (os.makedirs(path, exist_ok=True), QDesktopServices.openUrl(QUrl.fromLocalFile(str(path))))
 
@@ -246,13 +273,23 @@ class SettingsPage(QWidget):
 
         ver = QLabel(f"{APP_NAME} <span style=\"font-family:'{F.DISPLAY}'\">{__version__}</span>")
         ver.setObjectName("muted")
-        ver.setToolTip("MIT lisanslı açık kaynak yazılım. Bu proje Rockstar Games, Sony, OBS Project, "
+        ver.setToolTip("MIT lisanslı açık kaynak yazılım. Bu proje Rockstar Games, Sony, OBS Project, Kick, "
                        "Google veya DeepL ile bağlantılı değildir.")
         notices = resource_dir().parent / "THIRD_PARTY_NOTICES.md"
         lic = link_button("Lisanslar", QUrl.fromLocalFile(str(notices)), icon_name="file-text",
                           tip="Açık kaynak ve üçüncü taraf lisansları")
         lic.setVisible(notices.exists())
         add_row(f, "Sürüm", layout=hbox(ver, lic, None, spacing=SPACE["m"]))
+
+        # geliştirici: Kick ve YouTube kanalları (bkz. gui/developer.py); Kick yeşili yalnız logoda
+        dev = QLabel(developer.DEVELOPER)
+        dev.setObjectName("muted")
+        self.kick_link = link_button("Kick'te takip et", developer.KICK_URL, tip=developer.FOLLOW_TIP)
+        self.kick_link.setIcon(developer.kick_icon())
+        self.kick_link.setAccessibleName(developer.FOLLOW_TEXT)
+        self.youtube_link = link_button("YouTube", developer.YOUTUBE_URL, tip=developer.YOUTUBE_TIP)
+        self.youtube_link.setAccessibleName(developer.YOUTUBE_TIP)
+        add_row(f, "Geliştirici", layout=hbox(dev, self.kick_link, self.youtube_link, None, spacing=SPACE["m"]))
         ac.add(layout=f)
         lay.addWidget(ac)
         lay.addStretch(1)
@@ -260,6 +297,28 @@ class SettingsPage(QWidget):
     def _restart(self) -> None:
         self.ctx.save_later()
         self.ctx.request_restart()
+
+    # --- güncellemeler ------------------------------------------------------------------------------------------
+    def _update_auto_changed(self) -> None:
+        self.ctx.save_later()
+        if self._upd is not None:
+            self._upd.set_auto(self.ctx.s.update.auto_check)
+
+    def _check_updates_now(self) -> None:
+        if self._upd is not None:
+            self._upd.check_now(manual=True)
+
+    def _open_update(self) -> None:
+        opener = getattr(self.win, "open_update_dialog", None)
+        if callable(opener):
+            opener()
+
+    def _sync_update_status(self) -> None:
+        upd = self._upd
+        text, kind, tip = settings_status(upd, self.ctx.s)
+        self.update_line.set(text, kind, tip=tip)
+        self.update_now.setEnabled(upd is not None and not upd.checking)
+        self.update_open.setVisible(upd is not None and upd.available is not None and upd.phase != "installing")
 
     def _start_tour(self) -> None:
         try:

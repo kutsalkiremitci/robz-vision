@@ -40,7 +40,9 @@ bir hatayı düzeltirken mümkünse `tests/` altına bir test ekleyin.
 - Yeni bağımlılık eklerken lisansını kontrol edin. Ticari olmayan lisanslar (ör. CC BY-NC) para kazanılan
   yayınlarla çeliştiği için kabul edilmez. Eklediğiniz bileşeni `THIRD_PARTY_NOTICES.md`'ye yazın.
 - Arayüzü görünür biçimde değiştirdiyseniz `python tools/readme_gorselleri.py` ile `docs/gorseller/`'i
-  yeniden üretin. Bu araç gerçek ekranı yakalamaz; görseller sahte test sahnesinden gelir.
+  yeniden üretin. Bu araç gerçek ekranı yakalamaz; görseller sahte test sahnesinden gelir. README'deki GTA VI
+  zeminli görseller (`gta6_*`) yalnız resmî tanıtım görsellerinin klasörü `--kaynak KLASÖR` ile verilince üretilir;
+  o kaynak görselleri depoya eklemeyin.
 
 ## Hata bildirmek
 
@@ -114,6 +116,21 @@ Etiketi göndermeden önce:
 
   Testleri çalıştırın ve yeni Ollama sürümünü temiz bir bilgisayarda, ilk açılıştaki yapay zekâ kurulumuyla
   baştan sona deneyin.
+- **Uygulama içinden güncelleme şunlara dayanır** (`altyazitr/updater.py`; `.github/workflows/release.yml`
+  üretir). Değiştirirseniz kullanıcıların uygulaması kendini güncelleyemez; `tests/test_updater.py` denetler:
+  - Etiket `vX.Y.Z` biçiminde ve sürüm GitHub'da *Latest* olmalı (`make_latest: true`). Taslak ve ön sürümler
+    (`-beta`, *Pre-release*) yok sayılır.
+  - Kurulum dosyasının adı `RobzVision-Setup-X.Y.Z-x64.exe` (`installer/RobzVision.iss`: `OutputBaseFilename`),
+    özet dosyası `SHA256SUMS.txt` (`<sha256>  <dosya>` satırları). Dosyalar sürümün kendi indirme adresinde
+    olmalı: `https://github.com/kutsalkiremitci/robz-vision/releases/download/vX.Y.Z/…`. Depoyu yeniden
+    adlandırmayın ya da taşımayın: başka adresteki dosyayı uygulama indirmez.
+  - `RobzVision.iss`'teki `AppId`, `AppMutex` ve `[Code]` bölümü (`/GUNCELLEME`, `/BEKLE=`): uygulama kurulumu
+    sessiz başlatıp kapanır, kurulum uygulamanın kapanmasını bekler ve bitince onu yeniden açar.
+  - Yayımlanmış bir sürümün dosyalarını sonradan değiştirmeyin: uygulama indirdiği dosyayı `SHA256SUMS.txt`'deki ve
+    GitHub'ın verdiği özetle karşılaştırır; tutmazsa kurmaz.
+
+  Yeni sürümde güncellemeyi bir önceki sürümden deneyin: eski sürümü kurun, *Ayarlar → Uygulama → Şimdi
+  denetle*, **Güncelle**; uygulama kapanıp yeni sürümle açılmalı ve ayarlar aynı kalmalı.
 - `v<sürüm>` etiketini gönderin; GitHub Actions derleyip Releases'e yükler.
 
 ## Pull request

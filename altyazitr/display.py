@@ -85,8 +85,11 @@ TEST_LINES = (
     ("Çabuk ol, polisler peşimizde!", "JASON", "Hurry up, the cops are on our tail!", None),
     ("Arabaya bin, Vice City'ye gidiyoruz.", "LUCIA", "Get in the car, we're going to Vice City.", "Vice City'ye"),
     ("Köprüyü geçince sola dön, sonra güneye ilerle.", None, "Turn left after the bridge, then head south.", None),
-    ("Bu bir test altyazısıdır — ğüşıöç ĞÜŞİÖÇ. Ayarları buradan kontrol edin!", APP_NAME,
-     "This is a test subtitle. Check your settings here!", "test altyazısıdır"),
+    # En yeni (tek satır kipinde tek görünen) örnek: geliştiricinin kanalına davet; kanal adı vurgu renginde (pembe)
+    ("Bu bir test mesajıdır, kullandığınız için teşekkürler! Destek için Robz so good'u takip edebilirsiniz: "
+     "kick.com/robzsogood", APP_NAME,
+     "This is a test message. Thanks for using Robz Vision! Support: follow Robz so good at kick.com/robzsogood",
+     "Robz so good"),
 )
 
 

@@ -6,6 +6,14 @@ sayfası). Pencere açmayan bildirimler tek kanaldan gelir (`ctx.notify()` → `
 oraya AppContext'te bağlı): pencere görünürken sağ altta kısa bildirim (gui/toast.py), tepsideyken tepsi balonu.
 Kurulumun sonucu (`ai.finished`) ve güncelleyen kullanıcıya bir kezlik yapay zekâ daveti (`settings.ai.invite_pending`)
 de bu kanaldan verilir.
+
+Kenar çubuğunun en altında geliştiricinin Kick bağlantısı durur (Kick logosu + "Robz so good"; gui/developer.py):
+tıklanınca ya da odaktayken Enter ile kanal tarayıcıda açılır. Bildirim ya da açılır pencere göstermez.
+
+Güncelleme (`ctx.updater`, altyazitr.update_service.UpdateService): yeni sürüm varken kenar çubuğunda "Güncelleme var"
+satırı durur (indirme sürerken yüzdesi); tıklanınca güncelleme penceresi (gui/update_dialog.py). Yeni sürüm bu oturumda
+ilk kez bulununca pencere içinde bir kez tıklanabilir kısa bildirim çıkar; çeviri çalışırken, pencere gizliyken ya da
+tur açıkken beklenir (çeviri durunca, pencere açılınca). Tepsi balonu çıkmaz (yayına düşer).
 """
 
 from __future__ import annotations
@@ -47,6 +55,7 @@ from PySide6.QtWidgets import (
 from altyazitr import APP_NAME, __version__, winutil
 from altyazitr.ai_setup import TEXT_READY, TEXT_READY_LATER, Step, step_title
 from altyazitr.capture import snapshot_window
+from altyazitr.gui import developer
 from altyazitr.gui.ai_setup_view import PAUSED, error_note, fmt_eta, fmt_pair, fmt_percent
 from altyazitr.gui.dialogs import OBS_NOT_CONNECTED_TIP
 from altyazitr.gui.home_page import HomePage
@@ -59,6 +68,7 @@ from altyazitr.gui.theme import app_icon
 from altyazitr.gui.toast import ToastHost
 from altyazitr.gui.tokens import RADIUS, SPACE, C, F
 from altyazitr.gui.translate_page import TranslatePage, invite_offered
+from altyazitr.gui.update_dialog import TOAST_MS, TOAST_TEXT, UpdateDialog, sidebar_status
 
 log = logging.getLogger(__name__)
 
@@ -317,20 +327,13 @@ def ai_status(ai: Any, fraction: float | None = None) -> tuple[str, str, str] | 
     return None
 
 
-class _AiRow(QAbstractButton):
-    """Kenar çubuğundaki yapay zekâ kurulum satırı: ikon + kısa durum (durum satırlarıyla aynı eksenlerde; dar kenar
-    çubuğunda yalnız ikon, yazı ipucuna geçer). Düğmedir: tıklanınca, odaktayken Enter ya da Boşluk ile `clicked`.
-    Üzerine gelince menü öğeleri gibi yarı saydam RAISED zemin, klavye odağında camgöbeği halka."""
-
-    LOOK = {  # durum → (ikon, ikon rengi, yazı rengi)
-        "running": ("download", C.CYAN, C.TEXT),
-        "paused": ("download", C.TEXT_3, C.TEXT_2),
-        "failed": ("circle-alert", C.ORANGE, C.TEXT),
-    }
+class _RowButton(QAbstractButton):
+    """Kenar çubuğunda tıklanabilir satır: ikon + kısa yazı (durum satırlarıyla aynı eksenlerde; dar kenar çubuğunda
+    yalnız ikon, yazı ipucuna geçer). Düğmedir: tıklanınca, odaktayken Enter ya da Boşluk ile `clicked`. Üzerine
+    gelince menü öğeleri gibi yarı saydam RAISED zemin, klavye odağında camgöbeği halka."""
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        self.setObjectName("aiStatus")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
@@ -347,22 +350,7 @@ class _AiRow(QAbstractButton):
             w.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         h.addWidget(self.ic)
         h.addWidget(self.tx, 1)
-        self._look: tuple[str, str, str] | None = None
-        self._tip = ""
         self._compact = False
-        self.setAccessibleDescription("Çeviri sayfasını açar")
-
-    def set_status(self, state: str, text: str, tip: str) -> None:
-        look = self.LOOK.get(state, self.LOOK["running"])
-        if look != self._look:  # ikon yalnız durum değişince çizilir (ilerleme sık güncellenir)
-            self._look = look
-            name, icon_color, text_color = look
-            self.ic.setPixmap(pixmap(name, 16, icon_color, dpr=max(2.0, _dpr(self))))
-            self.tx.setStyleSheet(_qss_font(F.DISPLAY, 13, text_color))
-        self.tx.setText(text)
-        self._tip = tip
-        self.setAccessibleName(text)
-        self._sync_tip()
 
     def set_compact(self, compact: bool) -> None:
         self._compact = compact
@@ -370,11 +358,10 @@ class _AiRow(QAbstractButton):
         self._sync_tip()
 
     def _sync_tip(self) -> None:
-        text = self.tx.text()
-        if self._compact:
-            self.setToolTip(f"{text}\n{self._tip}" if self._tip else text)
-        else:
-            self.setToolTip(self._tip or text)
+        """İpucu (dar kenar çubuğunda yazı da ipucuna geçer); alt sınıflar belirler."""
+
+    def _hover_changed(self, _hover: bool) -> None:
+        """Fare satıra girip çıkınca (alt sınıf yazı rengini değiştirebilir)."""
 
     def keyPressEvent(self, e) -> None:  # noqa: N802
         if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not e.isAutoRepeat():
@@ -384,10 +371,12 @@ class _AiRow(QAbstractButton):
         super().keyPressEvent(e)
 
     def enterEvent(self, e) -> None:  # noqa: N802
+        self._hover_changed(True)
         self.update()
         super().enterEvent(e)
 
     def leaveEvent(self, e) -> None:  # noqa: N802
+        self._hover_changed(False)
         self.update()
         super().leaveEvent(e)
 
@@ -413,6 +402,78 @@ class _AiRow(QAbstractButton):
             p.setPen(QPen(QColor(C.CYAN), 1.5))
             p.drawRoundedRect(r.adjusted(0.75, 0.75, -0.75, -0.75), RADIUS["m"], RADIUS["m"])
         p.end()
+
+
+class _AiRow(_RowButton):
+    """Kenar çubuğundaki yapay zekâ kurulum satırı: ikon + kısa durum; tıklanınca Çeviri sayfası."""
+
+    LOOK = {  # durum → (ikon, ikon rengi, yazı rengi)
+        "running": ("download", C.CYAN, C.TEXT),
+        "paused": ("download", C.TEXT_3, C.TEXT_2),
+        "failed": ("circle-alert", C.ORANGE, C.TEXT),
+    }
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setObjectName("aiStatus")
+        self._look: tuple[str, str, str] | None = None
+        self._tip = ""
+        self.setAccessibleDescription("Çeviri sayfasını açar")
+
+    def set_status(self, state: str, text: str, tip: str) -> None:
+        look = self.LOOK.get(state, self.LOOK["running"])
+        if look != self._look:  # ikon yalnız durum değişince çizilir (ilerleme sık güncellenir)
+            self._look = look
+            name, icon_color, text_color = look
+            self.ic.setPixmap(pixmap(name, 16, icon_color, dpr=max(2.0, _dpr(self))))
+            self.tx.setStyleSheet(_qss_font(F.DISPLAY, 13, text_color))
+        self.tx.setText(text)
+        self._tip = tip
+        self.setAccessibleName(text)
+        self._sync_tip()
+
+    def _sync_tip(self) -> None:
+        text = self.tx.text()
+        if self._compact:
+            self.setToolTip(f"{text}\n{self._tip}" if self._tip else text)
+        else:
+            self.setToolTip(self._tip or text)
+
+
+class _UpdateRow(_AiRow):
+    """Kenar çubuğundaki güncelleme satırı ("Güncelleme var", "Güncelleme %34"); tıklanınca güncelleme penceresi."""
+
+    LOOK = {  # durum → (ikon, ikon rengi, yazı rengi); bkz. update_dialog.sidebar_status
+        "available": ("download", C.CYAN, C.TEXT),
+        "running": ("download", C.CYAN, C.TEXT),
+        "failed": ("circle-alert", C.ORANGE, C.TEXT),
+    }
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setObjectName("updateStatus")
+        self.setAccessibleDescription("Güncelleme penceresini açar")
+
+
+class _KickRow(_RowButton):
+    """Kenar çubuğunun en altındaki geliştirici bağlantısı (bkz. gui/developer.py): Kick logosu + "Robz so good"; dar
+    kenar çubuğunda yalnız logo. Tıklanınca, odaktayken Enter ya da Boşluk ile geliştiricinin Kick kanalı varsayılan
+    tarayıcıda açılır. Yazı sessizdir (TEXT_2, üzerine gelince TEXT); Kick yeşili yalnız logoda."""
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setObjectName("kickLink")
+        # durum ikonları gibi 16 px; dolu "K" çizgi ikonlarla aynı ağırlıkta görünsün diye kutuda 14 px
+        self.ic.setPixmap(developer.kick_pixmap(16, max(2.0, _dpr(self)), developer.ICON_SCALE))
+        self.tx.setText(developer.DEVELOPER)
+        self._hover_changed(False)
+        self.setToolTip(developer.FOLLOW_TIP)  # yazıyı da kapsar: dar kenar çubuğunda da aynı
+        self.setAccessibleName(developer.FOLLOW_TEXT)
+        self.setAccessibleDescription(developer.KICK_DESC)
+        self.clicked.connect(developer.open_kick)
+
+    def _hover_changed(self, hover: bool) -> None:
+        self.tx.setStyleSheet(_qss_font(F.DISPLAY, 13, C.TEXT if hover else C.TEXT_2))
 
 
 class _Sidebar(QWidget):
@@ -445,6 +506,10 @@ class MainWindow(QMainWindow):
         self._startup_done = False  # açılıştaki tur kararı verildi (davet bildirimi ondan sonra)
         self._advice: Any = None  # donanım önerisi (Çeviri sayfası arka planda okur)
         self._advice_known = False
+        self._upd = getattr(ctx, "updater", None)  # güncelleme servisi (araçlarda ve testlerde olmayabilir)
+        self._update_dlg: UpdateDialog | None = None
+        self._update_toast_for = ""  # bildirimi bekleyen sürüm (çeviri durunca / pencere açılınca)
+        self._update_toast: Any = None
 
         central = QWidget()
         h = QHBoxLayout(central)
@@ -453,7 +518,8 @@ class MainWindow(QMainWindow):
         self.side = side = _Sidebar()
         side.setFixedWidth(SIDEBAR_W)
         sv = QVBoxLayout(side)
-        sv.setContentsMargins(0, SPACE["l"] + SPACE["xs"], 1, SPACE["l"])
+        # alt boşluk 8 px: en alttaki Kick satırının logosu kendi satırında 9 px içeride, kenara uzaklığı ~16 px kalır
+        sv.setContentsMargins(0, SPACE["l"] + SPACE["xs"], 1, SPACE["s"])
         sv.setSpacing(0)
 
         # marka: logo + "Robz Vision"
@@ -472,6 +538,17 @@ class MainWindow(QMainWindow):
 
         self.nav = _NavList()
         sv.addWidget(self.nav, 1)
+
+        # güncelleme: yalnız yeni sürüm varken (ya da indirilirken); tıklanınca güncelleme penceresi. Yapay zekâ satırı
+        # gibi kenarlardan 8 px içeride (bkz. _apply_compact).
+        self._update_row = _UpdateRow()
+        self._update_row.clicked.connect(self.open_update_dialog)
+        self._update_box = QWidget()
+        ub = QHBoxLayout(self._update_box)
+        ub.setContentsMargins(SPACE["s"], 0, SPACE["s"], SPACE["xs"])
+        ub.addWidget(self._update_row)
+        self._update_box.hide()
+        sv.addWidget(self._update_box)
 
         # yapay zekâ kurulumu: yalnız iş sürerken ya da hata varken; tıklanınca Çeviri sayfası. Menü öğeleri gibi
         # kenarlardan 8 px içeride durur (üzerine gelince zemini onlarınkiyle aynı genişlikte), ikonu ve yazısı
@@ -500,6 +577,15 @@ class MainWindow(QMainWindow):
         fv.addWidget(self._ver)
         sv.addWidget(self._footer)
 
+        # geliştirici bağlantısı, en altta: Kick logosu + "Robz so good" (bkz. gui/developer.py). Yapay zekâ satırı
+        # gibi kenarlardan 8 px içeride, logosu durum ikonlarıyla aynı eksende (bkz. _apply_compact).
+        self._kick_row = _KickRow()
+        self._kick_box = QWidget()
+        kb = QHBoxLayout(self._kick_box)
+        kb.setContentsMargins(SPACE["s"], SPACE["s"], SPACE["s"], 0)
+        kb.addWidget(self._kick_row)
+        sv.addWidget(self._kick_box)
+
         self.stack = QStackedWidget()
         self.pages: dict[str, QWidget] = {}
         for key, title, cls in PAGES:
@@ -526,9 +612,14 @@ class MainWindow(QMainWindow):
         ctx.needs_region.connect(self.select_region)
         ctx.ai.changed.connect(self._update_ai_row)
         ctx.ai.finished.connect(self._on_ai_finished)
+        ctx.pipeline.running_changed.connect(self._on_running_for_update)
+        if self._upd is not None:
+            self._upd.changed.connect(self._sync_update_row)
+            self._upd.found.connect(self._on_update_found)
         self._set_live(bool(getattr(ctx.pipeline, "running", False)))
         self._set_obs(len(getattr(getattr(ctx, "server", None), "obs_clients", ()) or ()))
         self._update_ai_row()
+        self._sync_update_row()
         self._apply_compact(self.width() < COMPACT_BELOW)
         self._build_tray()
         if ctx.server_error:
@@ -567,7 +658,7 @@ class MainWindow(QMainWindow):
         self._wordmark.setVisible(not compact)
         self._ver.setVisible(not compact)
         self.nav.set_compact(compact)
-        for row in (self._live, self._obs, self._ai_row):
+        for row in (self._live, self._obs, self._update_row, self._ai_row, self._kick_row):
             row.set_compact(compact)
         # İki hizalama ekseni: ikonlar (genişte x = 30, menü ikonlarıyla aynı; darda kenar çubuğunun ortası)
         # ve yazılar (x = 52: marka adı, menü etiketleri, durum yazıları ve sürüm aynı sol kenarda).
@@ -583,8 +674,10 @@ class MainWindow(QMainWindow):
         self._brand.layout().setSpacing(max(SPACE["xs"], text_x - logo_x - self._logo.width()))
         self._footer.layout().setContentsMargins(icon_x, 0, SPACE["l"], 0)
         self._ver.setContentsMargins(ICON_COL + SPACE["m"], 0, 0, 0)
-        # yapay zekâ satırı kenarlardan SPACE["s"] içeride başlar (bkz. _ai_box): ikonu yine icon_x'te
-        self._ai_row.layout().setContentsMargins(icon_x - SPACE["s"], 0, SPACE["s"], 0)
+        # güncelleme, yapay zekâ ve Kick satırları kenarlardan SPACE["s"] içeride başlar (bkz. _update_box, _ai_box,
+        # _kick_box): ikonları yine icon_x'te
+        for row in (self._update_row, self._ai_row, self._kick_row):
+            row.layout().setContentsMargins(icon_x - SPACE["s"], 0, SPACE["s"], 0)
 
     def _set_live(self, running: bool) -> None:
         if running:
@@ -606,6 +699,91 @@ class MainWindow(QMainWindow):
         if status is not None:
             self._ai_row.set_status(*status)
         self._ai_box.setVisible(status is not None)
+
+    def _sync_update_row(self) -> None:
+        """Güncelleme satırı: yalnız yeni sürüm varken (atlanmamış) ya da indirme/kurulum/hata durumunda görünür."""
+        status = sidebar_status(self._upd)
+        if status is not None:
+            self._update_row.set_status(*status)
+        self._update_box.setVisible(status is not None)
+
+    # --- güncelleme ----------------------------------------------------------------------------------------------
+    def _on_update_found(self, release: Any, manual: bool) -> None:
+        """Atlanmamış yeni sürüm bulundu. Şimdi denetle'den: pencere hemen açılır. Kendiliğinden denetimde: bir kez
+        kısa, tıklanabilir bildirim (uygun an gelince; bkz. _maybe_update_toast)."""
+        self._sync_update_row()
+        if manual:
+            self.open_update_dialog()
+            return
+        self._update_toast_for = str(getattr(release, "version", "") or "")
+        self._maybe_update_toast()
+
+    def _maybe_update_toast(self) -> None:
+        """Bekleyen "yeni sürüm" bildirimini gösterir: açılış kararlarından sonra, çeviri çalışmıyorken (yayına ve oyuna
+        dikkat dağıtmasın), pencere görünürken ve tur açık değilken. Tepsi balonu yok: kenar çubuğundaki satır kalır."""
+        version, upd = self._update_toast_for, self._upd
+        if not version or upd is None or not self._startup_done:
+            return
+        avail = upd.available
+        if avail is None or avail.version != version or upd.phase != "idle":
+            self._update_toast_for = ""  # atlandı, indiriliyor ya da artık yeni değil
+            return
+        if bool(getattr(self.ctx.pipeline, "running", False)):
+            return  # çeviri durunca (_on_running_for_update)
+        if not self.isVisible() or self.isMinimized():
+            return  # pencere açılınca (showEvent)
+        if self._update_dlg is not None and self._update_dlg.isVisible():
+            self._update_toast_for = ""
+            return
+        from altyazitr.gui import tour
+
+        if tour.active_tour(self) is not None:
+            return  # tur bitince sonraki fırsatta (çeviri durunca, pencere açılınca)
+        self._update_toast_for = ""
+        try:
+            t = self._toasts.show(TOAST_TEXT.format(v=version), "info", TOAST_MS)
+        except Exception:
+            log.exception("Güncelleme bildirimi gösterilemedi")
+            return
+        if t is not None and t is not self._update_toast:
+            self._update_toast = t
+            t.clicked.connect(self.open_update_dialog)
+
+    def _on_running_for_update(self, running: bool) -> None:
+        if not running:
+            self._maybe_update_toast()
+
+    def open_update_dialog(self) -> None:
+        """Güncelleme penceresi (kenar çubuğu satırı, bildirim, Ayarlar → Güncelle…). Tek pencere; açıksa öne gelir."""
+        upd = self._upd
+        if upd is None or upd.shown is None:
+            return
+        if not self.isVisible() or self.isMinimized():
+            self._restore()
+        dlg = self._update_dlg
+        if dlg is None:
+            dlg = UpdateDialog(self, upd, running=lambda: bool(getattr(self.ctx.pipeline, "running", False)),
+                               on_install=self.install_update)
+            dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+            dlg.finished.connect(self._update_dialog_closed)
+            if self.testAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen):  # testler: ekranda açılmasın
+                dlg.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
+            self._update_dlg = dlg
+        dlg.open()
+        dlg.raise_()
+        dlg.activateWindow()
+
+    def _update_dialog_closed(self, *_args) -> None:
+        self._update_dlg = None
+
+    def install_update(self) -> None:
+        """Güncelleme penceresinden: doğrulanmış kurulum başlar ve uygulama kapanır (AppContext.shutdown ayarları
+        kaydeder, hattı durdurur, yapay zekâ modelini boşaltır; kurulum süreç bitince dosyaları değiştirir ve uygulamayı
+        yeniden açar). Kurulum başlatılamazsa pencere hatayı gösterir, uygulama açık kalır."""
+        if self._upd is not None and self._upd.install():
+            if self._update_dlg is not None:
+                self._update_dlg.hide()
+            self.quit_app()
 
     # --- bildirim --------------------------------------------------------------------
     def toast(self, msg: str, kind: str = "info", timeout_ms: int | None = None) -> None:
@@ -672,6 +850,15 @@ class MainWindow(QMainWindow):
     def showEvent(self, e) -> None:  # noqa: N802
         super().showEvent(e)
         self._maybe_invite()
+        self._maybe_update_toast()
+
+    def _show_update_result(self) -> None:
+        """Güncellemeden sonraki ilk açılış: sonuç bir kez ("Robz Vision X sürümüne güncellendi" ya da kurulamadı)."""
+        note = getattr(self._upd, "post_note", None)
+        if note:
+            self._upd.post_note = None
+            text, level = note
+            self.ctx.notify(text, level)
 
     # --- bölge seçimi --------------------------------------------------------
     def select_region(self) -> None:
@@ -757,6 +944,8 @@ class MainWindow(QMainWindow):
         self._first_run()
         self._startup_done = True
         self._maybe_invite()
+        self._show_update_result()
+        self._maybe_update_toast()
 
     def _first_run(self) -> None:
         if self.ctx.s.first_run:

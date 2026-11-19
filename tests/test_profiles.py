@@ -243,8 +243,8 @@ def test_test_dugmesi_iki_ciktida_kendi_gorunumuyle(live):
     display.push_style()
     display.show_test()
     st = _state(server)
-    assert "test altyazısıdır" in st["sub"]["text"] and st["style"]["vars"]["color"] == "#00FF00"
-    assert "test altyazısıdır" in ov.text
+    assert "test mesajıdır" in st["sub"]["text"] and st["style"]["vars"]["color"] == "#00FF00"
+    assert "test mesajıdır" in ov.text
     _opaque_now(ov)
     px = _render(ov)
     assert _count(px, RED) > 100 and _count(px, GREEN) == 0

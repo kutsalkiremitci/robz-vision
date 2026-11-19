@@ -723,6 +723,8 @@ def test_display_vurguyu_iki_ciktiya_iletir(qapp):
         d.show_test()  # Test düğmesi: örnek satırda vurgu
         shown = [(x["text"], x.get("spans")) for x in box.calls[-1]]
         assert any(sp and t[sp[0][0]:sp[0][1]] == "Vice City'ye" for t, sp in shown)
+        # en yeni örnek: geliştiricinin kanalına davet, kanal adı vurgu renginde (varsayılan pembe)
+        assert any(sp and t[sp[0][0]:sp[0][1]] == "Robz so good" and "kick.com/robzsogood" in t for t, sp in shown)
     finally:
         d._hide.stop()
 

@@ -24,6 +24,7 @@ from altyazitr.paths import ensure_dirs
 from altyazitr.pipeline import Pipeline
 from altyazitr.server import AsyncBridge, OverlayServer
 from altyazitr.translate import release_ollama_models
+from altyazitr.update_service import UpdateService
 
 log = logging.getLogger("altyazitr")
 
@@ -43,7 +44,11 @@ class AppContext(QObject):
 
     Pencere açmayan bildirimler tek kanaldan geçer: notify() → notified(kısa metin, ayrıntı, düzey). İşlem hattının
     notice'i (yerel yapay zekâ hazırlanamadı, hızlı çeviri kullanılıyor) burada bağlıdır; arayüz notified'ı tepsi
-    balonu / durum satırıyla gösterir ve yapay zekâ kurulumunun sonucunu (ai.finished) da notify() ile verir."""
+    balonu / durum satırıyla gösterir ve yapay zekâ kurulumunun sonucunu (ai.finished) da notify() ile verir.
+
+    `updater` (altyazitr.update_service.UpdateService) yeni sürümü saatte bir denetler; main() ana pencere açılınca
+    başlatır (updater.start). Kullanıcı Güncelle'ye basıp kurulum başlarsa (updater.launched) main() kapanıştan sonra
+    süreci hemen bitirir: kurulum bu sürecin bitmesini bekler."""
 
     obs_clients = Signal(int)
     needs_region = Signal()
@@ -83,6 +88,7 @@ class AppContext(QObject):
         self.hotkey_errors = self.register_hotkeys()
 
         self._save_timer = QTimer(self, singleShot=True, interval=600, timeout=self.save_now)
+        self.updater = UpdateService(settings, save=self.save_later, save_now=self.save_now)
         self._restart_timer = QTimer(self, singleShot=True, interval=800, timeout=self._do_restart)
         self._restart_pending = False
         # Yarıda kalan yapay zekâ kurulumu (hatayla bitmediyse) biraz sonra sürer; --start ile çeviri başladıysa iş
@@ -172,6 +178,7 @@ class AppContext(QObject):
     # --- kapanış ---------------------------------------------------------------
     def shutdown(self) -> None:
         log.info("Kapatılıyor…")
+        self.updater.shutdown()
         self.save_now()
         self._ai_resume_timer.stop()
         # Yapay zekâ kurulumu durur: indirme isteği kesilir, süren Ollama kurulum süreci öldürülmez, yarım iş sonraki
@@ -318,12 +325,19 @@ def main() -> int:
 
     win = MainWindow(ctx)
     win.show()
+    ctx.updater.start()  # ilk denetim 10 sn sonra, sonra saatte bir (arka planda)
     if "--start" in sys.argv:
         QTimer.singleShot(500, ctx.pipeline.start)
     try:
         return app.exec()
     finally:
         ctx.shutdown()
+        if ctx.updater.launched:
+            # Kurulum bu sürecin bitmesini bekliyor (RobzVision.iss /BEKLE): ayarlar kaydedildi, hat durdu, model
+            # boşaltıldı; kalan iş parçacıkları çıkışı geciktirmesin.
+            log.info("Güncelleme için çıkılıyor")
+            logging.shutdown()
+            os._exit(0)
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -62,9 +62,11 @@ def _body_font() -> QFont:
 
 
 class Toast(QWidget):
-    """Tek bir bildirim. Kendini çizer (QSS'e bağlı değildir); tıklanınca kapanır, üzerine gelince bekler."""
+    """Tek bir bildirim. Kendini çizer (QSS'e bağlı değildir); tıklanınca kapanır, üzerine gelince bekler.
+    `clicked`: kapanmadan hemen önce (bildirimin bir eylemi varsa, ör. "güncellemek için tıklayın")."""
 
     closed = Signal()
+    clicked = Signal()
 
     def __init__(self, text: str, kind: str = "info", parent: QWidget | None = None,
                  timeout_ms: int | None = None):
@@ -155,6 +157,8 @@ class Toast(QWidget):
     # --- etkileşim ------------------------------------------------------------------------
     def mousePressEvent(self, e) -> None:  # noqa: N802
         if e.button() == Qt.MouseButton.LeftButton:
+            if not self._closing:
+                self.clicked.emit()
             self.dismiss()
         e.accept()
 

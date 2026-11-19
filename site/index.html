@@ -18,9 +18,9 @@
 <meta property="og:title" content="Robz Vision: İngilizce oyun altyazılarını Türkçeye çevirir">
 <meta property="og:description" content="PC’de ya da PS Remote Play ile bilgisayarda oynanan oyunların İngilizce altyazısını Türkçeye çevirir; Kick ve OBS yayınlarına da ekler. Ücretsiz ve açık kaynak.">
 <meta property="og:image" content="https://kutsalkiremitci.github.io/robz-vision/img/og.jpg">
-<meta property="og:image:width" content="1280">
-<meta property="og:image:height" content="640">
-<meta property="og:image:alt" content="Robz Vision logosu; gün batımı, deniz ve palmiye siluetleri. İngilizce oyun altyazılarını Türkçeye çevirir.">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="GTA VI sahnesinde Jason ve Lucia; altta oyunun İngilizce altyazısı, üstünde Robz Vision’ın Türkçe çevirisi. Yanında Robz Vision logosu, “GTA 6’yı Türkçe oyna.” sloganı ve kick.com/robzsogood adresi. Oyun görseli © Rockstar Games / Take-Two Interactive.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Robz Vision: İngilizce oyun altyazılarını Türkçeye çevirir">
 <meta name="twitter:description" content="PC’de ya da PS Remote Play ile bilgisayarda oynanan oyunların İngilizce altyazısını Türkçeye çevirir; Kick ve OBS yayınlarına da ekler. Ücretsiz ve açık kaynak.">
@@ -356,6 +356,9 @@ h3 { font-size: 1.375rem; }
 .compare figure { margin: 0; }
 .compare figcaption { margin-top: 10px; font: 600 1.0625rem/1.3 var(--display); color: var(--text); }
 .compare img { width: 100%; aspect-ratio: 16 / 9; }
+.compare .wide { grid-column: 1 / -1; }
+.compare .wide img { aspect-ratio: 1280 / 976; }
+.compare figcaption span { display: block; margin-top: 2px; font: 400 .9375rem/1.5 var(--body); color: var(--text-3); }
 
 /* özellikler */
 .features { display: grid; gap: 44px; }
@@ -418,6 +421,14 @@ code.inline {
 .who tbody th { width: 22%; font: 600 1.125rem/1.3 var(--display); color: var(--text); }
 .who td { width: 39%; }
 .who-role { display: block; font: 400 .9375rem/1.4 var(--body); color: var(--text-3); margin-top: 2px; }
+/* geliştirici notu: Kick yeşili yalnız logoda */
+.dev-note {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px;
+  margin-top: clamp(40px, 5vw, 56px); padding: 18px 20px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+}
+.dev-note .kick-logo { width: 24px; height: 24px; flex: none; }
+.dev-note p { flex: 1 1 18em; margin: 0; }
 
 /* indir */
 .dl {
@@ -498,6 +509,8 @@ code.inline {
 .foot ul { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; padding: 0; list-style: none; }
 .foot ul a { color: var(--text-2); }
 .foot ul a:hover { color: var(--text); }
+.foot ul a.kick { display: inline-flex; align-items: center; gap: 8px; }
+.foot .kick-logo { width: 14px; height: 14px; flex: none; }
 .license { margin-top: 28px; max-width: 60em; }
 .disclaimer { margin-top: 12px; max-width: 60em; font-size: .875rem; line-height: 1.6; }
 
@@ -582,6 +595,10 @@ code.inline {
         <a class="btn btn-primary" data-dl="exe" href="https://github.com/kutsalkiremitci/robz-vision/releases/latest">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>
           Windows için indir
+        </a>
+        <a class="btn btn-secondary" href="https://kick.com/robzsogood" aria-label="Robz so good’u Kick’te takip et">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#53FC18" d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>
+          Kick’te takip et
         </a>
         <a class="btn btn-secondary" href="https://github.com/kutsalkiremitci/robz-vision">
           <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
@@ -700,7 +717,7 @@ code.inline {
         <li>
           <span class="step-n" aria-hidden="true">1</span>
           <h3>Ekrandan okur</h3>
-          <p>Altyazının çıktığı alanı fareyle seçersiniz ya da bir uygulama penceresini gösterirsiniz. Windows’un kendi OCR’ı yazıyı yaklaşık 10 ms’de okur. Altyazı değişmedikçe OCR çalışmaz.</p>
+          <p>Altyazının çıktığı alanı fareyle seçersiniz ya da bir uygulama penceresini gösterirsiniz. Altyazı belirdikten yaklaşık 0,1 sn sonra okunur; plaka, tabela gibi oyun içi yazılar çevrilmez. Altyazı değişmedikçe OCR çalışmaz.</p>
         </li>
         <li>
           <span class="step-n" aria-hidden="true">2</span>
@@ -715,15 +732,19 @@ code.inline {
       </ol>
       <div class="compare">
         <figure>
-          <img class="shot" src="img/demo_once.webp" width="1280" height="720" loading="lazy" decoding="async" alt="Sahte bir oyun sahnesinde yalnızca İngilizce altyazı: LUCIA: I told you not to come back here, Jason.">
+          <img class="shot" src="img/gta6_once.webp" width="1280" height="720" loading="lazy" decoding="async" alt="GTA VI sahnesi, Jason arabada: altta yalnızca oyunun İngilizce altyazısı “You’ve got two minutes. If the cops show up, I’m gone.”">
           <figcaption>Oyunun kendi altyazısı</figcaption>
         </figure>
         <figure>
-          <img class="shot" src="img/demo_sonra.webp" width="1280" height="720" loading="lazy" decoding="async" alt="Aynı sahnede İngilizce altyazının hemen üstünde Türkçe çevirisi: LUCIA: Sana buraya geri gelmemeni söylemiştim, Jason.">
+          <img class="shot" src="img/gta6_sonra.webp" width="1280" height="720" loading="lazy" decoding="async" alt="Aynı sahnede İngilizce altyazının hemen üstünde Robz Vision’ın Türkçe kutusu: “İki dakikan var. Polis gelirse basar giderim.”; vurgulu “Polis” pembe.">
           <figcaption>Robz Vision açıkken</figcaption>
         </figure>
+        <figure class="wide">
+          <img class="shot" src="img/gta6_ustune.webp" width="1280" height="976" loading="lazy" decoding="async" alt="GTA VI’da neon ışıklı bir gece sahnesi, iki şerit: üstte oyunun İngilizce altyazısı “Forget the job for one night. Tonight, Vice City is ours.”, altta aynı yerde İngilizceyi örten koyu kutuda Türkçesi “Bir geceliğine işi unut. Bu gece Vice City bizim.”">
+          <figcaption>Oyun altyazısının üzerine<span>İsterseniz Türkçe, İngilizcenin tam yerine yazılır; oyun altyazıyı kaldırınca kutu da kalkar. Görünüm sayfasında, Yerleşim altında.</span></figcaption>
+        </figure>
       </div>
-      <p class="note">Görüntüler depodaki sahte test sahnesinden alınmıştır. Süreler donanıma göre değişir.</p>
+      <p class="note">Oyun görseli © Rockstar Games / Take-Two Interactive (GTA VI resmî tanıtım görselleri). Robz Vision bağımsız bir hayran projesidir, Rockstar Games ile bir bağlantısı yoktur. Altyazı cümleleri örnektir, oyundan alıntı değildir; Türkçe kutu uygulamanın kendi çizim koduyla çizilmiştir. Süreler donanıma göre değişir.</p>
     </div>
   </section>
 
@@ -735,7 +756,8 @@ code.inline {
       <div class="features">
         <dl class="feats">
           <div><dt>Ücretsiz ve yerel</dt><dd>OCR ve çeviri bilgisayarınızda çalışır. Varsayılan ayarlarla internet yalnızca ilk açılışta çeviri modelini indirmek için kullanılır.</dd></div>
-          <div><dt>Hızlı</dt><dd>OCR yaklaşık 10 ms, çeviri işlemcide 20–60 ms sürer. Altyazı belirdikten kısa süre sonra Türkçesi ekranda olur.</dd></div>
+          <div><dt>Hızlı</dt><dd>Altyazı belirdikten yaklaşık 0,1 sn sonra okunur. Hızlı çeviri işlemcide 20–60 ms, yerel yapay zekâ 12 GB ekran kartında satır başına yaklaşık 0,35 sn sürer.</dd></div>
+          <div><dt>Oyun altyazısının üzerine</dt><dd>İsterseniz Türkçe, İngilizcenin tam yerine yazılır: koyu bir kutu İngilizceyi örter, Türkçe oyunun yazısıyla aynı boyda içinde ortalanır.</dd></div>
           <div><dt>İki ayrı çıktı</dt><dd>Kendi ekranınızda taşıyıp boyutlandırabileceğiniz bir kutu, izleyicileriniz için bir OBS Tarayıcı Kaynağı. İkisinin konumu birbirinden bağımsızdır.</dd></div>
           <div><dt>Bölge ya da pencere</dt><dd>Altyazının çıktığı alanı fareyle seçersiniz. İsterseniz belirli bir uygulama penceresinden okursunuz; pencere başka pencerelerin arkasında kalsa da çalışır.</dd></div>
           <div><dt>Gereksiz iş yapmaz</dt><dd>Titreyen okumaları ayıklar, daha temiz bir okuma gelirse çeviriyi düzeltir. Konuşmacı adları çevrilmez, ayrı renkte gösterilir.</dd></div>
@@ -817,6 +839,12 @@ code.inline {
           </tr>
         </tbody>
       </table>
+
+      <div class="dev-note">
+        <svg class="kick-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#53FC18" d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>
+        <p>Robz Vision’ı Kick yayıncısı <strong>Robz so good</strong> geliştiriyor. Yeni sürümler ve güncellemeler yayınlarda duyurulur.</p>
+        <a class="btn btn-secondary" href="https://kick.com/robzsogood" aria-label="Robz so good’u Kick’te takip et">Kick’te takip et</a>
+      </div>
     </div>
   </section>
 
@@ -955,11 +983,13 @@ code.inline {
           <li><a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest">Sürümler</a></li>
           <li><a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/docs/KULLANIM.md">Kullanım kılavuzu</a></li>
           <li><a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/LICENSE">Lisans</a></li>
+          <li><a class="kick" href="https://kick.com/robzsogood" aria-label="Robz so good’u Kick’te takip et"><svg class="kick-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#53FC18" d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Robz so good</a></li>
+          <li><a href="https://www.youtube.com/@robzsogood">YouTube</a></li>
         </ul>
       </nav>
     </div>
     <p class="license">Kaynak kod MIT lisanslıdır. Varsayılan çeviri modeli quickmt-en-tr, CC BY 4.0 lisanslıdır; programla birlikte dağıtılmaz, ilk açılışta indirilir. Sitedeki Barlow yazı tipi <a href="fonts/OFL.txt">SIL Open Font License 1.1</a> ile kullanılır.</p>
-    <p class="disclaimer">Robz Vision bağımsız, gönüllü bir açık kaynak projedir. Rockstar Games, Take-Two Interactive, Sony Interactive Entertainment, Microsoft, OBS Project, Kick, Twitch, YouTube, Google veya DeepL ile bağlantılı değildir ve bu şirketlerce desteklenmez. Grand Theft Auto, GTA ve Rockstar Games, Take-Two Interactive Software, Inc.’in ticari markalarıdır; adı geçen diğer markalar da sahiplerine aittir. Bu sitede hiçbir oyuna ait logo veya görsel yoktur; demo görüntüleri depodaki sahte test sahnesinden üretilmiştir, gün batımı, deniz, binalar ve palmiyeler sayfanın içinde kodla çizilir.</p>
+    <p class="disclaimer">Robz Vision bağımsız, gönüllü bir açık kaynak projedir. Rockstar Games, Take-Two Interactive, Sony Interactive Entertainment, Microsoft, OBS Project, Kick, Twitch, YouTube, Google veya DeepL ile bağlantılı değildir ve bu şirketlerce desteklenmez. Geliştiricisi Kick’te yayın yapan bir yayıncıdır; Kick adı ve logosu Kick’e aittir ve bu sitede yalnız geliştiricinin Kick kanalına bağlantı vermek için kullanılır. Grand Theft Auto, GTA ve Rockstar Games, Take-Two Interactive Software, Inc.’in ticari markalarıdır; adı geçen diğer markalar da sahiplerine aittir. “Nasıl çalışır” bölümündeki örnek görsellerin ve sosyal ağ önizlemesinin zemini GTA VI’nın resmî tanıtım görselleridir: oyun görseli © Rockstar Games / Take-Two Interactive. Yalnız uygulamanın ne yaptığını göstermek için kullanılır; üzerlerindeki altyazılar ve çeviriler örnektir, Rockstar Games’in logoları kullanılmaz. Açılıştaki gün batımı, deniz, binalar ve palmiyeler sayfanın içinde kodla çizilir.</p>
   </div>
 </footer>
 
