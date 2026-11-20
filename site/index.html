@@ -70,6 +70,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body {
   margin: 0;
@@ -355,8 +356,8 @@ h3 { font-size: 1.375rem; }
 .guide-fig a { display: block; border-radius: 10px; cursor: zoom-in; }
 .guide-fig img { width: 100%; aspect-ratio: 16 / 9; transition: border-color 120ms ease; }
 .guide-fig a:hover img { border-color: var(--line-strong); }
-.guide-body h5 { margin: 24px 0 12px; font: 600 1.125rem/1.3 var(--display); color: var(--text); }
-.guide-body h5:first-child { margin-top: 0; }
+.guide-body h5, .guide-body h4 { margin: 24px 0 12px; font: 600 1.125rem/1.3 var(--display); color: var(--text); }
+.guide-body h5:first-child, .guide-body h4:first-child { margin-top: 0; }
 .guide-body .obs-steps li:last-child { margin-bottom: 0; }
 .guide-body .facts { margin-bottom: 0; }
 .guide-body .note { margin-top: 18px; }
@@ -369,18 +370,243 @@ h3 { font-size: 1.375rem; }
 .paths { margin-top: clamp(36px, 5vw, 56px); }
 .path h4 { margin: 0; font: 600 1.375rem/1.2 var(--display); color: var(--text); padding-top: .04em; }
 .path + .path { margin-top: clamp(48px, 6vw, 72px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
-.path[role="tabpanel"] { margin-top: 0; padding-top: 0; border-top: 0; scroll-margin-top: 140px; }
-.path[hidden], .tabs.path-tabs[hidden] { display: none; }
-.tabs.path-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 28px; }
-.path-tabs .tab { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px; text-align: left; line-height: 1.15; }
-.tab-n {
-  display: grid; place-items: center; flex: none; width: 24px; height: 24px;
-  border-radius: 50%; border: 1px solid var(--line-strong);
-  font: 600 .875rem/1 var(--display); color: var(--text);
-}
-.tab[aria-selected="true"] .tab-n { border-color: var(--cyan); }
 .guide-help h3 { font-size: clamp(1.5rem, 1.3rem + .8vw, 1.875rem); margin-bottom: 16px; }
 .guide-help .facts { margin-bottom: 20px; }
+
+/* kurulum sihirbazı: betik varsa yukarıdaki bölümler yanıtlara göre süzülüp plana taşınır (bkz. betik, 4. kısım) */
+.wiz, .plan-path { scroll-margin-top: 20px; }
+.wiz-steps {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+  max-width: 720px; margin: 0 0 clamp(28px, 4vw, 40px); padding: 0; list-style: none;
+}
+.wiz-step {
+  display: flex; flex-direction: column; gap: 10px; width: 100%; min-height: 44px; padding: 0 0 6px;
+  background: none; border: 0; border-radius: 4px; text-align: left; cursor: pointer;
+  font: 600 .9375rem/1.2 var(--display); color: var(--text-3);
+  transition: color 120ms ease;
+}
+.wiz-step::before {
+  content: ""; display: block; width: 100%; height: 4px; border-radius: 2px;
+  background: var(--line-strong);
+}
+.wiz-step.is-done { color: var(--text-2); }
+.wiz-step.is-done::before, .wiz-step[aria-current="step"]::before { background: var(--pink); }
+.wiz-step[aria-current="step"] { color: var(--text); }
+.wiz-step:not(:disabled):hover { color: var(--text); }
+.wiz-step:disabled { cursor: default; }
+/* Geçişler yalnız süs: saydamlık değişmez, dolgu kipi yok. Canlandırma takılsa ya da hiç oynamasa da içerik görünür. */
+.wiz-screen { animation: wiz-in 180ms ease; }
+@keyframes wiz-in { from { transform: translateY(6px); } }
+.wiz-q { min-width: 0; margin: 0; padding: 0; border: 0; }
+.wiz-q legend { float: left; width: 100%; padding: 0; }
+.wiz-title { font-size: clamp(1.75rem, 1.35rem + 1.5vw, 2.5rem); padding-top: .04em; }
+.wiz-title:focus { outline: none; }
+.wiz-hint { clear: both; padding-top: 12px; margin: 0; max-width: 42em; }
+.wiz-note { margin: 18px 0 0; font-size: .9375rem; color: var(--text-3); }
+.choices { display: grid; gap: 12px; margin-top: 24px; }
+.choice { position: relative; display: block; cursor: pointer; }
+.choice input { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0; }
+.choice-box {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; height: 100%;
+  padding: 18px 56px 20px 20px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 10px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.choice:hover .choice-box { border-color: var(--text-3); }
+.choice input:checked + .choice-box { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+.choice input:focus-visible + .choice-box { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.choice-mark {
+  position: absolute; top: 16px; right: 16px; display: grid; place-items: center; width: 26px; height: 26px;
+  border-radius: 50%; border: 1.5px solid var(--line-strong); background: var(--bg); color: var(--bg);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.choice-mark svg { width: 15px; height: 15px; opacity: 0; }
+.choice input:checked + .choice-box .choice-mark { background: var(--cyan); border-color: var(--cyan); }
+.choice input:checked + .choice-box .choice-mark svg { opacity: 1; }
+.choice-tag {
+  padding: 4px 8px 3px; border-radius: 4px; background: var(--cyan-soft);
+  font: 600 .875rem/1.2 var(--display); color: var(--cyan);
+}
+.choice-title { font: 600 1.375rem/1.2 var(--display); color: var(--text); padding-top: .04em; }
+.choice-desc { font-size: .9375rem; line-height: 1.5; }
+/* 1. sorunun kartlarındaki çizimler tek görselden (yol_secimi.webp) kırpılır: her yolun cihazları, 320 × 210 */
+.choices-art .choice-box { padding: 14px 18px 20px; }
+.choice-art { display: block; align-self: stretch; overflow: hidden; aspect-ratio: 320 / 210; margin: -2px -6px 6px; border-radius: 6px; }
+.choice-art img { width: 500%; max-width: none; margin-top: -126.5625%; }
+.art-1 img { margin-left: -27.5%; }
+.art-2 img { margin-left: -142.5%; }
+.art-3 img { margin-left: -257.5%; }
+.art-4 img { margin-left: -372.5%; }
+.wiz-err { margin: 16px 0 0; font-weight: 600; color: var(--orange); }
+.wiz-nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.wiz-nav [data-next] { margin-left: auto; }
+.btn-sm { min-height: 44px; padding: 0 16px; font-size: 1rem; }
+
+/* plan: adım adım uygulama. Solda (telefonda üstte, açılır) adım listesi, sağda tek adım; alt çubuk yapışık. */
+.run-grid { display: grid; gap: 24px; }
+.run-side { min-width: 0; }
+.run-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 16px; }
+.run-head { grid-column: 1 / -1; font-size: 1.375rem; }
+.run-pos { margin: 0; font: 600 1rem/1.3 var(--display); color: var(--text); }
+.run-meter { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+.plan-bar { flex: 1 1 auto; height: 6px; border-radius: 3px; background: var(--line-strong); overflow: hidden; }
+.plan-bar span { display: block; width: 0; height: 100%; border-radius: 3px; background: var(--pink); transition: width 180ms ease; }
+.plan-count { margin: 0; font: 600 .9375rem/1.3 var(--display); color: var(--text-2); white-space: nowrap; }
+.run-panel { display: grid; gap: 20px; margin-top: 20px; }
+.plan-sum { display: grid; gap: 10px; margin: 0; padding: 14px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.plan-sum dt { font: 600 .8125rem/1.3 var(--display); color: var(--text-3); }
+.plan-sum dd {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 10px; margin: 0;
+  font: 600 1.0625rem/1.3 var(--display); color: var(--text);
+}
+.plan-sum .unset { color: var(--text-3); }
+.link-btn {
+  display: inline-flex; align-items: center; min-height: 44px; margin: -10px 0; padding: 0 4px;
+  background: none; border: 0; cursor: pointer;
+  font: 600 1rem/1 var(--display); color: var(--cyan);
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .2em;
+}
+.link-btn:hover { text-decoration-thickness: 2px; }
+.run-sec { margin: 16px 0 4px; padding-left: 11px; font: 600 .8125rem/1.3 var(--display); color: var(--text-3); }
+.run-list > :first-child { margin-top: 0; }
+.run-steps { margin: 0; padding: 0; list-style: none; }
+.run-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 10px 6px 8px;
+  background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 6px 6px 0;
+  text-align: left; cursor: pointer; font: 600 .9375rem/1.25 var(--display); color: var(--text-2);
+}
+.run-item:hover { background: var(--panel); color: var(--text); }
+.run-item[aria-current="step"] { background: var(--raised); border-left-color: var(--cyan); color: var(--text); }
+.run-dot {
+  flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--bg); border: 1px solid var(--line-strong); font: 600 .8125rem/1 var(--display); color: var(--text);
+}
+.run-dot svg { display: none; width: 14px; height: 14px; }
+.run-item.is-done .run-dot { background: var(--turq); border-color: var(--turq); color: var(--bg); }
+.run-item.is-done .run-dot .n, .run-item.is-end .run-dot .n { display: none; }
+.run-item.is-done .run-dot svg, .run-item.is-end .run-dot svg { display: block; }
+.run-t { flex: 1 1 auto; min-width: 0; }
+.run-new { flex: none; padding: 3px 6px 2px; border-radius: 4px; background: var(--cyan-soft); font: 600 .75rem/1.2 var(--display); color: var(--cyan); }
+.run-item.is-new { animation: run-glow 1.2s ease 2; }
+@keyframes run-glow { 50% { background-color: var(--cyan-soft); } }
+.plan-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.run-toggle svg { width: 18px; height: 18px; transition: transform 180ms ease; }
+.run-side.is-open .run-toggle svg { transform: rotate(180deg); }
+
+.run-main { min-width: 0; scroll-margin-top: 16px; }
+.run-notice {
+  margin: 0 0 20px; padding: 12px 16px; border-left: 3px solid var(--cyan); border-radius: 0 8px 8px 0;
+  background: var(--cyan-soft); color: var(--text);
+}
+.run-title { display: flex; align-items: center; gap: 14px; font-size: clamp(1.625rem, 1.3rem + 1.3vw, 2.375rem); }
+.run-title .part-n { width: 42px; height: 42px; font-size: 1.125rem; }
+.run-title .part-n svg { width: 20px; height: 20px; }
+.run-body { margin-top: 22px; }
+.run-in { animation: run-in 200ms ease; }
+@keyframes run-in { from { transform: translateX(var(--run-from, 14px)); } }
+.run-off { display: none !important; }
+.run-body .guide-part { margin: 0; padding: 0; border: 0; }
+.run-body .guide { grid-template-areas: "fig" "head" "body"; gap: 20px; }
+.run-body .guide-head > h3, .run-body .guide-head > h4 { display: none; }
+.run-body .guide.no-fig { grid-template-areas: "head" "body"; }
+.run-body .guide-head p { margin: 0; font-size: 1.0625rem; }
+.run-body .guide-head p + p, .run-body .guide-head .no-tv { margin-top: 12px; }
+.run-body .guide-fig { max-width: min(100%, calc(42vh * 16 / 9)); }
+.run-body .guide-body { max-width: 46rem; }
+.run-body .obs-steps li { margin-bottom: 16px; }
+.run-body .guide-help { max-width: 46rem; }
+.run-body .guide-help > h4 { margin: 28px 0 14px; font: 600 1.375rem/1.2 var(--display); color: var(--text); }
+.run-done p { font-size: 1.0625rem; }
+.run-done .guide-fig { margin: 0 0 20px; }
+.run-done .plan-actions { margin-top: 18px; }
+.run-nav {
+  position: sticky; bottom: 0; z-index: 2; display: flex; gap: 12px;
+  margin-top: 28px; padding: 14px 0 max(14px, env(safe-area-inset-bottom));
+  background: var(--bg); border-top: 1px solid var(--line);
+}
+.run-nav [data-done] { margin-left: auto; }
+
+/* "Neler lazım": malzeme kartları; çizimler mevcut görsellerden kırpılır (ölçüler betikte, ART) */
+.need-ways { color: var(--text-3); }
+.run-body .needs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 12px; margin: 0; }
+.run-body dl.needs > div {
+  display: flex; flex-direction: column; padding: 14px;
+  background: var(--panel); border: 1px solid var(--line-strong); border-radius: 10px;
+}
+.run-body .needs > div.is-have { border-color: var(--turq); }
+.run-body .needs dt { margin: 0; font: 600 1.1875rem/1.25 var(--display); color: var(--text); }
+.run-body .needs dd { flex: 1 1 auto; display: flex; flex-direction: column; gap: 14px; margin: 6px 0 0; font-size: .9375rem; }
+.need-art {
+  display: flex; align-items: center; justify-content: center; aspect-ratio: 2 / 1; margin-bottom: 12px;
+  border-radius: 6px; background: var(--bg); overflow: hidden;
+}
+.need-crop { flex: none; overflow: hidden; }
+.need-crop img { max-width: none; }
+.have {
+  position: relative; display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; margin-top: auto;
+  min-height: 44px; padding: 0 16px 0 10px; border: 1px solid var(--line-strong); border-radius: 22px;
+  font: 600 .9375rem/1 var(--display); color: var(--text-2); cursor: pointer;
+}
+.have:hover { border-color: var(--cyan); color: var(--text); }
+.have input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.have-dot {
+  display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  border: 1.5px solid var(--line-strong); color: var(--bg); pointer-events: none;
+}
+.have-dot svg { width: 14px; height: 14px; opacity: 0; }
+.have input:checked ~ .have-dot { background: var(--turq); border-color: var(--turq); }
+.have input:checked ~ .have-dot svg { opacity: 1; }
+.have input:checked ~ span:last-child { color: var(--text); }
+.have input:focus-visible ~ .have-dot { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+.plan-dl { margin-bottom: 22px; }
+/* plandaki adımlar: numara yuvarlağı onay kutusudur; dokunma alanı 44 px */
+.run-body .obs-steps li::before { content: none; }
+.tick {
+  position: relative; display: grid; place-items: center; width: 44px; height: 44px;
+  margin: -8px 0 -8px -8px; cursor: pointer;
+}
+.tick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.tick .mark {
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--raised); border: 1px solid var(--line-strong); pointer-events: none;
+  font: 600 .9375rem/1 var(--display); color: var(--text);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.tick:hover .mark { border-color: var(--cyan); }
+.tick input:focus-visible + .mark { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.tick svg { display: none; width: 16px; height: 16px; }
+.tick input:checked + .mark { background: var(--turq); border-color: var(--turq); color: var(--bg); }
+.tick input:checked + .mark .n { display: none; }
+.tick input:checked + .mark svg { display: block; }
+.obs-steps li.is-done > span:last-child { color: var(--text-3); }
+.plan-more { margin-top: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.plan-more summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 52px; padding: 0 16px; border-radius: 10px; cursor: pointer; list-style: none;
+  font: 600 1.125rem/1.3 var(--display); color: var(--text);
+}
+.plan-more summary::-webkit-details-marker { display: none; }
+.plan-more summary svg { width: 20px; height: 20px; flex: none; color: var(--text-3); transition: transform 180ms ease; }
+.plan-more[open] summary svg { transform: rotate(180deg); }
+.plan-more .obs-steps, .plan-more > p { margin: 0; padding: 6px 16px 18px; }
+@media (min-width: 900px) {
+  .run-grid { grid-template-columns: 290px minmax(0, 1fr); gap: 48px; align-items: start; }
+  .run-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; padding: 2px 6px 2px 2px; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+  .run-toggle { display: none; }
+}
+@media (max-width: 899px) {
+  .run-side { padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+  .run-head { font-size: 1.125rem; color: var(--text-2); }
+  .run-side:not(.is-open) .run-panel { display: none; }
+}
+@media (max-width: 640px) {
+  .run-body .guide-fig { max-width: none; }
+  .run-body dl.needs > div { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .run-body .needs dt { display: flex; align-items: center; gap: 14px; }
+  .need-art { flex: 0 0 96px; margin: 0; }
+  .run-nav { margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); }
+  .run-nav .btn { flex: 1 1 0; }
+}
 
 /* nasıl çalışır */
 .steps { display: grid; gap: 36px; margin: 0; padding: 0; list-style: none; }
@@ -424,7 +650,7 @@ h3 { font-size: 1.375rem; }
 .tabpanel { margin: 0; }
 .tabpanel[hidden] { display: none; }
 .tabpanel a { display: block; border-radius: 10px; }
-.tabpanel img { width: 100%; aspect-ratio: 1100 / 820; }
+.tabpanel img { width: 100%; aspect-ratio: 1280 / 840; }
 .tabpanel figcaption { margin-top: 10px; font-size: .9375rem; color: var(--text-3); }
 
 /* yayıncılar */
@@ -563,9 +789,31 @@ code.inline {
   .feats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; }
   .feats div:nth-child(2) { padding-top: 0; border-top: 0; }
 }
+@media (min-width: 640px) {
+  .choices-4, .choices-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .choices-2 { max-width: 760px; }
+  .choices-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1000px) {
+  .choices-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 639px) {
+  /* telefonda 1. sorunun kartları satır: çizim solda, yazı sağda */
+  .choices-art .choice-box {
+    display: grid; grid-template-columns: 96px minmax(0, 1fr); grid-template-areas: "art tag" "art title" "art desc";
+    align-items: center; gap: 4px 14px; padding: 12px 48px 12px 12px;
+  }
+  .choices-art .choice-art { grid-area: art; align-self: center; margin: 0; }
+  .choices-art .choice-tag { grid-area: tag; justify-self: start; }
+  .choices-art .choice-title { grid-area: title; }
+  .choices-art .choice-desc { grid-area: desc; }
+  .choices-art .choice-mark { top: 50%; margin-top: -13px; right: 12px; }
+  .choice-title { font-size: 1.25rem; }
+  .wiz-nav .btn { flex: 1 1 auto; }
+  .wiz-steps { gap: 6px; }
+  .wiz-step { font-size: .8125rem; }
+}
 @media (min-width: 820px) {
-  .tabs.path-tabs { display: inline-flex; }
-  .path[role="tabpanel"] { scroll-margin-top: 96px; }
   .audience { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
   .tv-ways { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
@@ -640,15 +888,15 @@ code.inline {
       <h1>Oyundaki İngilizce altyazı, ekranınızda Türkçe.</h1>
       <p class="lead">Bilgisayarda ya da PS Remote Play ile oynadığınız oyunların İngilizce altyazısını ekrandan okur, Türkçeye çevirir ve oyunun üstünde gösterir. Kick’te yayın yapıyorsanız OBS ile yayına da ekler. Ücretsiz ve açık kaynak.</p>
       <div class="cta">
-        <a class="btn btn-primary" data-dl="exe" href="https://github.com/kutsalkiremitci/robz-vision/releases/latest">
+        <a class="btn btn-primary" data-dl="exe" href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>
           Windows için indir
         </a>
-        <a class="btn btn-secondary" href="https://kick.com/robzsogood" aria-label="Robz so good’u Kick’te takip et">
+        <a class="btn btn-secondary" href="https://kick.com/robzsogood" aria-label="Robz so good’u Kick’te takip et" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#53FC18" d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>
           Kick’te takip et
         </a>
-        <a class="btn btn-secondary" href="https://github.com/kutsalkiremitci/robz-vision">
+        <a class="btn btn-secondary" href="https://github.com/kutsalkiremitci/robz-vision" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
           GitHub
         </a>
@@ -745,25 +993,205 @@ code.inline {
     <div class="wrap">
       <div class="section-head">
         <h2 id="kurulum-baslik">Adım adım kurulum</h2>
-        <p class="section-intro">Hiç bilmiyorsanız buradan başlayın. Önce neler gerektiğine bakın, Robz Vision’ı kurun, sonra oynadığınız yere göre yolunuzu seçin. Ne kuracağınızı biliyorsanız doğrudan <a href="#kurulum-yol">yolunuzu seçin</a>.</p>
-        <p class="note">Çizimlere dokunursanız büyük boyutu yeni sekmede açılır.</p>
+        <p class="section-intro" data-wiz-skip>Hiç bilmiyorsanız buradan başlayın. Önce neler gerektiğine bakın, Robz Vision’ı kurun, sonra oynadığınız yere göre yolunuzu seçin. Ne kuracağınızı biliyorsanız doğrudan <a href="#kurulum-yol">yolunuzu seçin</a>.</p>
+        <p class="note" data-wiz-skip>Çizimlere dokunursanız büyük boyutu yeni sekmede açılır.</p>
+        <p class="section-intro wiz-only" hidden>Hiç bilmiyorsanız buradan başlayın. Üç kısa soruyu yanıtlayın; size neler gerektiğini, hangi kablonun nereye takılacağını ve çeviriyi nasıl açacağınızı adım adım gösterelim.</p>
+      </div>
+
+      <div class="wiz" id="sihirbaz" hidden>
+        <p class="sr-only" aria-live="polite" data-live></p>
+        <ol class="wiz-steps" aria-label="Sihirbazın adımları">
+          <li><button class="wiz-step" type="button" data-go="1">Nerede</button></li>
+          <li><button class="wiz-step" type="button" data-go="2">Ekran kartı</button></li>
+          <li><button class="wiz-step" type="button" data-go="3">Yayın</button></li>
+          <li><button class="wiz-step" type="button" data-go="plan">Planınız</button></li>
+        </ol>
+
+        <div class="wiz-screen" data-screen="1">
+          <fieldset class="wiz-q" aria-describedby="wiz-ipucu-1">
+            <legend><h3 class="wiz-title" tabindex="-1">Nerede oynuyorsunuz?</h3></legend>
+            <p class="wiz-hint" id="wiz-ipucu-1">Robz Vision bilgisayarda çalışır ve bilgisayar ekranındaki altyazıyı okur; televizyona ya da PS5’e kurulmaz. Size uyanı seçin.</p>
+            <div class="choices choices-4 choices-art">
+              <label class="choice">
+                <input type="radio" name="yol" value="1" aria-labelledby="sec-yol1-n sec-yol1" aria-describedby="sec-yol1-a">
+                <span class="choice-box">
+                  <span class="choice-art art-1" aria-hidden="true"><img src="img/kurulum/yol_secimi.webp" width="1600" height="900" alt="" loading="lazy" decoding="async"></span>
+                  <span class="choice-tag" id="sec-yol1-n">Yol 1<span class="sr-only">:</span></span>
+                  <span class="choice-title" id="sec-yol1">Bilgisayarda</span>
+                  <span class="choice-desc" id="sec-yol1-a">PC oyunu, görüntü monitörde. En kolayı.</span>
+                  <span class="choice-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="yol" value="2" aria-labelledby="sec-yol2-n sec-yol2" aria-describedby="sec-yol2-a">
+                <span class="choice-box">
+                  <span class="choice-art art-2" aria-hidden="true"><img src="img/kurulum/yol_secimi.webp" width="1600" height="900" alt="" loading="lazy" decoding="async"></span>
+                  <span class="choice-tag" id="sec-yol2-n">Yol 2<span class="sr-only">:</span></span>
+                  <span class="choice-title" id="sec-yol2">PS5’i bilgisayar ekranında</span>
+                  <span class="choice-desc" id="sec-yol2-a">PS5’in görüntüsü ağ üzerinden bilgisayara gelir.</span>
+                  <span class="choice-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="yol" value="3" aria-labelledby="sec-yol3-n sec-yol3" aria-describedby="sec-yol3-a">
+                <span class="choice-box">
+                  <span class="choice-art art-3" aria-hidden="true"><img src="img/kurulum/yol_secimi.webp" width="1600" height="900" alt="" loading="lazy" decoding="async"></span>
+                  <span class="choice-tag" id="sec-yol3-n">Yol 3<span class="sr-only">:</span></span>
+                  <span class="choice-title" id="sec-yol3">PS5’i televizyonda</span>
+                  <span class="choice-desc" id="sec-yol3-a">Araya bilgisayar girer; TV markası fark etmez.</span>
+                  <span class="choice-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="yol" value="4" aria-labelledby="sec-yol4-n sec-yol4" aria-describedby="sec-yol4-a">
+                <span class="choice-box">
+                  <span class="choice-art art-4" aria-hidden="true"><img src="img/kurulum/yol_secimi.webp" width="1600" height="900" alt="" loading="lazy" decoding="async"></span>
+                  <span class="choice-tag" id="sec-yol4-n">Yol 4<span class="sr-only">:</span></span>
+                  <span class="choice-title" id="sec-yol4">Capture kartıyla</span>
+                  <span class="choice-desc" id="sec-yol4-a">Kartınız varsa en net görüntü bu yolda.</span>
+                  <span class="choice-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </span>
+              </label>
+            </div>
+            <p class="wiz-note">Xbox’ta Yol 2 ve 3’ü chiaki-ng yerine Xbox uygulamasıyla yaparsınız.</p>
+          </fieldset>
+          <p class="wiz-err" role="alert" hidden></p>
+          <div class="wiz-nav">
+            <button class="btn btn-primary" type="button" data-next>İleri</button>
+          </div>
+        </div>
+
+        <div class="wiz-screen" data-screen="2" hidden>
+          <fieldset class="wiz-q" aria-describedby="wiz-ipucu-2">
+            <legend><h3 class="wiz-title" tabindex="-1">Ekran kartınız ne?</h3></legend>
+            <p class="wiz-hint" id="wiz-ipucu-2">Çeviri her bilgisayarda çalışır. Belleği en az 8 GB olan bir NVIDIA ya da AMD ekran kartınız varsa yerel yapay zekâ daha doğal çevirir. Bilmiyorsanız sorun değil: Robz Vision ilk açılışta kartınızı kendisi okur.</p>
+            <div class="choices choices-3">
+              <label class="choice">
+                <input type="radio" name="kart" value="12" aria-labelledby="sec-kart12" aria-describedby="sec-kart12-a">
+                <span class="choice-box">
+                  <span class="choice-title" id="sec-kart12">12 GB ya da daha fazla</span>
+                  <span class="choice-desc" id="sec-kart12-a">NVIDIA ya da AMD. Yapay zekâ ile en doğal çeviri.</span>
+                  <span class="choice-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="kart" value="8" aria-labelledby="sec-kart8" aria-describedby="sec-kart8-a">
+                <span class="choice-box">
+                  <span class="choice-title" id="sec-kart8">8 GB</span>
+                  <span class="choice-desc" id="sec-kart8-a">NVIDIA ya da AMD, 8–11 GB. Yapay zekâ, daha hafif modelle.</span>
+                  <span class="choice-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="kart" value="yok" aria-labelledby="sec-kartyok" aria-describedby="sec-kartyok-a">
+                <span class="choice-box">
+                  <span class="choice-title" id="sec-kartyok">Yok ya da bilmiyorum</span>
+                  <span class="choice-desc" id="sec-kartyok-a">Hızlı çeviri her bilgisayarda çalışır. Uygun kart varsa Robz Vision onu kendisi bulur.</span>
+                  <span class="choice-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+          <p class="wiz-err" role="alert" hidden></p>
+          <div class="wiz-nav">
+            <button class="btn btn-secondary" type="button" data-back>Geri</button>
+            <button class="btn btn-primary" type="button" data-next>İleri</button>
+          </div>
+        </div>
+
+        <div class="wiz-screen" data-screen="3" hidden>
+          <fieldset class="wiz-q" aria-describedby="wiz-ipucu-3">
+            <legend><h3 class="wiz-title" tabindex="-1">Yayın yapacak mısınız?</h3></legend>
+            <p class="wiz-hint" id="wiz-ipucu-3">Kick, Twitch ya da YouTube’da yayın açıyorsanız izleyicileriniz de Türkçe altyazıyı görür.</p>
+            <div class="choices choices-2">
+              <label class="choice">
+                <input type="radio" name="yayin" value="evet" aria-labelledby="sec-yayin-evet" aria-describedby="sec-yayin-evet-a">
+                <span class="choice-box">
+                  <span class="choice-title" id="sec-yayin-evet">Evet, yayın yapacağım</span>
+                  <span class="choice-desc" id="sec-yayin-evet-a">Türkçe altyazıyı OBS ile yayına eklersiniz. İzleyiciler hiçbir şey kurmaz.</span>
+                  <span class="choice-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="yayin" value="hayir" aria-labelledby="sec-yayin-hayir" aria-describedby="sec-yayin-hayir-a">
+                <span class="choice-box">
+                  <span class="choice-title" id="sec-yayin-hayir">Hayır, yalnız oynayacağım</span>
+                  <span class="choice-desc" id="sec-yayin-hayir-a">Türkçe kutu yalnız kendi ekranınızda görünür.</span>
+                  <span class="choice-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+          <p class="wiz-err" role="alert" hidden></p>
+          <div class="wiz-nav">
+            <button class="btn btn-secondary" type="button" data-back>Geri</button>
+            <button class="btn btn-primary" type="button" data-next>Planı göster</button>
+          </div>
+        </div>
+
+        <div class="wiz-screen" data-screen="plan" hidden>
+          <div class="run-grid">
+            <aside class="run-side" aria-labelledby="plan-baslik">
+              <div class="run-top">
+                <h3 class="run-head" id="plan-baslik">Kurulum planınız</h3>
+                <p class="run-pos" data-pos></p>
+                <button class="btn btn-secondary btn-sm run-toggle" type="button" aria-expanded="false" aria-controls="plan-paneli">Tüm adımlar<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+                <div class="run-meter">
+                  <span class="plan-bar" aria-hidden="true"><span></span></span>
+                  <p class="plan-count" data-count></p>
+                </div>
+              </div>
+              <div class="run-panel" id="plan-paneli">
+                <nav class="run-list" aria-label="Kurulum adımları" data-list></nav>
+                <dl class="plan-sum">
+                  <div><dt>Nerede</dt><dd><span data-sum="yol"></span><button class="link-btn" type="button" data-go="1" data-return><span data-act>Değiştir</span><span class="sr-only">: nerede oynadığınız</span></button></dd></div>
+                  <div><dt>Ekran kartı</dt><dd><span data-sum="kart"></span><button class="link-btn" type="button" data-go="2" data-return><span data-act>Değiştir</span><span class="sr-only">: ekran kartı</span></button></dd></div>
+                  <div><dt>Yayın</dt><dd><span data-sum="yayin"></span><button class="link-btn" type="button" data-go="3" data-return><span data-act>Değiştir</span><span class="sr-only">: yayın</span></button></dd></div>
+                </dl>
+                <div class="plan-actions">
+                  <button class="btn btn-secondary btn-sm" type="button" data-restart>Baştan başla</button>
+                  <button class="btn btn-secondary btn-sm" type="button" data-copy-link hidden>Bağlantıyı kopyala</button>
+                  <button class="btn btn-secondary btn-sm" type="button" data-clear hidden>İşaretleri temizle</button>
+                </div>
+              </div>
+            </aside>
+            <section class="run-main" aria-labelledby="adim-baslik">
+              <p class="run-notice" data-notice hidden></p>
+              <h3 class="wiz-title run-title" id="adim-baslik" tabindex="-1"><span class="part-n" aria-hidden="true" data-num></span><span data-title></span></h3>
+              <div class="run-body" data-body></div>
+              <div class="run-nav">
+                <button class="btn btn-secondary" type="button" data-prev>Geri</button>
+                <button class="btn btn-primary" type="button" data-done>Yaptım, devam</button>
+              </div>
+            </section>
+          </div>
+        </div>
       </div>
 
       <div class="guide-part" id="kurulum-malzeme">
         <div class="guide">
           <div class="guide-head">
             <h3><span class="part-n" aria-hidden="true">1</span>Neler lazım</h3>
-            <p>Hepsi her yolda gerekmez. Yolunuzu 3. adımda seçeceksiniz.</p>
+            <p data-wiz-skip>Hepsi her yolda gerekmez. Yolunuzu 3. adımda seçeceksiniz.</p>
+            <p class="wiz-only" hidden>Sizin kurulumunuz için gerekenler. Elinizde olanları işaretleyin.</p>
           </div>
-          <figure class="guide-fig">
+          <figure class="guide-fig" data-wiz-skip>
             <a href="img/kurulum/neler_lazim.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/neler_lazim.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Gerekenler: bilgisayar ve monitör, PS5, DualSense, televizyon, modem, Ethernet kablosu, USB-C kablo, HDMI kablo ve isteğe bağlı capture kartı"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
           </figure>
           <div class="guide-body">
-            <dl class="feats">
-              <div><dt>Her yolda</dt><dd>Windows 10 ya da 11 yüklü bir bilgisayar ve monitörü. İlk açılışta modelleri indirmek için internet. Ekran kartı şart değil; hızlı çeviri işlemcide çalışır. Güçlü bir ekran kartınız varsa daha iyi çeviren yerel yapay zekâyı da kurabilirsiniz.</dd></div>
-              <div><dt>PS5’te oynayacaksanız</dt><dd>PS5 ve DualSense kol. Kolu bilgisayara bağlamak için USB-C kablo: PS5’in kutusundan çıkan şarj kablosu olur. PS5 ile modem arasında Ethernet kablosu önerilir.</dd></div>
-              <div><dt>Televizyonda göreceksiniz</dt><dd>HDMI girişi olan bir televizyon, marka fark etmez. Bilgisayarla TV arasında bir HDMI kablo.</dd></div>
-              <div><dt>Capture kartı (isteğe bağlı)</dt><dd>En net görüntüyü verir ama şart değil. PS5’in HDMI kablosu karta, kart USB ile bilgisayara takılır.</dd></div>
+            <dl class="feats needs">
+              <div data-need="pc"><dt>Windows bilgisayar ve monitör</dt><dd>Robz Vision bunda çalışır: Windows 10 (2004 ve sonrası) ya da Windows 11, 64 bit. Ekran kartı şart değil; hızlı çeviri işlemcide çalışır.<span data-wiz-skip> Güçlü bir ekran kartınız varsa daha iyi çeviren yerel yapay zekâyı da kurabilirsiniz.</span><span class="need-ways" data-wiz-skip> Her yolda.</span></dd></div>
+              <div data-need="net"><dt>İnternet</dt><dd>İlk açılışta modelleri bir kez indirmek için.<span class="need-ways" data-wiz-skip> Her yolda.</span></dd></div>
+              <div class="wiz-only" data-need="ai" data-kart="12 8" hidden><dt>Boş disk alanı</dt><dd>Yapay zekâ kurulurken yaklaşık 15 GB. Windows 10 22H2 ya da Windows 11 gerekir.</dd></div>
+              <div data-need="ps5" data-yol="2 3 4"><dt>PS5</dt><dd>Oyun PS5’te çalışır, görüntüsü bilgisayara gelir.<span class="need-ways" data-wiz-skip> Yol 2, 3 ve 4.</span></dd></div>
+              <div data-need="kol" data-yol="2 3 4"><dt>DualSense kol</dt><dd><span data-yol="2 3">Kolu bilgisayara takıp oynarsınız<span class="need-ways" data-wiz-skip> (Yol 2 ve 3)</span>. </span><span data-yol="4">Capture kartı yolunda kol PS5’e bağlı kalır.</span></dd></div>
+              <div data-need="usbc" data-yol="2 3"><dt>USB-C kablo</dt><dd>Kolu bilgisayara bağlar: PS5’in kutusundan çıkan şarj kablosu olur. Kablo yerine Bluetooth da olur.<span class="need-ways" data-wiz-skip> Yol 2 ve 3.</span></dd></div>
+              <div data-need="modem" data-yol="2 3"><dt>Modem</dt><dd>PS5 ile bilgisayar aynı modeme bağlı olmalı.<span class="need-ways" data-wiz-skip> Yol 2 ve 3.</span></dd></div>
+              <div data-need="eth" data-yol="2 3"><dt>Ethernet kablosu (önerilir)</dt><dd>PS5’i modeme kabloyla bağlamak görüntüyü netleştirir. Kablo şart değil.<span class="need-ways" data-wiz-skip> Yol 2 ve 3.</span></dd></div>
+              <div data-need="tv" data-yol="3 4"><dt>Televizyon</dt><dd>HDMI girişi olan bir televizyon, marka fark etmez.<span data-yol="4"> Capture kartı yolunda isteğe bağlı.</span><span class="need-ways" data-wiz-skip> Yol 3 ve 4.</span></dd></div>
+              <div data-need="hdmi" data-yol="3 4"><dt>HDMI kablo</dt><dd>Bilgisayarı TV’ye bağlar; TV bilgisayarın ekranı olur.<span data-yol="4"> Capture kartı yolunda bir HDMI kablo da PS5’i karta bağlar.</span><span class="need-ways" data-wiz-skip> Yol 3 ve 4.</span></dd></div>
+              <div data-need="capture" data-yol="4"><dt>Capture kartı</dt><dd>PS5’in HDMI görüntüsünü USB ile bilgisayara aktarır. En net görüntü bu yolda; görüntüyü OBS’te açarsınız.<span class="need-ways" data-wiz-skip> Yalnız Yol 4.</span></dd></div>
+              <div data-need="obs" data-yayin="evet"><dt>OBS (yayın için)</dt><dd>Türkçe altyazıyı yayına ekler. Yayını her zamanki gibi Kick, Twitch ya da YouTube’a açarsınız; izleyiciler hiçbir şey kurmaz.</dd></div>
             </dl>
           </div>
         </div>
@@ -779,13 +1207,23 @@ code.inline {
             <a href="img/kurulum/robz_vision_kurulum.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/robz_vision_kurulum.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Robz Vision'ı kurmanın dört adımı: 1 İndir ve kur, 2 Yapay zekâ ile, 3 Bölge seç, 4 Başlat"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
           </figure>
           <div class="guide-body">
+            <p class="plan-dl wiz-only" hidden>
+              <a class="btn btn-primary" data-dl="exe" href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" target="_blank" rel="noopener noreferrer">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>
+                Windows için indir
+              </a>
+            </p>
             <ol class="obs-steps">
-              <li><span>Kurulum dosyasını <a href="#indir">İndir</a> bölümünden indirin.</span></li>
+              <li data-adim="Robz Vision’ı indirin ve kurun"><span>Kurulum dosyasını <a href="#indir">İndir</a> bölümünden indirin.</span></li>
               <li><span>Dosyayı çalıştırın. Windows “bilinmeyen yayımcı” uyarısı verirse <em>Ek bilgi → Yine de çalıştır</em>’ı seçin. <a href="#smartscreen-baslik">Neden uyarı verir?</a></span></li>
               <li><span>Sihirbazda <em>İleri</em>’ye basarak kurun. Yönetici izni istemez.</span></li>
-              <li><span>Robz Vision’ı açın. İlk açılışta çeviri yolunu seçin: ekran kartınız varsa <em>Yapay zekâ ile</em>, yoksa <em>Yalnız hızlı çeviri</em>. <em>Devam</em>’a basın; gereken modeller bir kez iner.</span></li>
+              <li data-kart="x" data-adim="İlk açılışta çeviriyi seçin"><span>Robz Vision’ı açın. İlk açılışta çeviri yolunu seçin: ekran kartınız varsa <em>Yapay zekâ ile</em>, yoksa <em>Yalnız hızlı çeviri</em>. <em>Devam</em>’a basın; gereken modeller bir kez iner.</span></li>
+              <li data-kart="12" data-adim="İlk açılışta çeviriyi seçin" hidden><span>Robz Vision’ı açın. <em>Çeviri nasıl yapılsın?</em> sorusunda <em>Yapay zekâ ile</em>’yi seçip <em>Devam</em>’a, sonra <em>Kur</em>’a basın; ekran kartınız uygunsa bu seçenek önceden seçili gelir. 12 GB’lık kartta Gemma 4 12B kurulur (Ollama ile birlikte yaklaşık 10 GB).<span data-yol="1"> Oyun da bu bilgisayarda çalıştığı için uygulama hafif modeli (Gemma 4 E4B) önerebilir.</span></span></li>
+              <li data-kart="8" data-adim="İlk açılışta çeviriyi seçin" hidden><span>Robz Vision’ı açın. <em>Çeviri nasıl yapılsın?</em> sorusunda <em>Yapay zekâ ile</em>’yi seçip <em>Devam</em>’a, sonra <em>Kur</em>’a basın; ekran kartınız uygunsa bu seçenek önceden seçili gelir. 8 GB’lık kartta daha hafif Gemma 4 E4B (6,6 GB) kurulur.</span></li>
+              <li data-kart="12 8" hidden><span>Hızlı çeviri modeli (404 MB) inince <em>Şimdi başla</em>’ya basın. Yapay zekâ arka planda iner, hazır olunca kendiliğinden devreye girer.</span></li>
+              <li data-kart="yok" data-adim="İlk açılışta çeviriyi seçin" hidden><span>Robz Vision’ı açın. <em>Çeviri nasıl yapılsın?</em> sorusunda <em>Yalnız hızlı çeviri</em>’yi seçip <em>Devam</em>’a basın. Hızlı çeviri modeli (404 MB) bir kez iner, sonra program açılır. Uygun bir ekran kartınız varsa Robz Vision onu kendisi bulur ve <em>Yapay zekâ ile</em>’yi önceden seçer. Yapay zekâyı sonradan <em>Çeviri</em> sayfasındaki <em>Önerilen kurulum</em> ile de kurabilirsiniz.</span></li>
             </ol>
-            <p class="note">Çeviriyi başlatmak her yolda aynıdır: <em>Bölge seç</em> ile altyazının çıktığı alanı çizin, <em>Onayla</em>’ya, sonra <em>Başlat</em>’a basın. Bunun için oyunun görüntüsü bilgisayar ekranında olmalı; nasıl getireceğinizi yolunuz anlatıyor.</p>
+            <p class="note">Çeviriyi başlatmak her yolda aynıdır: Ana sayfadaki canlı önizlemede altyazının çıktığı alanı fareyle çizin, sonra <em>Başlat</em>’a basın. İlk açılışta ekranın alt-orta altyazı şeridi seçili gelir; altyazı oradaysa dokunmanız gerekmez. Bunun için oyunun görüntüsü bilgisayar ekranında olmalı; nasıl getireceğinizi yolunuz anlatıyor.</p>
           </div>
         </div>
       </div>
@@ -811,13 +1249,6 @@ code.inline {
         </div>
 
         <div class="paths">
-          <div class="tabs path-tabs" role="tablist" aria-label="Kurulum yolları" hidden>
-            <button class="tab" type="button" role="tab" id="tab-yol-1" aria-controls="yol-1" aria-selected="true"><span class="tab-n"><span class="sr-only">Yol </span>1</span> Bilgisayarda</button>
-            <button class="tab" type="button" role="tab" id="tab-yol-2" aria-controls="yol-2" aria-selected="false" tabindex="-1"><span class="tab-n"><span class="sr-only">Yol </span>2</span> PS5 + bilgisayar</button>
-            <button class="tab" type="button" role="tab" id="tab-yol-3" aria-controls="yol-3" aria-selected="false" tabindex="-1"><span class="tab-n"><span class="sr-only">Yol </span>3</span> PS5 + TV</button>
-            <button class="tab" type="button" role="tab" id="tab-yol-4" aria-controls="yol-4" aria-selected="false" tabindex="-1"><span class="tab-n"><span class="sr-only">Yol </span>4</span> Capture kartı</button>
-          </div>
-
           <div class="path" id="yol-1">
             <div class="guide">
               <div class="guide-head">
@@ -829,10 +1260,10 @@ code.inline {
               </figure>
               <div class="guide-body">
                 <ol class="obs-steps">
-                  <li><span>Oyunu <em>Pencereli tam ekran</em> modunda açın ve İngilizce altyazıyı açın.</span></li>
-                  <li><span>Robz Vision’da <em>Ana sayfa → Çevrilecek bölge → Ekran bölgesi</em>’ni seçin.</span></li>
-                  <li><span><em>Bölge seç</em>’e basın, altyazının çıktığı alanı fareyle çizin ve <em>Onayla</em>’ya basın.</span></li>
-                  <li><span><em>Başlat</em>’a basın. Türkçe kutu oyunun üstünde belirir.</span></li>
+                  <li data-adim="Oyunu hazırlayın"><span>Oyunu <em>Pencereli tam ekran</em> modunda açın ve İngilizce altyazıyı açın.</span></li>
+                  <li data-adim="Altyazının yerini seçin"><span>Robz Vision’ın Ana sayfasında <em>Çevrilecek bölge</em> başlığının yanında <em>Ekran</em> seçili olsun. Canlı önizlemede oyunun ekranı görünür.</span></li>
+                  <li><span>Önizlemede altyazının çıktığı alanı fareyle çizin; çerçeveyi ortasından tutup taşıyın, köşelerinden boyutlandırın. İlk açılışta alt-orta altyazı şeridi seçili gelir; altyazı oradaysa dokunmanız gerekmez. İnce ayar için <em>Tam ekranda seç</em>: bölgeyi oyunun üstünde, gerçek boyutunda çizip <em>Onayla</em>’ya basarsınız.</span></li>
+                  <li data-adim="Çeviriyi başlatın"><span><em>Başlat</em>’a basın. Türkçe kutu oyunun üstünde belirir.</span></li>
                   <li><span>Kutuyu <em>Ekranımda → Konumu ayarla</em> ile İngilizce altyazının hemen üstüne taşıyın, <em>Konumu kaydet</em>’e basın.</span></li>
                 </ol>
               </div>
@@ -843,7 +1274,7 @@ code.inline {
             <div class="guide">
               <div class="guide-head">
                 <h4>Yol 2: PS5’i bilgisayar ekranında oynuyorum</h4>
-                <p>PS5’in görüntüsü ağ üzerinden bilgisayara gelir, kolu bilgisayara takıp oynarsınız. Bunun için ücretsiz bir uzaktan oynatma programı gerekir: açık kaynak <a href="https://chiaki-ng.github.io/chiaki-ng/" rel="noopener">chiaki-ng</a> ya da Sony’nin resmî PS Remote Play uygulaması. İkisiyle de çalışır; adımlar chiaki-ng için.</p>
+                <p>PS5’in görüntüsü ağ üzerinden bilgisayara gelir, kolu bilgisayara takıp oynarsınız. Bunun için ücretsiz bir uzaktan oynatma programı gerekir: açık kaynak <a href="https://github.com/chiaki-ng/chiaki-ng/releases/latest" target="_blank" rel="noopener noreferrer">chiaki-ng</a> ya da Sony’nin resmî PS Remote Play uygulaması. İkisiyle de çalışır; adımlar chiaki-ng için.</p>
               </div>
               <figure class="guide-fig">
                 <a href="img/kurulum/yol2_ps5_bilgisayar.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol2_ps5_bilgisayar.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 2: PS5 ve bilgisayar Ethernet kablosuyla modeme, DualSense USB-C kabloyla bilgisayara, bilgisayar HDMI ile monitöre bağlı; monitörde Türkçe altyazı"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
@@ -851,23 +1282,23 @@ code.inline {
               <div class="guide-body">
                 <h5>PS5’te</h5>
                 <ol class="obs-steps">
-                  <li><span>PS5’i Ethernet kablosuyla modeme bağlayın; bilgisayar da aynı modeme bağlı olsun. Kablo şart değil ama görüntüyü netleştirir.</span></li>
+                  <li data-adim="PS5’te Uzaktan Oynama’yı açın"><span>PS5’i Ethernet kablosuyla modeme bağlayın; bilgisayar da aynı modeme bağlı olsun. Kablo şart değil ama görüntüyü netleştirir.</span></li>
                   <li><span><em>Ayarlar → Sistem → Uzaktan Oynama → Uzaktan Oynama’yı Etkinleştir</em>’i açın.</span></li>
                   <li><span>İsterseniz PS5’i dinlenme modundan bilgisayardan açabilirsiniz: <em>Ayarlar → Sistem → Güç Tasarrufu → Dinlenme Modunda Kullanılabilen Özellikler</em>’de <em>İnternete Bağlı Kalın</em> ve <em>PS5 Sisteminin Ağdan Açılmasını Etkinleştir</em>’i açın.</span></li>
                 </ol>
                 <h5>Bilgisayarda</h5>
                 <ol class="obs-steps" start="4" style="counter-reset: s 3">
-                  <li><span>chiaki-ng’yi <a href="https://chiaki-ng.github.io/chiaki-ng/setup/installation/" rel="noopener">resmî kurulum sayfasındaki</a> gibi kurun ya da komut isteminde <code class="inline">winget install --id=StreetPea.chiaki-ng -e</code> yazın. Yalnız resmî kaynaklardan indirin.</span></li>
+                  <li data-adim="chiaki-ng’yi kurun ve PS5’i kaydedin"><span>chiaki-ng’yi <a href="https://github.com/chiaki-ng/chiaki-ng/releases/latest" target="_blank" rel="noopener noreferrer">GitHub’daki sürüm sayfasından</a> indirin: Windows için <code class="inline">chiaki-ng-win_x64-MSYS2-installer.exe</code> dosyasını indirip kurun. Ya da komut isteminde <code class="inline">winget install --id=StreetPea.chiaki-ng -e</code> yazın. Yalnız resmî kaynaklardan indirin.</span></li>
                   <li><span>chiaki-ng’yi açın. Açılan pencerede PSN hesabınızla bir kez giriş yapın. PS5 aynı ağdaysa listede kendiliğinden görünür.</span></li>
                   <li><span>PS5’i kaydedin. “Automatic Registration Available” yazıyorsa kod gerekmez. Yazmıyorsa PS5’te <em>Ayarlar → Sistem → Uzaktan Oynama → Cihazı Eşleştir</em>’i açın ve ekrandaki sayıyı chiaki-ng’ye girin.</span></li>
-                  <li><span>chiaki-ng’nin ayarlarında (dişli simgesi) 1080p ve 60 FPS’i seçin.</span></li>
+                  <li data-adim="Görüntüyü ve kolu hazırlayın"><span>chiaki-ng’nin ayarlarında (dişli simgesi) 1080p ve 60 FPS’i seçin.</span></li>
                   <li><span>DualSense’i USB-C kabloyla bilgisayara takın. Bluetooth ile de bağlanır.</span></li>
                   <li><span>chiaki-ng’de PS5’e bağlanın, oyunu açın ve İngilizce altyazıyı açın.</span></li>
                 </ol>
                 <h5>Robz Vision’da</h5>
                 <ol class="obs-steps" start="10" style="counter-reset: s 9">
-                  <li><span><em>Ana sayfa → Çevrilecek bölge → Uygulama penceresi</em>’ni seçin, listeden chiaki-ng penceresini seçin.</span></li>
-                  <li><span><em>Bölge seç</em> ile altyazı alanını çizin, <em>Onayla</em>’ya ve <em>Başlat</em>’a basın.</span></li>
+                  <li data-adim="Robz Vision’da chiaki-ng penceresini seçin"><span>Ana sayfada <em>Çevrilecek bölge</em> başlığının yanında <em>Uygulama penceresi</em>’ni seçin, listeden chiaki-ng penceresini seçin. Önizlemede o pencerenin görüntüsü belirir.</span></li>
+                  <li><span>Önizlemede, pencerenin görüntüsünün üstünde altyazının çıktığı alanı fareyle çizin; sonra <em>Başlat</em>’a basın.</span></li>
                   <li><span>Kutuyu <em>Ekranımda → Konumu ayarla</em> ile altyazının üstüne yerleştirin, <em>Konumu kaydet</em>’e basın.</span></li>
                 </ol>
                 <p class="note">chiaki-ng penceresi başka pencerelerin arkasında kalsa da okunur; simge durumuna küçültmeyin.</p>
@@ -879,7 +1310,7 @@ code.inline {
             <div class="guide">
               <div class="guide-head">
                 <h4>Yol 3: PS5’i televizyonda oynuyorum</h4>
-                <p>Yol 2’deki kuruluma bir HDMI kablo eklenir: bilgisayar TV’ye bağlanır, TV bilgisayarın ekranı olur. TV markası fark etmez.</p>
+                <p><span data-wiz-skip>Yol 2’deki</span><span class="wiz-only" hidden>Önceki adımdaki</span> kuruluma bir HDMI kablo eklenir: bilgisayar TV’ye bağlanır, TV bilgisayarın ekranı olur. TV markası fark etmez.</p>
                 <div class="no-tv" role="note">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4M3.5 3.5l17 17"/></svg>
                   <p><strong>Robz Vision bilgisayarda çalışır</strong>Televizyonda ya da PS5’te çalışmaz. PS5’i doğrudan TV’ye bağlarsanız çeviri görünmez; görüntü bilgisayardan geçmeli.</p>
@@ -890,15 +1321,15 @@ code.inline {
               </figure>
               <div class="guide-body">
                 <ol class="obs-steps">
-                  <li><span>Önce <a href="#yol-2">Yol 2</a>’yi kurun: PS5’in görüntüsü bilgisayarda chiaki-ng penceresinde açılsın.</span></li>
-                  <li><span>Bilgisayarı HDMI kabloyla TV’ye bağlayın.</span></li>
-                  <li><span>TV kumandasındaki <em>Kaynak</em> (Source, Input) düğmesiyle kabloyu taktığınız HDMI girişini seçin.</span></li>
-                  <li><span>TV’de oyun modunu açın, gecikmeyi azaltır. Menüdeki adı markaya göre değişir.</span></li>
-                  <li><span>Bilgisayarda <kbd>Win</kbd>+<kbd>P</kbd>’ye basıp <em>Yalnızca ikinci ekran</em>’ı seçin. Görüntü hem monitörde hem TV’de olsun isterseniz <em>Çoğalt</em>’ı seçin.</span></li>
+                  <li data-wiz-skip><span>Önce <a href="#yol-2">Yol 2</a>’yi kurun: PS5’in görüntüsü bilgisayarda chiaki-ng penceresinde açılsın.</span></li>
+                  <li data-tv data-adim="Bilgisayarı TV’ye bağlayın"><span>Bilgisayarı HDMI kabloyla TV’ye bağlayın.</span></li>
+                  <li data-tv><span>TV kumandasındaki <em>Kaynak</em> (Source, Input) düğmesiyle kabloyu taktığınız HDMI girişini seçin.</span></li>
+                  <li data-tv><span>TV’de oyun modunu açın, gecikmeyi azaltır. Menüdeki adı markaya göre değişir.</span></li>
+                  <li data-tv data-adim="Görüntüyü TV’ye verin"><span>Bilgisayarda <kbd>Win</kbd>+<kbd>P</kbd>’ye basıp <em>Yalnızca ikinci ekran</em>’ı seçin. Görüntü hem monitörde hem TV’de olsun isterseniz <em>Çoğalt</em>’ı seçin.</span></li>
                   <li><span>chiaki-ng’yi tam ekran yapın.</span></li>
                   <li><span>Türkçe kutuyu <em>Ana sayfa → Ekranımda → Konumu ayarla</em> ile TV’de altyazının üstüne sürükleyin, <em>Konumu kaydet</em>’e basın.</span></li>
                 </ol>
-                <h5>Kablosuz</h5>
+                <h5 data-adim-ek="Bilgisayarı TV’ye bağlayın">Kablosuz</h5>
                 <p>TV’niz kablosuz yansıtmayı destekliyorsa kablo yerine <kbd>Win</kbd>+<kbd>K</kbd> ile bilgisayar ekranını TV’ye yansıtabilirsiniz. Gecikme artar. Türkçe kutu TV’de görünmezse <em>Ekranımda</em> altındaki <em>Yayında da görünsün</em>’ü açın.</p>
               </div>
             </div>
@@ -919,14 +1350,15 @@ code.inline {
               </figure>
               <div class="guide-body">
                 <ol class="obs-steps">
-                  <li><span>PS5’te <em>Ayarlar → Sistem → HDMI → HDCP’yi Etkinleştir</em>’i kapatın. Açıkken kart görüntüyü alamaz.</span></li>
+                  <li data-adim="HDCP’yi kapatıp kabloları takın"><span>PS5’te <em>Ayarlar → Sistem → HDMI → HDCP’yi Etkinleştir</em>’i kapatın. Açıkken kart görüntüyü alamaz.</span></li>
                   <li><span>PS5’i HDMI kabloyla capture kartının girişine, kartı USB ile bilgisayara bağlayın.</span></li>
-                  <li><span>Kartın görüntüsünü OBS’e kaynak olarak ekleyin. Kaynağa sağ tıklayıp <em>Pencereli Projektör (Kaynak)</em>’ı açın. Bu pencere yalnız oyun görüntüsünü gösterir.</span></li>
-                  <li><span>Robz Vision’da <em>Ana sayfa → Çevrilecek bölge → Uygulama penceresi</em> ile projektör penceresini seçin.</span></li>
-                  <li><span><em>Bölge seç</em> ile altyazı alanını çizin, <em>Onayla</em>’ya ve <em>Başlat</em>’a basın.</span></li>
-                  <li><span>TV’de oynayacaksanız bilgisayarı HDMI ile TV’ye bağlayın; adımlar <a href="#yol-3">Yol 3</a>’te.</span></li>
+                  <li data-adim="Görüntüyü OBS’te açın"><span>Kartın görüntüsünü OBS’e kaynak olarak ekleyin. Kaynağa sağ tıklayıp <em>Pencereli Projektör (Kaynak)</em>’ı açın. Bu pencere yalnız oyun görüntüsünü gösterir.</span></li>
+                  <li data-adim="Robz Vision’da projektör penceresini seçin"><span>Robz Vision’ın Ana sayfasında <em>Çevrilecek bölge</em> başlığının yanında <em>Uygulama penceresi</em>’ni seçin, listeden projektör penceresini seçin. Önizlemede pencerenin görüntüsü belirir.</span></li>
+                  <li><span>Önizlemede, pencerenin görüntüsünün üstünde altyazının çıktığı alanı fareyle çizin; sonra <em>Başlat</em>’a basın.</span></li>
+                  <li><span>Kutuyu <em>Ekranımda → Konumu ayarla</em> ile altyazının üstüne yerleştirin, <em>Konumu kaydet</em>’e basın.</span></li>
+                  <li data-wiz-skip><span>TV’de oynayacaksanız bilgisayarı HDMI ile TV’ye bağlayın; adımlar <a href="#yol-3">Yol 3</a>’te.</span></li>
                 </ol>
-                <p class="note">OBS önizlemesini seçmeyin, orada Türkçe altyazı da olur. Projektör penceresi başka pencerelerin arkasında kalabilir ama simge durumuna küçültülmemeli.</p>
+                <p class="note">OBS’in önizlemesini seçmeyin, orada Türkçe altyazı da olur. Projektör penceresi başka pencerelerin arkasında kalabilir ama simge durumuna küçültülmemeli.</p>
               </div>
             </div>
           </div>
@@ -937,16 +1369,17 @@ code.inline {
         <div class="guide">
           <div class="guide-head">
             <h3><span class="part-n" aria-hidden="true">4</span>Yayına ekleyin</h3>
-            <p>Yayın yapmıyorsanız bu adımı atlayın. İzleyiciler Türkçe altyazıyı yayında görür; ekranınızdaki kutu varsayılan olarak yayına girmez.</p>
+            <p><span data-yayin="x">Yayın yapmıyorsanız bu adımı atlayın. </span>İzleyiciler Türkçe altyazıyı yayında görür; ekranınızdaki kutu varsayılan olarak yayına girmez.</p>
           </div>
           <figure class="guide-fig">
             <a href="img/kurulum/yayin_obs.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yayin_obs.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yayın: Robz Vision (adres 127.0.0.1:8765) → OBS Tarayıcı kaynağı → yayın; izleyiciler Türkçe altyazıyı görür"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
           </figure>
           <div class="guide-body">
             <ol class="obs-steps">
-              <li><span>Robz Vision’ın Ana sayfasındaki OBS adresini kopyalayın. Varsayılan adres <code class="inline">http://127.0.0.1:8765/</code></span></li>
+              <li data-adim="Türkçe altyazıyı OBS’e ekleyin"><span>Robz Vision’ın Ana sayfasındaki OBS adresini kopyalayın. Varsayılan adres <code class="inline">http://127.0.0.1:8765/</code></span></li>
               <li><span>OBS’te <strong>Kaynaklar</strong> altındaki <strong>+</strong> düğmesine basıp <strong>Tarayıcı</strong>’yı seçin. Adresi <strong>URL</strong> alanına yapıştırın, genişlik ve yüksekliği tuvalle aynı yapın, örneğin 1920 × 1080.</span></li>
               <li><span>Kaynağı listede oyun görüntüsünün üstüne taşıyın.</span></li>
+              <li><span>Kick, Twitch ya da YouTube’a her zamanki gibi yayın açın; izleyiciler Türkçe altyazıyı görür.</span></li>
             </ol>
             <p class="note">Ayrıntılar ve ipuçları <a href="#yayin">Yayıncılar için</a> bölümünde.</p>
           </div>
@@ -954,13 +1387,24 @@ code.inline {
       </div>
 
       <div class="guide-part guide-help" id="kurulum-yardim">
+        <div class="run-done wiz-only" hidden>
+          <figure class="guide-fig">
+            <img class="shot" src="img/gta6_sonra.webp" width="1280" height="720" loading="lazy" decoding="async" alt="GTA VI sahnesi, Jason arabada: oyunun İngilizce altyazısının hemen üstünde Robz Vision’ın Türkçe kutusu “İki dakikan var. Polis gelirse basar giderim.”">
+          </figure>
+          <p>Oyunu açın, Robz Vision’da <em>Başlat</em>’a basın: İngilizce altyazı ekrana geldiğinde Türkçesi de gelir. <kbd>Ctrl+Alt+T</kbd> çeviriyi başlatır ve durdurur, <kbd>Ctrl+Alt+H</kbd> gizler ve gösterir.</p>
+          <p class="plan-actions"><button class="btn btn-secondary btn-sm" type="button" data-copy-link hidden>Planın bağlantısını kopyala</button><button class="btn btn-secondary btn-sm" type="button" data-restart>Baştan başla</button></p>
+        </div>
         <h3>Takılırsanız</h3>
         <ul class="facts">
-          <li><strong>PS5 listede görünmüyor.</strong> PS5 ile bilgisayarın aynı modeme bağlı olduğunu ve <em>Uzaktan Oynama</em>’nın açık olduğunu kontrol edin.</li>
-          <li><strong>Türkçe kutu TV’de yok.</strong> Kutuyu <em>Konumu ayarla</em> ile TV ekranına sürükleyin. Kablosuz yansıtıyorsanız <em>Yayında da görünsün</em>’ü açın.</li>
-          <li><strong>Okumalar bozuk.</strong> Uzaktan oynatma görüntüsü sıkıştırılır. chiaki-ng’de 1080p’yi seçin ya da oyunda altyazı boyutunu büyütün.</li>
+          <li data-yol="2 3"><strong>PS5 listede görünmüyor.</strong> PS5 açık ya da dinlenme modunda olmalı. PS5 ile bilgisayarın aynı modeme bağlı olduğunu ve <em>Uzaktan Oynama</em>’nın açık olduğunu kontrol edin.</li>
+          <li data-yol="2 3"><strong>chiaki-ng’nin penceresi boş kalıyor ya da program açılmıyor.</strong> Başlat menüsünden <em>chiaki-ng (OpenGL)</em>’yi açın.</li>
+          <li data-yol="3"><strong>TV’de görüntü yok.</strong> Kumandadaki <em>Kaynak</em> (Source, Input) düğmesiyle kabloyu taktığınız HDMI girişini seçin. Bilgisayarda <kbd>Win</kbd>+<kbd>P</kbd> ile <em>Yalnızca ikinci ekran</em>’ı ya da <em>Çoğalt</em>’ı seçin.</li>
+          <li data-yol="3 4"><strong>Türkçe kutu TV’de yok.</strong> Kutuyu <em>Konumu ayarla</em> ile TV ekranına sürükleyin. Kablosuz yansıtıyorsanız <em>Yayında da görünsün</em>’ü açın.</li>
+          <li data-yol="1"><strong>Türkçe kutu oyunun üstünde görünmüyor.</strong> Oyunu <em>Pencereli tam ekran</em> (kenarlıksız) modunda açın; bazı oyunlar özel tam ekran modunda kutuyu üstte göstermez.</li>
+          <li><strong>Okumalar bozuk.</strong> <span data-yol="2 3">Uzaktan oynatma görüntüsü sıkıştırılır: PS5’i modeme kabloyla bağlayın, chiaki-ng’de 1080p’yi seçin. </span>Oyunda altyazı boyutunu büyütün; bölgeyi yalnız altyazı satırlarını kapsayacak kadar daraltın.</li>
+          <li data-yol="4"><strong>Capture kartından görüntü gelmiyor.</strong> PS5’te <em>Ayarlar → Sistem → HDMI → HDCP’yi Etkinleştir</em> kapalı olmalı.</li>
         </ul>
-        <p>Başka sorular için <a href="#sss">Sık sorulanlar</a>, ayrıntılı anlatım için <a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/docs/KULLANIM.md">kullanım kılavuzu</a>.</p>
+        <p>Başka sorular için <a href="#sss">Sık sorulanlar</a>, ayrıntılı anlatım için <a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/docs/KULLANIM.md" target="_blank" rel="noopener noreferrer">kullanım kılavuzu</a>.</p>
       </div>
     </div>
   </section>
@@ -996,7 +1440,7 @@ code.inline {
             <li class="missing">Türkçe <span>listede yok</span></li>
           </ul>
           <p class="langs-voice">Seslendirme yalnızca İngilizce. Xbox mağaza sayfası da 13 dil gösteriyor.</p>
-          <figcaption>Kaynaklar: <a href="https://www.playstation.com/en-us/support/games/gta-vi-support/" rel="noopener">PlayStation destek sayfası</a>, <a href="https://www.xbox.com/en-IN/games/store/grand-theft-auto-vi/9p3h4968grsm" rel="noopener">Xbox mağaza sayfası</a>. 16 Kasım 2026’da kontrol edildi.</figcaption>
+          <figcaption>Kaynaklar: <a href="https://www.playstation.com/en-us/support/games/gta-vi-support/" target="_blank" rel="noopener noreferrer">PlayStation destek sayfası</a>, <a href="https://www.xbox.com/en-IN/games/store/grand-theft-auto-vi/9p3h4968grsm" target="_blank" rel="noopener noreferrer">Xbox mağaza sayfası</a>. 16 Kasım 2026’da kontrol edildi.</figcaption>
         </figure>
       </div>
     </div>
@@ -1012,7 +1456,7 @@ code.inline {
         <li>
           <span class="step-n" aria-hidden="true">1</span>
           <h3>Ekrandan okur</h3>
-          <p>Altyazının çıktığı alanı fareyle seçersiniz ya da bir uygulama penceresini gösterirsiniz. Altyazı belirdikten yaklaşık 0,1 sn sonra okunur; plaka, tabela gibi oyun içi yazılar çevrilmez. Altyazı değişmedikçe OCR çalışmaz.</p>
+          <p>Altyazının çıktığı alanı Ana sayfadaki canlı önizlemede fareyle çizersiniz ya da bir uygulama penceresini gösterirsiniz; ilk açılışta alt-orta altyazı şeridi seçili gelir. Altyazı belirdikten yaklaşık 0,1 sn sonra okunur; plaka, tabela gibi oyun içi yazılar çevrilmez. Altyazı değişmedikçe OCR çalışmaz.</p>
         </li>
         <li>
           <span class="step-n" aria-hidden="true">2</span>
@@ -1052,9 +1496,9 @@ code.inline {
         <dl class="feats">
           <div><dt>Ücretsiz ve yerel</dt><dd>OCR ve çeviri bilgisayarınızda çalışır. Varsayılan ayarlarla internet yalnızca ilk açılışta çeviri modelini indirmek için kullanılır.</dd></div>
           <div><dt>Hızlı</dt><dd>Altyazı belirdikten yaklaşık 0,1 sn sonra okunur. Hızlı çeviri işlemcide 20–60 ms, yerel yapay zekâ 12 GB ekran kartında satır başına yaklaşık 0,35 sn sürer.</dd></div>
-          <div><dt>Oyun altyazısının üzerine</dt><dd>İsterseniz Türkçe, İngilizcenin tam yerine yazılır: koyu bir kutu İngilizceyi örter, Türkçe oyunun yazısıyla aynı boyda içinde ortalanır.</dd></div>
+          <div><dt>Oyun altyazısının üzerine</dt><dd>İsterseniz Türkçe, İngilizcenin tam yerine yazılır: koyu bir kutu İngilizceyi örter, Türkçe oyunun yazısıyla aynı boyda içinde ortalanır. Konuşma ve görev yazısı aynı anda çıkarsa ikisi de kendi kutusuyla örtülür.</dd></div>
           <div><dt>İki ayrı çıktı</dt><dd>Kendi ekranınızda taşıyıp boyutlandırabileceğiniz bir kutu, izleyicileriniz için bir OBS Tarayıcı Kaynağı. İkisinin konumu birbirinden bağımsızdır.</dd></div>
-          <div><dt>Bölge ya da pencere</dt><dd>Altyazının çıktığı alanı fareyle seçersiniz. İsterseniz belirli bir uygulama penceresinden okursunuz; pencere başka pencerelerin arkasında kalsa da çalışır.</dd></div>
+          <div><dt>Bölge ya da pencere</dt><dd>Altyazının çıktığı alanı Ana sayfadaki canlı önizlemede fareyle çizersiniz; ilk açılışta ekranın alt-orta altyazı şeridi seçili gelir. İsterseniz belirli bir uygulama penceresinden okursunuz; pencere başka pencerelerin arkasında kalsa da çalışır.</dd></div>
           <div><dt>Gereksiz iş yapmaz</dt><dd>Titreyen okumaları ayıklar, daha temiz bir okuma gelirse çeviriyi düzeltir. Konuşmacı adları çevrilmez, ayrı renkte gösterilir.</dd></div>
           <div><dt>Görünüm</dt><dd>Beş hazır stil: Klasik, Sinema, Kutulu, Sarı, Minimal. Yazı tipi, boyut, renk, kenar, gölge ve arka plan ayarlanır. Ekranınızdaki kutu ile yayındaki altyazı ayrı ayarlanabilir: örneğin ekranda küçük, yayında kutulu ve büyük. Değişiklik anında yansır.</dd></div>
           <div><dt>İsteğe bağlı motorlar</dt><dd>Ollama ile yerel bir dil modeli, kendi anahtarınızla Google Gemini ya da DeepL. Bu motorların çevirisi gecikirse önce hızlı yerel çeviri görünür, daha iyi sonuç gelince yerine geçer.</dd></div>
@@ -1067,15 +1511,15 @@ code.inline {
             <button class="tab" type="button" role="tab" id="tab-ceviri" aria-controls="panel-ceviri" aria-selected="false" tabindex="-1">Çeviri</button>
           </div>
           <figure class="tabpanel" role="tabpanel" id="panel-ana" aria-labelledby="tab-ana">
-            <a href="img/ana_pencere.webp"><img class="shot" src="img/ana_pencere.webp" width="1100" height="820" loading="lazy" decoding="async" alt="Robz Vision ana sayfası: Başlat düğmesi, çevrilecek bölgenin önizlemesi, son çeviri ve süreleri, Ekranımda ve OBS bölümleri"></a>
-            <figcaption>Ana sayfa: Başlat, bölge önizlemesi, son çeviri ve OCR ile çeviri süreleri.</figcaption>
+            <a href="img/ana_pencere.webp"><img class="shot" src="img/ana_pencere.webp" width="1280" height="840" loading="lazy" decoding="async" alt="Robz Vision ana sayfası: üstte Başlat düğmesi, durum ve son satırın OCR ve çeviri süreleri; solda Son çeviriler listesi; sağda Çevrilecek bölge, başlığında Tam ekranda seç düğmesi ve Ekran / Uygulama penceresi seçimi, altında ekranın canlı önizlemesi ve üstünde camgöbeği çerçeveyle işaretli altyazı şeridi; altta yan yana Ekranımda ve OBS"></a>
+            <figcaption>Ana sayfa: üstte Başlat; solda son çeviriler, sağda bölgesi çerçeveli canlı önizleme (bölge doğrudan üstünde çizilir), altında Ekranımda ve OBS.</figcaption>
           </figure>
           <figure class="tabpanel" role="tabpanel" id="panel-gorunum" aria-labelledby="tab-gorunum" hidden>
-            <a href="img/gorunum.webp"><img class="shot" src="img/gorunum.webp" width="1100" height="820" loading="lazy" decoding="async" alt="Görünüm sayfası: Ekranımda ve Yayınımda seçicisi, canlı önizleme, beş hazır stil ve yazı ayarları"></a>
+            <a href="img/gorunum.webp"><img class="shot" src="img/gorunum.webp" width="1280" height="840" loading="lazy" decoding="async" alt="Görünüm sayfası: Ekranımda ve Yayınımda seçicisi, canlı önizleme, beş hazır stil ve yazı ayarları"></a>
             <figcaption>Görünüm: ekranınızdaki kutu ve yayındaki altyazı ayrı ayarlanır; canlı önizleme ve hazır stiller.</figcaption>
           </figure>
           <figure class="tabpanel" role="tabpanel" id="panel-ceviri" aria-labelledby="tab-ceviri" hidden>
-            <a href="img/ceviri.webp"><img class="shot" src="img/ceviri.webp" width="1100" height="820" loading="lazy" decoding="async" alt="Çeviri sayfası: motor seçimi, yerel model durumu ve sözlük"></a>
+            <a href="img/ceviri.webp"><img class="shot" src="img/ceviri.webp" width="1280" height="840" loading="lazy" decoding="async" alt="Çeviri sayfası: motor seçimi, yerel model durumu ve sözlük"></a>
             <figcaption>Çeviri: motor seçimi, yerel model durumu ve sözlük.</figcaption>
           </figure>
         </div>
@@ -1106,7 +1550,7 @@ code.inline {
           </ol>
         </div>
         <figure class="obs-figure">
-          <img class="shot" src="img/obs_yardim.webp" width="540" height="386" loading="lazy" decoding="async" alt="Uygulamadaki “OBS’e tarayıcı kaynağı olarak ekleyin” penceresi: dört adım ve kopyalanabilir adres">
+          <img class="shot" src="img/obs_yardim.webp" width="540" height="433" loading="lazy" decoding="async" alt="Uygulamadaki “OBS’e tarayıcı kaynağı olarak ekleyin” penceresi: dört adım ve kopyalanabilir adres">
           <figcaption>Aynı adımlar uygulamanın içinde de var: Ana sayfadaki adresin yanındaki soru işareti.</figcaption>
         </figure>
       </div>
@@ -1138,7 +1582,7 @@ code.inline {
       <div class="dev-note">
         <svg class="kick-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#53FC18" d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>
         <p>Robz Vision’ı Kick yayıncısı <strong>Robz so good</strong> geliştiriyor. Yeni sürümler ve güncellemeler yayınlarda duyurulur.</p>
-        <a class="btn btn-secondary" href="https://kick.com/robzsogood" aria-label="Robz so good’u Kick’te takip et">Kick’te takip et</a>
+        <a class="btn btn-secondary" href="https://kick.com/robzsogood" aria-label="Robz so good’u Kick’te takip et" target="_blank" rel="noopener noreferrer">Kick’te takip et</a>
       </div>
     </div>
   </section>
@@ -1151,7 +1595,7 @@ code.inline {
       <div class="dl">
         <div class="dl-main">
           <p class="dl-lead">Önerilen yol kurulum dosyası: indirip çalıştırın, sihirbazda İleri’ye basarak kurun.</p>
-          <a class="btn btn-primary" data-dl="exe" href="https://github.com/kutsalkiremitci/robz-vision/releases/latest">
+          <a class="btn btn-primary" data-dl="exe" href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" target="_blank" rel="noopener noreferrer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>
             Windows için indir
           </a>
@@ -1160,20 +1604,20 @@ code.inline {
           <ul class="files">
             <li>
               <div class="file-kind">Kurulum dosyası (önerilen)</div>
-              <div class="file-links"><a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="exe">RobzVision-Setup-&lt;sürüm&gt;-x64.exe</a></div>
+              <div class="file-links"><a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="exe" target="_blank" rel="noopener noreferrer">RobzVision-Setup-&lt;sürüm&gt;-x64.exe</a></div>
               <p>Yönetici izni istemez. Kendi kullanıcı klasörünüze kurulur, Başlat menüsüne eklenir, <em>Ayarlar → Uygulamalar</em>’dan kaldırılır.</p>
             </li>
             <li>
               <div class="file-kind">Taşınabilir sürüm</div>
               <div class="file-links">
-                <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="zip">RobzVision-Portable-&lt;sürüm&gt;-x64.zip</a>
-                <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="7z">RobzVision-Portable-&lt;sürüm&gt;-x64.7z</a>
+                <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="zip" target="_blank" rel="noopener noreferrer">RobzVision-Portable-&lt;sürüm&gt;-x64.zip</a>
+                <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="7z" target="_blank" rel="noopener noreferrer">RobzVision-Portable-&lt;sürüm&gt;-x64.7z</a>
               </div>
               <p>Kısa bir klasöre (ör. <code class="inline">C:\RobzVision</code>) çıkarıp <code class="inline">RobzVision.exe</code>’yi çalıştırın. 7z dosyası daha küçüktür.</p>
             </li>
             <li>
               <div class="file-kind">Doğrulama</div>
-              <div class="file-links"><a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="sums">SHA256SUMS.txt</a></div>
+              <div class="file-links"><a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" data-asset="sums" target="_blank" rel="noopener noreferrer">SHA256SUMS.txt</a></div>
               <p>İndirdiğiniz dosyanın SHA-256 özetini bununla karşılaştırabilirsiniz.</p>
             </li>
           </ul>
@@ -1206,7 +1650,7 @@ code.inline {
           </section>
         </div>
       </div>
-      <p class="dl-more">Adım adım anlatım için <a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/docs/KULLANIM.md">kullanım kılavuzu</a>. Kaynak koddan çalıştırmak için <a href="https://github.com/kutsalkiremitci/robz-vision#kurulum">README’deki Kurulum bölümü</a>.</p>
+      <p class="dl-more">Adım adım anlatım için <a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/docs/KULLANIM.md" target="_blank" rel="noopener noreferrer">kullanım kılavuzu</a>. Kaynak koddan çalıştırmak için <a href="https://github.com/kutsalkiremitci/robz-vision#kurulum" target="_blank" rel="noopener noreferrer">README’deki Kurulum bölümü</a>.</p>
     </div>
   </section>
 
@@ -1238,7 +1682,7 @@ code.inline {
         <details>
           <summary>Verilerim nereye gider?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
           <div class="answer">
-            <p>Varsayılan ayarlarla ekran görüntüsü, OCR ve çeviri bilgisayarınızda kalır. Görüntüler diske kaydedilmez, uygulama kullanım verisi toplamaz. OBS sunucusu yalnızca <code class="inline">127.0.0.1</code> adresini dinler.</p>
+            <p>Varsayılan ayarlarla ekran görüntüsü, OCR ve çeviri bilgisayarınızda kalır. Görüntüler diske kaydedilmez, uygulama kullanım verisi toplamaz. Ana sayfadaki canlı önizleme de yalnız ekranda gösterilir; kaydedilmez, gönderilmez. OBS sunucusu yalnızca <code class="inline">127.0.0.1</code> adresini dinler.</p>
             <p>Çeviri önbelleği ve günlükler <code class="inline">%LOCALAPPDATA%\RobzVision</code>, ayarlar ve API anahtarları <code class="inline">%APPDATA%\RobzVision\ayarlar.json</code> içinde tutulur.</p>
             <p>Gemini ya da DeepL’i seçerseniz altyazı metni ve bağlam için önceki birkaç satır o hizmete gönderilir; görüntü gönderilmez. Gemini’nin ücretsiz katmanında Google, gönderilen metinleri ürünlerini geliştirmek için kullanabilir.</p>
           </div>
@@ -1255,7 +1699,7 @@ code.inline {
             <p>Hayır. Robz Vision oyuna kod eklemez, belleğini ya da dosyalarını okumaz; yalnızca ekranda görüneni okur. Çevrim içi oyunlarda yine de oyunun kullanım koşullarını kendiniz kontrol edin.</p>
           </div>
         </details>
-        <p class="faq-more">Sorun giderme için <a href="https://github.com/kutsalkiremitci/robz-vision#sss-ve-sorun-giderme">README’deki SSS</a>.</p>
+        <p class="faq-more">Sorun giderme için <a href="https://github.com/kutsalkiremitci/robz-vision#sss-ve-sorun-giderme" target="_blank" rel="noopener noreferrer">README’deki SSS</a>.</p>
       </div>
     </div>
   </section>
@@ -1274,12 +1718,12 @@ code.inline {
       </div>
       <nav aria-label="Bağlantılar">
         <ul>
-          <li><a href="https://github.com/kutsalkiremitci/robz-vision">GitHub</a></li>
-          <li><a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest">Sürümler</a></li>
-          <li><a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/docs/KULLANIM.md">Kullanım kılavuzu</a></li>
-          <li><a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/LICENSE">Lisans</a></li>
-          <li><a class="kick" href="https://kick.com/robzsogood" aria-label="Robz so good’u Kick’te takip et"><svg class="kick-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#53FC18" d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Robz so good</a></li>
-          <li><a href="https://www.youtube.com/@robzsogood">YouTube</a></li>
+          <li><a href="https://github.com/kutsalkiremitci/robz-vision" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest" target="_blank" rel="noopener noreferrer">Sürümler</a></li>
+          <li><a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/docs/KULLANIM.md" target="_blank" rel="noopener noreferrer">Kullanım kılavuzu</a></li>
+          <li><a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Lisans</a></li>
+          <li><a class="kick" href="https://kick.com/robzsogood" aria-label="Robz so good’u Kick’te takip et" target="_blank" rel="noopener noreferrer"><svg class="kick-logo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="#53FC18" d="M1.333 0h8v5.333H12V2.667h2.667V0h8v8H20v2.667h-2.667v2.666H20V16h2.667v8h-8v-2.667H12v-2.666H9.333V24h-8Z"/></svg>Robz so good</a></li>
+          <li><a href="https://www.youtube.com/@robzsogood" target="_blank" rel="noopener noreferrer">YouTube</a></li>
         </ul>
       </nav>
     </div>
@@ -1408,7 +1852,7 @@ code.inline {
     }).catch(function () { /* bağlantılar sürüm sayfasına gitmeye devam eder */ });
   }
 
-  /* 3. Sekmeler: her sekme grubu kendi içinde (ekran görüntüleri, kurulum yolları) */
+  /* 3. Sekmeler: uygulama ekran görüntüleri */
   function tabset(list) {
     var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
     function panel(t) { return document.getElementById(t.getAttribute("aria-controls")); }
@@ -1432,52 +1876,782 @@ code.inline {
         e.preventDefault(); select(tabs[j]); tabs[j].focus();
       });
     });
-    return { tabs: tabs, panel: panel, select: select };
   }
   var shots = document.querySelector('.viewer [role="tablist"]');
   if (shots) tabset(shots);
 
-  /* Kurulum yolları: betik yoksa dört yol alt alta görünür; varsa sekmeye dönüşür.
-     Sayfa içi bağlantı (ör. #yol-3 ya da yolun içindeki bir öğe) o yolun sekmesini açar. */
-  var pathList = document.querySelector(".path-tabs");
-  if (pathList) {
-    var ways = tabset(pathList);
-    ways.tabs.forEach(function (t) {
-      var p = ways.panel(t);
-      p.setAttribute("role", "tabpanel");
-      p.setAttribute("aria-labelledby", t.id);
-      p.tabIndex = 0;
-    });
-    pathList.hidden = false;
-    var openFor = function (id) {
-      var el = id && document.getElementById(id);
-      if (!el) return null;
-      for (var i = 0; i < ways.tabs.length; i++) {
-        if (ways.panel(ways.tabs[i]).contains(el)) {
-          var hidden = ways.panel(ways.tabs[i]).hidden;
-          ways.select(ways.tabs[i]);
-          return hidden ? el : null; // yalnız yeni açıldıysa kaydırmak gerekir
-        }
-      }
-      return null;
+  /* 4. Kurulum sihirbazı. Betik yoksa #kurulum'daki bölümler alt alta görünür. Betik varsa üç soru sorulur, sonra
+     plan adım adım gösterilir: solda (telefonda üstte, açılır) adım listesi, sağda tek adım. Planın metni HTML'de
+     tek yerde kalır; sabit bölümler yanıtlara göre süzülüp ekranlara bölünür.
+     Süzme: data-yol="2 3", data-kart="12 8 yok x", data-yayin="evet hayir x" (x: soru yanıtlanmadı) uymayanı
+     gizler; data-wiz-skip sihirbazda hiç görünmez; .wiz-only[hidden] yalnız sihirbazda görünür.
+     Ekranlar: data-adim="Başlık" taşıyan adım yeni bir ekran başlatır; ara başlık, not ve açılır kutular önceki
+     adımın ekranına (data-adim-ek="Başlık" ile başka bir ekrana) gider. "Neler lazım" ilk, "Hazırsınız" son ekrandır.
+     Adres: #kurulum (1. soru), #kurulum?soru=2&yol=3 (soru), #kurulum?yol=3&kart=12&yayin=evet&adim=4 (plan).
+     Eski bağlantılar çalışır: #yol-1 … #yol-4 o yolun planını açar; #kurulum-yol gibi bölüm adresleri 1. soruyu.
+     İşaretler yalnız bu tarayıcıda (localStorage) tutulur. Geçişler yalnız süstür: içerik onlara bağlı değildir. */
+  (function () {
+    var sec = document.getElementById("kurulum");
+    var wiz = document.getElementById("sihirbaz");
+    if (!sec || !wiz || !window.history || !history.pushState || !Element.prototype.closest) return;
+    var P = {
+      needs: document.getElementById("kurulum-malzeme"),
+      install: document.getElementById("kurulum-program"),
+      choose: document.getElementById("kurulum-yol"),
+      stream: document.getElementById("kurulum-yayin"),
+      help: document.getElementById("kurulum-yardim")
     };
-    var hashId = function () {
-      try { return decodeURIComponent(location.hash.slice(1)); } catch (err) { return ""; }
-    };
-    ways.select(ways.tabs[0]);
-    var first = openFor(hashId());
-    if (first) first.scrollIntoView();
-    document.addEventListener("click", function (e) {
-      var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
-      if (a) openFor(a.getAttribute("href").slice(1)); // tarayıcı ardından açılan yola kaydırır
-    });
-    window.addEventListener("hashchange", function () {
-      var el = openFor(hashId());
-      if (el) el.scrollIntoView();
-    });
-  }
+    var paths = {}, n;
+    var runEl = wiz.querySelector('[data-screen="plan"]');
+    var runBody = wiz.querySelector("[data-body]");
+    var ok = runEl && runBody && P.needs && P.install && P.choose && P.stream && P.help && P.needs.querySelector(".needs");
+    for (n = 1; n <= 4; n++) {
+      paths[n] = document.getElementById("yol-" + n);
+      ok = ok && paths[n] && paths[n].querySelector(".guide-body");
+    }
+    if (!ok) return;
 
-  /* 4. Komutu kopyala */
+    var VALID = { yol: ["1", "2", "3", "4"], kart: ["12", "8", "yok"], yayin: ["evet", "hayir"] };
+    var ASK = { "1": "yol", "2": "kart", "3": "yayin" };
+    var SUM = {
+      yol: { "1": "Bilgisayarda", "2": "PS5’i bilgisayar ekranında", "3": "PS5’i televizyonda", "4": "Capture kartıyla" },
+      kart: { "12": "12 GB ya da daha fazla", "8": "8 GB", "yok": "Yok ya da bilmiyorum" },
+      yayin: { evet: "Evet", hayir: "Hayır" }
+    };
+    var ERR = {
+      yol: "Devam etmek için oynadığınız yeri seçin.",
+      kart: "Devam etmek için bir seçenek seçin. Bilmiyorsanız “Yok ya da bilmiyorum”u seçin.",
+      yayin: "Devam etmek için Evet ya da Hayır’ı seçin."
+    };
+    var SEC = {
+      kur: "Robz Vision’ı kurun", yayin: "Yayına ekleyin",
+      "1": "Çeviriyi oyunda açın", "2": "PS5’i bilgisayara bağlayın", "3": "Bilgisayarı televizyona bağlayın", "4": "Capture kartını bağlayın"
+    };
+    var ROUTE = { "1": [1], "2": [2], "3": [2, 3], "4": [4] }; // TV yolunda önce PS5 bilgisayara bağlanır
+    // Malzeme kartlarının çizimi: [görsel, x, y, genişlik, yükseklik] (görseller 1600 × 900)
+    var ART = {
+      pc: ["neler_lazim", 62, 118, 380, 228], net: ["robz_vision_kurulum", 128, 268, 264, 264],
+      ai: ["robz_vision_kurulum", 488, 268, 264, 264], ps5: ["neler_lazim", 538, 78, 164, 266],
+      kol: ["neler_lazim", 840, 150, 285, 188], usbc: ["neler_lazim", 698, 505, 202, 190],
+      modem: ["neler_lazim", 100, 540, 230, 155], eth: ["neler_lazim", 405, 505, 207, 190],
+      tv: ["neler_lazim", 1185, 125, 325, 212], hdmi: ["neler_lazim", 990, 505, 205, 190],
+      capture: ["neler_lazim", 1265, 570, 235, 127], obs: ["yayin_obs", 665, 262, 270, 270]
+    };
+    var KEY = "robzvision-kurulum";
+    var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    var CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+
+    var live = wiz.querySelector("[data-live]");
+    var screens = wiz.querySelectorAll(".wiz-screen");
+    var stepBtns = wiz.querySelectorAll(".wiz-step");
+    var side = runEl.querySelector(".run-side");
+    var toggle = runEl.querySelector(".run-toggle");
+    var runMain = runEl.querySelector(".run-main");
+    var listEl = runEl.querySelector("[data-list]");
+    var posEl = runEl.querySelector("[data-pos]");
+    var bar = runEl.querySelector(".plan-bar span");
+    var countEl = runEl.querySelector("[data-count]");
+    var clearBtn = runEl.querySelector("[data-clear]");
+    var noticeEl = runEl.querySelector("[data-notice]");
+    var titleEl = runEl.querySelector("[data-title]");
+    var numEl = runEl.querySelector("[data-num]");
+    var headEl = runEl.querySelector(".run-title");
+    var prevBtn = runEl.querySelector("[data-prev]");
+    var doneBtn = runEl.querySelector("[data-done]");
+
+    var marks = {};
+    try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (err) { marks = {}; }
+    if (!marks || typeof marks !== "object") marks = {};
+    function saveMarks() {
+      try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch (err) { /* işaretler bu sayfada kalır */ }
+    }
+    function each(list, fn) { Array.prototype.forEach.call(list, fn); }
+    function shown(el, root) { // filtrelerle gizlenmemiş mi (kökün dışındaki atalar sayılmaz)
+      for (; el && el !== root; el = el.parentElement) if (el.hidden) return false;
+      return true;
+    }
+
+    /* Kurulum: sabit bölümler görünmeyen bir depoya alınır; o anki adımın bölümü plana taşınır */
+    var store = document.createElement("div");
+    store.hidden = true;
+    sec.querySelector(".wrap").appendChild(store);
+
+    var wraps = {};
+    for (n = 1; n <= 4; n++) {
+      wraps[n] = document.createElement("div");
+      wraps[n].className = "guide-part plan-path";
+      wraps[n].appendChild(paths[n]);
+    }
+    // Liste dışı ara başlık + paragraf (ör. "Kablosuz") açılır kutu olur
+    [paths[1], paths[2], paths[3], paths[4]].forEach(function (path) { each(path.querySelectorAll(".guide-body > h5"), function (h) {
+      var nx = h.nextElementSibling;
+      if (!nx || nx.tagName === "OL") return;
+      var d = document.createElement("details");
+      d.className = "plan-more";
+      if (h.hasAttribute("data-adim-ek")) d.setAttribute("data-adim-ek", h.getAttribute("data-adim-ek"));
+      d.innerHTML = "<summary></summary>";
+      d.firstChild.textContent = h.textContent;
+      d.firstChild.insertAdjacentHTML("beforeend", CHEVRON);
+      h.parentNode.insertBefore(d, h);
+      d.appendChild(nx);
+      h.parentNode.removeChild(h);
+    }); });
+    // Capture kartı yolunda TV adımları Yol 3'ten kopyalanır, isteğe bağlı açılır kutuda durur
+    var tvSteps = paths[3].querySelectorAll("li[data-tv]");
+    var body4 = paths[4].querySelector(".guide-body");
+    if (tvSteps.length) {
+      var more = document.createElement("details");
+      more.className = "plan-more";
+      more.innerHTML = "<summary>Televizyonda oynayacaksanız" + CHEVRON + '</summary><ol class="obs-steps"></ol>';
+      each(tvSteps, function (li) {
+        var c = li.cloneNode(true);
+        c.removeAttribute("data-tv");
+        c.removeAttribute("data-adim");
+        more.querySelector("ol").appendChild(c);
+      });
+      body4.insertBefore(more, body4.querySelector(".note"));
+    }
+    // "Hazırsınız" ekranında "Takılırsanız" ara başlık olur
+    var helpH = P.help.querySelector(":scope > h3");
+    if (helpH) {
+      var h4 = document.createElement("h4");
+      h4.textContent = helpH.textContent;
+      P.help.replaceChild(h4, helpH);
+    }
+    var dlBtn = P.install.querySelector(".plan-dl .btn-primary"); // ekranda tek pembe düğme: "Yaptım, devam"
+    if (dlBtn) dlBtn.className = "btn btn-secondary";
+
+    // Adımların numara yuvarlağı onay kutusu olur. Kimlik metinden türer: metin değişirse işaret düşer.
+    var uid = 0;
+    function hash(s) {
+      s = s.replace(/\s+/g, " ").trim();
+      for (var h = 5381, i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) | 0;
+      return (h >>> 0).toString(36);
+    }
+    function addTicks(root, prefix) {
+      each(root.querySelectorAll(".obs-steps > li"), function (li) {
+        var text = li.lastElementChild;
+        if (!text || li.querySelector(".tick")) return;
+        if (!text.id) text.id = "kurulum-adim-" + (++uid);
+        var box = document.createElement("input");
+        box.type = "checkbox";
+        box.setAttribute("aria-labelledby", text.id);
+        box.setAttribute("data-step", (li.closest(".plan-more") ? "tv" : prefix) + "-" + hash(text.textContent));
+        box.checked = marks[box.getAttribute("data-step")] === 1;
+        var mark = document.createElement("span");
+        mark.className = "mark";
+        mark.setAttribute("aria-hidden", "true");
+        mark.innerHTML = '<span class="n"></span>' + CHECK;
+        var label = document.createElement("label");
+        label.className = "tick";
+        label.appendChild(box);
+        label.appendChild(mark);
+        li.insertBefore(label, li.firstChild);
+        li.classList.toggle("is-done", box.checked);
+      });
+    }
+    addTicks(P.install, "kur");
+    for (n = 1; n <= 4; n++) addTicks(paths[n], "yol" + n);
+    addTicks(P.stream, "yayin");
+
+    // Malzeme kartları: çizim (mevcut görsellerden kırpılır) ve "Bende var" işareti
+    each(P.needs.querySelectorAll(".needs > div"), function (card) {
+      var key = card.getAttribute("data-need");
+      var dt = card.querySelector("dt"), dd = card.querySelector("dd");
+      if (!key || !dt || !dd) return;
+      var name = dt.textContent.trim();
+      var a = ART[key];
+      if (a) {
+        var art = document.createElement("span");
+        art.className = "need-art";
+        art.setAttribute("aria-hidden", "true");
+        var crop = document.createElement("span");
+        crop.className = "need-crop";
+        crop.style.width = Math.min(100, a[3] / a[4] / 2 * 100) + "%";
+        crop.style.aspectRatio = a[3] + " / " + a[4];
+        var img = document.createElement("img");
+        img.src = "img/kurulum/" + a[0] + ".webp";
+        img.alt = "";
+        img.width = 1600;
+        img.height = 900;
+        img.loading = "lazy";
+        img.decoding = "async";
+        img.style.width = 1600 / a[3] * 100 + "%";
+        img.style.marginLeft = -a[1] / a[3] * 100 + "%";
+        img.style.marginTop = -a[2] / a[3] * 100 + "%";
+        crop.appendChild(img);
+        art.appendChild(crop);
+        dt.insertBefore(art, dt.firstChild);
+      }
+      var txt = document.createElement("span");
+      txt.className = "need-txt";
+      while (dd.firstChild) txt.appendChild(dd.firstChild);
+      dd.appendChild(txt);
+      var have = document.createElement("label");
+      have.className = "have";
+      have.innerHTML = '<input type="checkbox"><span class="have-dot" aria-hidden="true">' + CHECK + "</span><span>Bende var</span>";
+      var box = have.querySelector("input");
+      box.setAttribute("data-step", "need-" + key);
+      box.setAttribute("aria-label", "Bende var: " + name);
+      box.checked = marks["need-" + key] === 1;
+      card.classList.toggle("is-have", box.checked);
+      dd.appendChild(have);
+    });
+
+    [P.needs, P.install, P.choose, P.stream, P.help].forEach(function (p) { store.appendChild(p); });
+    for (n = 1; n <= 4; n++) store.appendChild(wraps[n]);
+    P.needs.querySelector(".guide").classList.add("no-fig");
+
+    /* Durum ve adres */
+    var state = { screen: "1", yol: "", kart: "", yayin: "", step: 1 };
+    var shown_ = null;  // en son gösterilen adres; aynı adres için yeniden çizilmez
+    var back = false;   // plandaki "Değiştir"den gelindiyse yanıttan sonra plana dönülür
+    var timer = 0;
+    var plan = [];      // ekranlar: {id, kind: needs|step|end, part, sec, title, lis, extras, first, no, sig}
+    var prev = null;    // son çizilen plan: yanıt değişince farkı göstermek için
+    var fresh = {}, freshTimer = 0;
+
+    function merge(a, b) {
+      var o = {}, k;
+      for (k in a) o[k] = a[k];
+      for (k in b) o[k] = b[k];
+      return o;
+    }
+    function parse(hash) {
+      var h = String(hash || "").replace(/^#/, "");
+      try { h = decodeURIComponent(h); } catch (err) { return null; }
+      var m = /^yol-([1-4])$/.exec(h);
+      if (m) return { screen: "plan", yol: m[1], kart: "", yayin: "", step: 1, path: m[1] };
+      if (/^kurulum(-malzeme|-program|-yol|-yayin|-yardim)?$/.test(h)) return { screen: "1", yol: "", kart: "", yayin: "", step: 1, plain: true };
+      if (h.indexOf("kurulum?") !== 0) return null;
+      var q = {};
+      h.slice(8).split("&").forEach(function (pair) {
+        var i = pair.indexOf("=");
+        if (i > 0) q[pair.slice(0, i)] = pair.slice(i + 1);
+      });
+      var s = { yol: "", kart: "", yayin: "" };
+      for (var k in s) if (VALID[k].indexOf(q[k]) >= 0) s[k] = q[k];
+      s.screen = !s.yol ? "1" : /^[123]$/.test(q.soru || "") ? q.soru : "plan";
+      s.step = Math.max(1, parseInt(q.adim, 10) || 1);
+      return s;
+    }
+    function fmt(s) {
+      var q = [];
+      if (s.screen !== "plan" && (s.yol || s.kart || s.yayin)) q.push("soru=" + s.screen);
+      ["yol", "kart", "yayin"].forEach(function (k) { if (s[k]) q.push(k + "=" + s[k]); });
+      if (s.screen === "plan" && s.step > 1) q.push("adim=" + s.step);
+      return "#kurulum" + (q.length ? "?" + q.join("&") : "");
+    }
+
+    /* Süzme ve plan */
+    function fits(el) {
+      if (el.hasAttribute("data-wiz-skip")) return false;
+      var keys = ["yol", "kart", "yayin"];
+      for (var i = 0; i < keys.length; i++) {
+        var want = el.getAttribute("data-" + keys[i]);
+        if (want !== null && want.split(" ").indexOf(state[keys[i]] || "x") < 0) return false;
+      }
+      return true;
+    }
+    function filter() {
+      each(sec.querySelectorAll("[data-yol], [data-kart], [data-yayin], [data-wiz-skip], .wiz-only"), function (el) {
+        el.hidden = !fits(el);
+      });
+    }
+    function split(part, key, title, out) {
+      var body = part.querySelector(".guide-body");
+      var lis = Array.prototype.filter.call(body.querySelectorAll(".obs-steps > li"), function (li) {
+        return shown(li, part) && !li.closest(".plan-more");
+      });
+      var mine = [];
+      lis.forEach(function (li) {
+        var t = li.getAttribute("data-adim");
+        if (!mine.length || t) mine.push({ id: key + ":" + (t || title), kind: "step", part: part, sec: title, title: t || title, lis: [], extras: [], first: !mine.length });
+        mine[mine.length - 1].lis.push(li);
+      });
+      if (!mine.length) return;
+      function owner(li) {
+        for (var i = 0; i < mine.length; i++) if (mine[i].lis.indexOf(li) >= 0) return mine[i];
+        return null;
+      }
+      each(body.children, function (el) {
+        if (el.tagName === "OL" || el.tagName === "H5" || el.hidden) return;
+        var to = null, ek = el.getAttribute("data-adim-ek");
+        if (ek) mine.forEach(function (s) { if (s.title === ek) to = s; });
+        for (var i = lis.length - 1; !to && i >= 0; i--) {
+          if (lis[i].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) to = owner(lis[i]);
+        }
+        (to || mine[0]).extras.push(el);
+      });
+      out.push.apply(out, mine);
+    }
+    function needBoxes() {
+      return Array.prototype.filter.call(P.needs.querySelectorAll(".have input"), function (b) { return shown(b, P.needs); });
+    }
+    function boxes(s) {
+      if (s.kind === "needs") return needBoxes();
+      return s.lis.map(function (li) { return li.querySelector(".tick input"); });
+    }
+    function isDone(s) {
+      var b = boxes(s);
+      return b.length > 0 && b.every(function (x) { return x.checked; });
+    }
+    function total() { return plan.length - 1; } // "Hazırsınız" sayılmaz
+    function buildPlan() {
+      filter();
+      var list = [{ id: "neler", kind: "needs", part: P.needs, sec: "Neler lazım", title: "Neler lazım", lis: [], extras: [] }];
+      split(P.install, "kur", SEC.kur, list);
+      ROUTE[state.yol].forEach(function (k) { split(wraps[k], "yol" + k, SEC[k], list); });
+      if (state.yayin !== "hayir") split(P.stream, "yayin", SEC.yayin, list);
+      list.push({ id: "hazir", kind: "end", part: P.help, sec: "Hazırsınız", title: "Hazırsınız", lis: [], extras: [] });
+      list.forEach(function (s, i) {
+        s.no = i + 1;
+        s.sig = boxes(s).map(function (b) { return b.getAttribute("data-step"); }).join(",");
+      });
+      return list;
+    }
+    function names(list) {
+      var t = list.slice(0, 3).map(function (s) { return "“" + s.title + "”"; }).join(", ");
+      return list.length > 3 ? t + " ve " + (list.length - 3) + " adım daha" : t;
+    }
+    function describe(added, changed, removed) {
+      var p = [];
+      if (added.length) p.push("eklenen: " + names(added));
+      if (changed.length) p.push("değişen: " + names(changed));
+      if (removed.length) p.push("çıkarılan: " + names(removed));
+      if (!p.length) return "Planınız güncellendi; adımlar aynı kaldı.";
+      var t = p.join("; ");
+      return "Planınız güncellendi. " + t.charAt(0).toUpperCase() + t.slice(1) + ".";
+    }
+    // Bir ekranın içeriği: bölümü plana taşınır, o ekrana ait olmayan adımlar ve notlar saklanır
+    function place(s) {
+      var part = s.part;
+      if (runBody.firstElementChild !== part) {
+        while (runBody.firstElementChild) store.appendChild(runBody.firstElementChild);
+        runBody.appendChild(part);
+      }
+      if (s.kind !== "step") {
+        each(part.querySelectorAll(".run-off"), function (el) { el.classList.remove("run-off"); });
+        return;
+      }
+      var head = part.querySelector(".guide-head");
+      if (head) head.classList.toggle("run-off", !s.first);
+      var body = part.querySelector(".guide-body");
+      each(body.children, function (el) {
+        var on = el.tagName === "OL" ? s.lis.some(function (li) { return li.parentNode === el; }) : s.extras.indexOf(el) >= 0;
+        el.classList.toggle("run-off", !on);
+      });
+      each(body.querySelectorAll(".obs-steps > li"), function (li) {
+        if (!li.closest(".plan-more")) li.classList.toggle("run-off", s.lis.indexOf(li) < 0);
+      });
+      s.lis.forEach(function (li, i) { li.querySelector(".mark .n").textContent = i + 1; });
+      var j = 0;
+      each(body.querySelectorAll(".plan-more .obs-steps > li"), function (li) {
+        if (!li.hidden) li.querySelector(".mark .n").textContent = ++j;
+      });
+    }
+    function buildList() {
+      listEl.textContent = "";
+      var groups = [];
+      plan.forEach(function (s) {
+        var g = groups[groups.length - 1];
+        if (!g || g.sec !== s.sec) groups.push(g = { sec: s.sec, items: [] });
+        g.items.push(s);
+      });
+      groups.forEach(function (g) {
+        if (g.items.length > 1) {
+          var h = document.createElement("p");
+          h.className = "run-sec";
+          h.textContent = g.sec;
+          listEl.appendChild(h);
+        }
+        var ol = document.createElement("ol");
+        ol.className = "run-steps";
+        ol.start = g.items[0].no;
+        g.items.forEach(function (s) {
+          var li = document.createElement("li");
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "run-item" + (s.kind === "end" ? " is-end" : "");
+          b.setAttribute("data-to", s.no);
+          b.innerHTML = '<span class="run-dot" aria-hidden="true"><span class="n"></span>' + CHECK + '</span><span class="run-t"></span><span class="sr-only" data-state></span>';
+          b.querySelector(".n").textContent = s.no;
+          b.querySelector(".run-t").textContent = s.title;
+          if (s.kind !== "end") b.querySelector(".run-t").insertAdjacentHTML("afterbegin", '<span class="sr-only">Adım ' + s.no + ": </span>");
+          s.btn = b;
+          li.appendChild(b);
+          ol.appendChild(li);
+        });
+        listEl.appendChild(ol);
+      });
+    }
+    function updateList() {
+      plan.forEach(function (s) {
+        var b = s.btn, cur = s.no === state.step, done = s.kind !== "end" && isDone(s);
+        if (cur) { b.setAttribute("aria-current", "step"); delete fresh[s.id]; }
+        else b.removeAttribute("aria-current");
+        b.classList.toggle("is-done", done);
+        b.querySelector("[data-state]").textContent = done ? ", tamamlandı" : "";
+        var tag = b.querySelector(".run-new");
+        if (fresh[s.id] && !tag) {
+          tag = document.createElement("span");
+          tag.className = "run-new";
+          tag.textContent = fresh[s.id];
+          b.appendChild(tag);
+          b.classList.add("is-new");
+        } else if (!fresh[s.id] && tag) {
+          b.removeChild(tag);
+          b.classList.remove("is-new");
+        }
+      });
+    }
+    function progress() {
+      var t = total(), d = 0, any = false;
+      plan.forEach(function (s) {
+        if (s.kind !== "end" && isDone(s)) d++;
+        boxes(s).forEach(function (b) { if (b.checked) any = true; });
+      });
+      bar.style.width = t ? Math.round(d / t * 100) + "%" : "0";
+      countEl.textContent = d === t ? "Bütün adımlar tamam" : d + " / " + t + " adım tamam";
+      clearBtn.hidden = !any;
+      return d === t;
+    }
+    function label(s) {
+      if (s.kind === "needs") return isDone(s) ? "Devam" : "Hepsi bende, devam";
+      var last = s.no === total();
+      if (isDone(s)) return last ? "Bitir" : "Devam";
+      return last ? "Yaptım, bitir" : "Yaptım, devam";
+    }
+    function summary() {
+      ["yol", "kart", "yayin"].forEach(function (key) {
+        var v = state[key];
+        var out = wiz.querySelector('[data-sum="' + key + '"]');
+        out.textContent = v ? SUM[key][v] : "Seçilmedi";
+        out.classList.toggle("unset", !v);
+        out.parentNode.querySelector("[data-act]").textContent = v ? "Değiştir" : "Seç";
+      });
+    }
+    function current() { return plan[state.step - 1]; }
+    function renderPlan(opt) {
+      plan = buildPlan();
+      var key = state.yol + "|" + state.kart + "|" + state.yayin;
+      noticeEl.hidden = true;
+      if (prev && prev.key !== key) { // yanıt değişti: farkı göster, mümkünse aynı adımda kal
+        var old = {}, now = {}, added = [], changed = [], removed = [];
+        prev.items.forEach(function (s) { old[s.id] = s.sig; });
+        plan.forEach(function (s) {
+          now[s.id] = true;
+          if (!(s.id in old)) added.push(s);
+          else if (old[s.id] !== s.sig) changed.push(s);
+        });
+        prev.items.forEach(function (s) { if (!now[s.id]) removed.push(s); });
+        fresh = {};
+        added.forEach(function (s) { fresh[s.id] = "Yeni"; });
+        changed.forEach(function (s) { fresh[s.id] = "Değişti"; });
+        clearTimeout(freshTimer);
+        freshTimer = setTimeout(function () { fresh = {}; if (plan.length) updateList(); }, 12000);
+        noticeEl.textContent = describe(added, changed, removed);
+        noticeEl.hidden = false;
+        var at = -1;
+        plan.forEach(function (s, i) { if (s.id === prev.cur) at = i; });
+        if (at < 0 && added.length) at = added[0].no - 1;
+        if (at >= 0) state.step = at + 1;
+      }
+      state.step = Math.min(Math.max(1, state.step), plan.length);
+      var s = current();
+      prev = { key: key, cur: s.id, items: plan.map(function (x) { return { id: x.id, sig: x.sig, title: x.title }; }) };
+      place(s);
+      buildList();
+      updateList();
+      summary();
+      if (!progress() && s.kind === "end" && noticeEl.hidden) {
+        noticeEl.textContent = "İşaretlenmemiş adımlar var. Atladığınız bir adıma adım listesinden dönebilirsiniz.";
+        noticeEl.hidden = false;
+      }
+      titleEl.textContent = s.title;
+      if (s.kind === "end") numEl.innerHTML = CHECK;
+      else numEl.textContent = s.no;
+      posEl.textContent = s.kind === "end" ? "Planın sonu" : "Adım " + s.no + " / " + total();
+      prevBtn.textContent = s.no === 1 ? "Sorulara dön" : "Geri";
+      doneBtn.hidden = s.kind === "end";
+      doneBtn.textContent = label(s);
+      if (opt && opt.dir) { // süs: içerik kayarak gelir; canlandırma oynamasa da içerik yerindedir
+        runBody.classList.remove("run-in");
+        runBody.style.setProperty("--run-from", (opt.dir < 0 ? -14 : 14) + "px");
+        void runBody.offsetWidth;
+        runBody.classList.add("run-in");
+      }
+    }
+    function steps() {
+      stepBtns.forEach(function (b) {
+        var g = b.getAttribute("data-go");
+        var cur = g === state.screen;
+        b.disabled = g !== "1" && !state.yol;
+        b.classList.toggle("is-done", !cur && g !== "plan" && !!state[ASK[g]]);
+        if (cur) b.setAttribute("aria-current", "step");
+        else b.removeAttribute("aria-current");
+      });
+    }
+    function render(opt) {
+      screens.forEach(function (el) { el.hidden = el.getAttribute("data-screen") !== state.screen; });
+      wiz.querySelectorAll('input[type="radio"]').forEach(function (r) { r.checked = state[r.name] === r.value; });
+      wiz.querySelectorAll(".wiz-err").forEach(function (e) { e.hidden = true; });
+      wiz.querySelectorAll("[data-next]").forEach(function (b) {
+        b.textContent = back || b.closest('[data-screen="3"]') ? "Planı göster" : "İleri";
+      });
+      steps();
+      if (state.screen === "plan") renderPlan(opt);
+    }
+    function say(msg) {
+      live.textContent = "";
+      setTimeout(function () { live.textContent = msg; }, 60);
+    }
+    function reveal(el, force) {
+      var top = el.getBoundingClientRect().top;
+      if (force || top < 0 || top > window.innerHeight * 0.4) el.scrollIntoView({ block: "start" });
+    }
+    function jump(el) { // açılışta kaydırma canlandırılmaz
+      var root = document.documentElement, old = root.style.scrollBehavior;
+      root.style.scrollBehavior = "auto";
+      el.scrollIntoView({ block: "start" });
+      root.style.scrollBehavior = old;
+    }
+    function show(next, opt) {
+      opt = opt || {};
+      clearTimeout(timer);
+      state = { screen: next.screen, yol: next.yol || "", kart: next.kart || "", yayin: next.yayin || "", step: next.step || 1 };
+      if (state.screen === "plan") back = false;
+      if (opt.nav) prev = null; // geçmişte gezinme: adres ne diyorsa o, bildirim yok
+      render(opt);
+      var url = fmt(state);
+      if (opt.push && url !== location.hash) history.pushState(null, "", url);
+      else if (url !== location.hash && (opt.replace || state.screen === "plan")) history.replaceState(null, "", url);
+      shown_ = location.hash;
+      if (opt.focus) {
+        var t = wiz.querySelector(".wiz-screen:not([hidden]) .wiz-title");
+        if (t) t.focus({ preventScroll: true });
+      }
+      if (opt.announce) {
+        var s = state.screen === "plan" ? current() : null;
+        var msg = !s ? "Soru " + state.screen + " / 3"
+          : s.kind === "end" ? "Hazırsınız." : "Adım " + s.no + " / " + total() + ": " + s.title;
+        say(s && !noticeEl.hidden ? noticeEl.textContent + " " + msg : msg);
+      }
+      if (opt.scroll) reveal(opt.scroll, opt.force);
+    }
+    function go(screen) {
+      show(merge(state, { screen: screen }), { push: true, focus: true, announce: true, scroll: wiz });
+    }
+    function goStep(no) {
+      var dir = no < state.step ? -1 : 1;
+      side.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+      show(merge(state, { screen: "plan", step: no }), { push: true, focus: true, announce: true, scroll: runMain, dir: dir });
+    }
+    function next() {
+      var key = ASK[state.screen];
+      if (!key) return;
+      if (!state[key]) {
+        var scr = wiz.querySelector(".wiz-screen:not([hidden])");
+        var err = scr.querySelector(".wiz-err");
+        err.textContent = ERR[key];
+        err.hidden = false;
+        scr.querySelector('input[type="radio"]').focus();
+        return;
+      }
+      go(back || state.screen === "3" ? "plan" : String(+state.screen + 1));
+    }
+    function setBox(b, on) {
+      b.checked = on;
+      var id = b.getAttribute("data-step");
+      if (on) marks[id] = 1;
+      else delete marks[id];
+      var card = b.closest(".needs > div");
+      if (card) card.classList.toggle("is-have", on);
+      else b.closest("li").classList.toggle("is-done", on);
+    }
+    function refresh() { // işaret değişti: liste, ilerleme, düğme
+      updateList();
+      var all = progress();
+      doneBtn.textContent = label(current());
+      return all;
+    }
+    function copyLink(btn) {
+      var link = location.href.split("#")[0] + fmt(merge(state, { screen: "plan", step: 1 }));
+      var text = btn.getAttribute("data-text") || btn.textContent;
+      btn.setAttribute("data-text", text);
+      var copied = function (yes) {
+        btn.textContent = yes ? "Bağlantı kopyalandı" : "Adres çubuğundan kopyalayın";
+        say(yes ? "Bağlantı kopyalandı." : "Kopyalanamadı. Bağlantıyı adres çubuğundan kopyalayın.");
+        setTimeout(function () { btn.textContent = text; }, 2500);
+      };
+      navigator.clipboard.writeText(link).then(function () { copied(true); }, function () { copied(oldCopy(link, btn)); });
+    }
+    function oldCopy(text, btn) { // pano izni verilmezse eski yol
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      var yes = false;
+      try { yes = document.execCommand("copy"); } catch (err) { yes = false; }
+      document.body.removeChild(ta);
+      btn.focus();
+      return yes;
+    }
+
+    /* Olaylar */
+    var pointerAt = 0;
+    wiz.addEventListener("pointerdown", function (e) {
+      if (e.target.closest(".choice")) pointerAt = Date.now();
+    });
+    wiz.addEventListener("click", function (e) {
+      var t = e.target;
+      if (t.matches('.choice input[type="radio"]')) {
+        // fareyle ya da dokunarak seçilince sonraki soruya geçilir; ok tuşları yalnız seçer, Enter geçirir
+        if (Date.now() - pointerAt < 1500) {
+          clearTimeout(timer);
+          timer = setTimeout(next, 260);
+        }
+        return;
+      }
+      var b = t.closest("button");
+      if (!b || !wiz.contains(b)) return;
+      if (b.hasAttribute("data-go")) {
+        back = b.hasAttribute("data-return");
+        go(b.getAttribute("data-go"));
+      } else if (b.hasAttribute("data-next")) {
+        next();
+      } else if (b.hasAttribute("data-back")) {
+        back = false;
+        go(state.screen === "3" ? "2" : "1");
+      } else if (b.hasAttribute("data-to")) {
+        goStep(+b.getAttribute("data-to"));
+      } else if (b === doneBtn) {
+        var s = current();
+        boxes(s).forEach(function (x) { setBox(x, true); });
+        saveMarks();
+        refresh();
+        goStep(s.no + 1);
+      } else if (b === prevBtn) {
+        if (state.step > 1) goStep(state.step - 1);
+        else { back = false; go("3"); }
+      } else if (b === toggle) {
+        var open = !side.classList.contains("is-open");
+        side.classList.toggle("is-open", open);
+        toggle.setAttribute("aria-expanded", String(open));
+      } else if (b.hasAttribute("data-restart")) {
+        back = false;
+        prev = null;
+        fresh = {};
+        show({ screen: "1" }, { push: true, focus: true, announce: true, scroll: wiz });
+      } else if (b === clearBtn) {
+        plan.forEach(function (s) { boxes(s).forEach(function (x) { if (x.checked) setBox(x, false); }); });
+        each(sec.querySelectorAll(".plan-more .tick input"), function (x) { if (x.checked) setBox(x, false); });
+        saveMarks();
+        refresh();
+        headEl.focus();
+        say("İşaretler temizlendi.");
+      } else if (b.hasAttribute("data-copy-link")) {
+        copyLink(b);
+      }
+    });
+    wiz.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && e.target.matches('.choice input[type="radio"]')) {
+        e.preventDefault();
+        next();
+      }
+    });
+    wiz.addEventListener("change", function (e) {
+      var t = e.target;
+      if (t.type === "radio" && ASK[state.screen] === t.name) {
+        state[t.name] = t.value;
+        history.replaceState(null, "", fmt(state));
+        shown_ = location.hash;
+        t.closest(".wiz-screen").querySelector(".wiz-err").hidden = true;
+        steps();
+      } else if (t.type === "checkbox" && t.hasAttribute("data-step")) {
+        setBox(t, t.checked);
+        saveMarks();
+        if (refresh() && t.checked) say("Bütün adımlar tamam.");
+      }
+    });
+    // Plandayken ← → adım değiştirir (odak bir giriş alanında değilken)
+    document.addEventListener("keydown", function (e) {
+      if (state.screen !== "plan" || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      var t = e.target;
+      if (t.closest && t.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return;
+      if (!runEl.contains(t)) {
+        if (t !== document.body) return;
+        var r = runEl.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight) return;
+      }
+      var to = state.step + (e.key === "ArrowRight" ? 1 : -1);
+      if (to < 1 || to > plan.length) return;
+      e.preventDefault();
+      goStep(to);
+    });
+
+    // Sayfa içi bağlantılar: #yol-3 o yolun planını açar (yanıtlar korunur), #kurulum sihirbazı olduğu gibi gösterir
+    document.addEventListener("click", function (e) {
+      if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      var a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      var href = a.getAttribute("href");
+      var el = href.length > 1 && document.getElementById(href.slice(1));
+      if (el && runBody.contains(el) && !el.closest("[hidden], .run-off")) { // hedef bu adımda: adres değişmeden kaydır
+        e.preventDefault();
+        el.scrollIntoView({ block: "start" });
+        return;
+      }
+      var s = parse(href);
+      if (!s) return;
+      e.preventDefault();
+      if (s.path) { // planın başına: yeni başlayan önce gerekenleri ve kurulumu görür
+        show({ screen: "plan", yol: s.path, kart: state.kart, yayin: state.yayin, step: 1 },
+          { push: true, focus: true, announce: true, scroll: wiz, force: true });
+      } else {
+        var url = fmt(state);
+        if (url !== location.hash) history.pushState(null, "", url);
+        shown_ = location.hash;
+        sec.scrollIntoView({ block: "start" });
+      }
+    });
+    function onNav() {
+      if (location.hash === shown_) return;
+      var s = parse(location.hash);
+      if (!s) return; // sihirbaz dışı bir adres (ör. #indir): sihirbaz olduğu gibi kalır
+      if (s.path) { s.kart = state.kart; s.yayin = state.yayin; }
+      var same = fmt(s) === fmt(state);
+      var step = s.screen === "plan" && state.screen === "plan" && s.yol === state.yol && s.kart === state.kart && s.yayin === state.yayin;
+      show(s, {
+        nav: true, replace: !!s.path, focus: !same, announce: !same, force: !!s.path,
+        scroll: same ? null : step ? runMain : wiz, dir: step ? s.step - state.step : 0
+      });
+    }
+    window.addEventListener("popstate", onNav);
+    window.addEventListener("hashchange", onNav);
+
+    if (navigator.clipboard && window.isSecureContext) each(sec.querySelectorAll("[data-copy-link]"), function (b) { b.hidden = false; });
+
+    /* Açılış */
+    var first = parse(location.hash);
+    if (first) state = merge(state, first);
+    filter();
+    wiz.hidden = false;
+    render();
+    if (first && fmt(state) !== location.hash) history.replaceState(null, "", fmt(state));
+    shown_ = location.hash;
+    if (first) {
+      var navEntry = window.performance && performance.getEntriesByType ? performance.getEntriesByType("navigation")[0] : null;
+      if (!navEntry || navEntry.type === "navigate") jump(first.plain ? sec : wiz);
+    }
+  })();
+
+  /* 5. Komutu kopyala */
   if (navigator.clipboard && window.isSecureContext) {
     document.querySelectorAll("[data-copy]").forEach(function (b) {
       b.hidden = false;
@@ -1491,6 +2665,18 @@ code.inline {
       });
     });
   }
+
+  /* 6. Dış bağlantılar yeni sekmede açılır. HTML'de zaten yazılı; betiğin sonradan eklediği ya da adresini
+     değiştirdiği bağlantılar için tıklanınca da denetlenir. Sayfa içi çapalar ve aynı sitedeki dosyalar hariç. */
+  function external(a) {
+    if (!a || !a.href || !/^https?:$/.test(a.protocol) || a.host === location.host) return;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+  }
+  document.querySelectorAll("a[href]").forEach(external);
+  document.addEventListener("click", function (e) {
+    external(e.target.closest ? e.target.closest("a[href]") : null);
+  }, true);
 })();
 </script>
 </body>
