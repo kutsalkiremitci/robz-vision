@@ -6,15 +6,34 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.4.0] - 2026-11-20
+
 ### Eklendi
 
 - **Ana sayfada canlı kaynak önizlemesi (OBS önizlemesi gibi).** Ekranın ya da seçilen pencerenin tamamı canlı
   görünür, okunan bölge üstünde çerçeveyle işaretlidir. Bölge doğrudan önizlemede çizilir, ortasından taşınır,
   köşelerinden boyutlandırılır (ok tuşları da çalışır); değişiklik hemen, çeviri sürerken de geçerli olur.
   Tam ekran seçici *Tam ekranda seç* olarak kaldı. Birden çok ekran varsa önizlenen ekran seçilir.
-- Geniş pencerede Ana sayfa iki sütun: kaynak sağda, kaymayan sütunda her zaman görünür; Başlat bandı üstte
-  sabit. Dar pencerede hepsi alt alta, kaynak en üstte. Pencere 1080p ekranda 1280×840 açılır (önce 980×760).
+- Ana sayfa OBS düzeninde: üstte ince komut çubuğu (Başlat, durum, son satırın OCR ve çeviri süreleri; her zaman
+  görünür), sağda büyük canlı önizleme ve altında yan yana Ekranımda / OBS panelleri, solda boydan boya
+  *Son çeviriler* akışı. Dar pencerede hepsi alt alta, önizleme en üstte. Pencere 1080p ekranda 1280×840 açılır
+  (önce 980×760). *Tam ekranda seç* önizlemenin başlığında; uyarılar (ör. pencere simge durumunda) önizlemenin
+  içinde görünür.
 - Çeviri sürerken okunan bölge (metin sanılan yerler yeşil) önizlemenin altında görünür.
+- *Uygulama penceresi* listesi kendiliğinden güncellenir: liste her açılışta ve pencere modunda iki saniyede bir
+  (yeni açılan, kapanan pencereler; seçim korunur). Seçili pencere sonradan açılınca önizleme ona geçer.
+- Varsayılan altyazı bölgesi GTA VI'nın altyazı şeridi (altta orta; x %17,6, y %80,4, genişlik %64,2, yükseklik
+  %19,6). Yeni kullanıcıda ekran modunda bölge seçmeden başlanabilir: açılışta birincil ekrana atanır, önizlemede
+  kaydırılır. Pencere modunun varsayılanı da aynı. Seçilmiş bölgesi olan kullanıcıya dokunulmaz.
+- **Oyun altyazısının üzerine: üst üste yazılara ayrı kutular.** Oyun bölgede aynı anda birden çok ayrı yazı
+  gösterdiğinde (ör. altta konuşma, onun üstünde daha küçük görev yazısı) her biri ayrı okunur, ayrı çevrilir ve
+  her birinin üstüne kendi koyu kutusu, kendi yerinde ve kendi yazı boyunda aynı anda yerleşir; ekranınızda da
+  OBS'te de. Bölgede en çok 3 yazı izlenir (fazlası varsa en alttakiler). Yazılardan biri kaybolunca yalnız onun
+  kutusu kalkar, öbürü yerinde kalır. Yapay zekânın gördüğü önceki satırlara yalnız asıl yazı (en büyük yazılı
+  olan, genellikle konuşma) girer; görev yazısı konuşmanın çevirisini karıştırmaz. *Görünüm → Yerleşim → Oyun
+  altyazısının üzerine* iki görünümden birinde açıkken devreye girer; ikisinde de kapalıyken hiçbir şey değişmez,
+  okuma eskisi gibidir. Yakın duran yazılar da ayrılır: aralarındaki boşluk satır boyuna oranla ölçülür (aynı
+  altyazının satırları bitişiktir, konuşma ile görev yazısı arasında bir satır kadar boşluk vardır).
 
 ### Değişti
 
@@ -24,10 +43,25 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   boşta bir çekirdeğin ~%5'i, çeviri sürerken ~%2,5'i.
 - Görünüm: "Oyun altyazısının üzerine" açıkken etkisiz ayarlar (Arka plan, İngilizce orijinal) gizlenir; Boyut'un
   altında üst sınır notu.
+- Çeviri sayfasında Ollama modeli yalnız listeden seçilir (tıklayınca liste açılır, yazı yazılmaz). Listede
+  önerilen modeller ve Ollama'da yüklü olanlar var; eski sürümde elle yazılmış model listeye eklenip seçili gelir.
+- Pencere başlığında sürüm yazar ("Robz Vision – 1.3.x"). Kenar çubuğunda çeviri çalışırken nokta yeşil; sürüm
+  satırında etiket ikonu. Ayarlar → Geliştirici'de YouTube bağlantısının yanında YouTube işareti.
 
 ### Düzeltildi
 
 - Güncelleme penceresi, sürüm notları uzunsa notların sonuna kaydırılmış açılıyordu; artık baştan başlar.
+- "Oyun altyazısının üzerine" yalnız bir görünümde açıkken (ör. yalnız *Yayınımda*) öbür görünümün altyazı
+  kutusuna görev yazısı karışmaz; orada eskisi gibi yalnız konuşma görünür.
+- Canlı önizleme Robz Vision kapanırken hata vermeden durur. Pencere modunda pencerenin görüntüsü değişmiyorsa
+  (oyun duraklatıldı, pencere durgun) aynı kare yeniden küçültülüp çizilmez; işlemci boşuna çalışmaz.
+- Satır içindeki kekeleme ("Just- just take it") birleştirilip çeviriye "Justjust" diye gidiyordu; tire artık yalnız
+  satır sonundaysa (heceleme: "re-" + "treat") birleşir.
+- Vurgulu kelimeler (oyunun pembe yazdığı isimler) bazen Türkçede vurgusuz kalıyordu:
+  - Oyun yazıyı solarak getirdiğinde ilk okumada renk henüz yoktu ve aynı satır vurguyla yeniden çevrilmiyordu;
+    artık sonradan beliren vurgu satırı yeniden çevirtir.
+  - Yapay zekâ kısa cümlede vurgu işaretini atlarsa, çeviride aynen geçen isim ekiyle birlikte yine vurgulanır
+    ("Choose what to do with Arnold" → "Arnold'a ne yapacağına karar ver", Arnold'a pembe).
 
 ## [1.3.2] - 2026-11-19
 
@@ -338,7 +372,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.3.2...HEAD
+[Yayımlanmadı]: ../../compare/v1.4.0...HEAD
+[1.4.0]: ../../releases/tag/v1.4.0
 [1.3.2]: ../../releases/tag/v1.3.2
 [1.3.1]: ../../releases/tag/v1.3.1
 [1.3.0]: ../../releases/tag/v1.3.0
