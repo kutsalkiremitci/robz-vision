@@ -340,6 +340,46 @@ h3 { font-size: 1.375rem; }
   font: 600 1rem/1 var(--display); color: var(--text);
 }
 .tv-ways strong { display: block; margin-bottom: 4px; font: 600 1.125rem/1.3 var(--display); color: var(--text); }
+.tv-guide > p.tv-more { margin-top: 18px; }
+
+/* adım adım kurulum: her bölüm başlık + çizim + adımlar; adımlar .obs-steps, sekmeler .tabs */
+.guide-part { margin-top: clamp(48px, 6vw, 72px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
+.section-head + .guide-part { margin-top: 0; padding-top: 0; border-top: 0; }
+.guide { display: grid; gap: 20px; grid-template-areas: "head" "fig" "body"; }
+.guide-head { grid-area: head; }
+.guide-fig { grid-area: fig; margin: 0; }
+.guide-body { grid-area: body; min-width: 0; }
+.guide-head h3 { display: flex; align-items: center; gap: 14px; font-size: clamp(1.5rem, 1.3rem + .8vw, 1.875rem); }
+.guide-head p { margin-top: 12px; max-width: 36em; }
+.guide-fig a { display: block; border-radius: 10px; cursor: zoom-in; }
+.guide-fig img { width: 100%; aspect-ratio: 16 / 9; transition: border-color 120ms ease; }
+.guide-fig a:hover img { border-color: var(--line-strong); }
+.guide-body h5 { margin: 24px 0 12px; font: 600 1.125rem/1.3 var(--display); color: var(--text); }
+.guide-body h5:first-child { margin-top: 0; }
+.guide-body .obs-steps li:last-child { margin-bottom: 0; }
+.guide-body .facts { margin-bottom: 0; }
+.guide-body .note { margin-top: 18px; }
+.guide .no-tv { margin: 18px 0 0; }
+.part-n {
+  display: grid; place-items: center; flex: none; width: 36px; height: 36px;
+  border-radius: 50%; background: var(--raised); border: 1px solid var(--line-strong);
+  font: 600 1.0625rem/1 var(--display); color: var(--text);
+}
+.paths { margin-top: clamp(36px, 5vw, 56px); }
+.path h4 { margin: 0; font: 600 1.375rem/1.2 var(--display); color: var(--text); padding-top: .04em; }
+.path + .path { margin-top: clamp(48px, 6vw, 72px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
+.path[role="tabpanel"] { margin-top: 0; padding-top: 0; border-top: 0; scroll-margin-top: 140px; }
+.path[hidden], .tabs.path-tabs[hidden] { display: none; }
+.tabs.path-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 28px; }
+.path-tabs .tab { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px; text-align: left; line-height: 1.15; }
+.tab-n {
+  display: grid; place-items: center; flex: none; width: 24px; height: 24px;
+  border-radius: 50%; border: 1px solid var(--line-strong);
+  font: 600 .875rem/1 var(--display); color: var(--text);
+}
+.tab[aria-selected="true"] .tab-n { border-color: var(--cyan); }
+.guide-help h3 { font-size: clamp(1.5rem, 1.3rem + .8vw, 1.875rem); margin-bottom: 16px; }
+.guide-help .facts { margin-bottom: 20px; }
 
 /* nasıl çalışır */
 .steps { display: grid; gap: 36px; margin: 0; padding: 0; list-style: none; }
@@ -523,6 +563,8 @@ code.inline {
   .feats div:nth-child(2) { padding-top: 0; border-top: 0; }
 }
 @media (min-width: 820px) {
+  .tabs.path-tabs { display: inline-flex; }
+  .path[role="tabpanel"] { scroll-margin-top: 96px; }
   .audience { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
   .tv-ways { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
@@ -541,6 +583,11 @@ code.inline {
   .features { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: start; }
   .viewer { position: sticky; top: 24px; }
   .dl { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 56px; }
+  .guide {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-rows: auto 1fr;
+    grid-template-areas: "head fig" "body fig"; gap: 20px 56px; align-items: start;
+  }
+  .guide-fig { position: sticky; top: 24px; }
 }
 @media (max-width: 819px) {
   .steps li { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 16px; }
@@ -580,6 +627,7 @@ code.inline {
     <nav class="nav" aria-label="Sayfa içi">
       <ul>
         <li><a href="#kimin-icin">Kimin için</a></li>
+        <li><a href="#kurulum">Kurulum</a></li>
         <li><a href="#nasil">Nasıl çalışır</a></li>
         <li><a href="#yayin">Yayıncılar</a></li>
         <li><a href="#indir">İndir</a></li>
@@ -670,7 +718,7 @@ code.inline {
         </li>
         <li class="aud-rp">
           <h3>PS5’i PS Remote Play ile oynayanlar</h3>
-          <p>Konsoldaki oyunu PS Remote Play ile bilgisayarda açıp oynarken altyazılar Türkçeye çevrilir. GTA VI gibi konsol oyunları için yol bu.</p>
+          <p>Konsoldaki oyunu PS Remote Play ile bilgisayarda açıp oynarken altyazılar Türkçeye çevrilir. GTA VI gibi konsol oyunları için yol bu. Kurulumu <a href="#yol-2">adım adım anlattık</a>.</p>
         </li>
         <li class="aud-live">
           <h3>Kick ve OBS yayıncıları</h3>
@@ -689,6 +737,231 @@ code.inline {
           <li><strong>Kablosuz yansıtın</strong>Aynı kurulum, kablo yerine bilgisayar ekranını Windows’ta <kbd>Win</kbd>+<kbd>K</kbd> ile TV’ye yansıtırsınız (LG’de Screen Share). Gecikme artar; hikâye oyunlarında genelde sorun olmaz. Türkçe kutu TV’de görünmezse “Yayında da görünsün”ü açın.</li>
           <li><strong>Capture kartı kullanın</strong>En net görüntü: konsol → capture kartı → bilgisayar → TV. Remote Play sıkıştırması olmadığı için altyazı daha net okunur. PS5’te <em>Ayarlar → Sistem → HDMI → HDCP’yi Etkinleştir</em> kapalı olmalı.</li>
         </ol>
+        <p class="tv-more">Kablolar, TV ayarları ve Windows’ta ekran seçimi çizimlerle: <a href="#yol-3">PS5’i televizyonda oynuyorum</a>. Capture kartıyla: <a href="#yol-4">Yol 4</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="kurulum" aria-labelledby="kurulum-baslik">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="kurulum-baslik">Adım adım kurulum</h2>
+        <p class="section-intro">Hiç bilmiyorsanız buradan başlayın. Önce neler gerektiğine bakın, Robz Vision’ı kurun, sonra oynadığınız yere göre yolunuzu seçin. Ne kuracağınızı biliyorsanız doğrudan <a href="#kurulum-yol">yolunuzu seçin</a>.</p>
+        <p class="note">Çizimlere dokunursanız büyük boyutu yeni sekmede açılır.</p>
+      </div>
+
+      <div class="guide-part" id="kurulum-malzeme">
+        <div class="guide">
+          <div class="guide-head">
+            <h3><span class="part-n" aria-hidden="true">1</span>Neler lazım</h3>
+            <p>Hepsi her yolda gerekmez. Yolunuzu 3. adımda seçeceksiniz.</p>
+          </div>
+          <figure class="guide-fig">
+            <a href="img/kurulum/neler_lazim.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/neler_lazim.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Gerekenlerin çizimi: Windows bilgisayar ve monitörü, PS5, DualSense kol, PS5 kutusundan çıkan USB-C kablo, HDMI kablo, Ethernet kablosu, modem, HDMI girişli televizyon ve isteğe bağlı capture kartı."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+          </figure>
+          <div class="guide-body">
+            <dl class="feats">
+              <div><dt>Her yolda</dt><dd>Windows 10 ya da 11 yüklü bir bilgisayar ve monitörü. İlk açılışta modelleri indirmek için internet. Ekran kartı şart değil; hızlı çeviri işlemcide çalışır. Güçlü bir ekran kartınız varsa daha iyi çeviren yerel yapay zekâyı da kurabilirsiniz.</dd></div>
+              <div><dt>PS5’te oynayacaksanız</dt><dd>PS5 ve DualSense kol. Kolu bilgisayara bağlamak için USB-C kablo: PS5’in kutusundan çıkan şarj kablosu olur. PS5 ile modem arasında Ethernet kablosu önerilir.</dd></div>
+              <div><dt>Televizyonda göreceksiniz</dt><dd>HDMI girişi olan bir televizyon, marka fark etmez. Bilgisayarla TV arasında bir HDMI kablo.</dd></div>
+              <div><dt>Capture kartı (isteğe bağlı)</dt><dd>En net görüntüyü verir ama şart değil. PS5’in HDMI kablosu karta, kart USB ile bilgisayara takılır.</dd></div>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-part" id="kurulum-program">
+        <div class="guide">
+          <div class="guide-head">
+            <h3><span class="part-n" aria-hidden="true">2</span>Robz Vision’ı kurun</h3>
+            <p>Her yolda aynı. Robz Vision her zaman bilgisayarda çalışır.</p>
+          </div>
+          <figure class="guide-fig">
+            <a href="img/kurulum/robz_vision_kurulum.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/robz_vision_kurulum.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Robz Vision kurulumu adım adım: dosyayı indir, Windows uyarısında Ek bilgi ve Yine de çalıştır, sihirbazda İleri, ilk açılışta Yapay zekâ ile, modeller iner, sonra Bölge seç, Onayla ve Başlat."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+          </figure>
+          <div class="guide-body">
+            <ol class="obs-steps">
+              <li><span>Kurulum dosyasını <a href="#indir">İndir</a> bölümünden indirin.</span></li>
+              <li><span>Dosyayı çalıştırın. Windows “bilinmeyen yayımcı” uyarısı verirse <em>Ek bilgi → Yine de çalıştır</em>’ı seçin. <a href="#smartscreen-baslik">Neden uyarı verir?</a></span></li>
+              <li><span>Sihirbazda <em>İleri</em>’ye basarak kurun. Yönetici izni istemez.</span></li>
+              <li><span>Robz Vision’ı açın. İlk açılışta çeviri yolunu seçin: ekran kartınız varsa <em>Yapay zekâ ile</em>, yoksa <em>Yalnız hızlı çeviri</em>. <em>Devam</em>’a basın; gereken modeller bir kez iner.</span></li>
+            </ol>
+            <p class="note">Çeviriyi başlatmak her yolda aynıdır: <em>Bölge seç</em> ile altyazının çıktığı alanı çizin, <em>Onayla</em>’ya, sonra <em>Başlat</em>’a basın. Bunun için oyunun görüntüsü bilgisayar ekranında olmalı; nasıl getireceğinizi yolunuz anlatıyor.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-part" id="kurulum-yol">
+        <div class="guide">
+          <div class="guide-head">
+            <h3><span class="part-n" aria-hidden="true">3</span>Yolunuzu seçin</h3>
+            <p>Oyunu nerede oynuyorsunuz? Size uyan yolu açın.</p>
+          </div>
+          <figure class="guide-fig">
+            <a href="img/kurulum/yol_secimi.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol_secimi.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Karar şeması. Oyunu nerede oynuyorsunuz? Bilgisayarda ise Yol 1. PS5’i bilgisayar ekranında oynuyorsanız Yol 2. PS5’i televizyonda oynuyorsanız Yol 3, araya bilgisayar girer. Capture kartınız varsa Yol 4. Yayın yapacaksanız OBS’e Tarayıcı kaynağı eklenir."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+          </figure>
+          <div class="guide-body">
+            <ul class="facts">
+              <li><a href="#yol-1">Yol 1: Bilgisayarda oynuyorum</a>. Oyun bilgisayarınızda, görüntü monitörde. En kolayı.</li>
+              <li><a href="#yol-2">Yol 2: PS5’i bilgisayar ekranında oynuyorum</a>. PS5’in görüntüsü ağ üzerinden bilgisayara gelir.</li>
+              <li><a href="#yol-3">Yol 3: PS5’i televizyonda oynuyorum</a>. Araya bilgisayar girer; TV markası fark etmez.</li>
+              <li><a href="#yol-4">Yol 4: Capture kartıyla oynuyorum</a>. Kartınız varsa en net görüntü bu yolda.</li>
+              <li>Yayın yapacaksanız önce yolunuzu kurun, sonra <a href="#kurulum-yayin">yayına ekleyin</a>.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="paths">
+          <div class="tabs path-tabs" role="tablist" aria-label="Kurulum yolları" hidden>
+            <button class="tab" type="button" role="tab" id="tab-yol-1" aria-controls="yol-1" aria-selected="true"><span class="tab-n"><span class="sr-only">Yol </span>1</span> Bilgisayarda</button>
+            <button class="tab" type="button" role="tab" id="tab-yol-2" aria-controls="yol-2" aria-selected="false" tabindex="-1"><span class="tab-n"><span class="sr-only">Yol </span>2</span> PS5 + bilgisayar</button>
+            <button class="tab" type="button" role="tab" id="tab-yol-3" aria-controls="yol-3" aria-selected="false" tabindex="-1"><span class="tab-n"><span class="sr-only">Yol </span>3</span> PS5 + TV</button>
+            <button class="tab" type="button" role="tab" id="tab-yol-4" aria-controls="yol-4" aria-selected="false" tabindex="-1"><span class="tab-n"><span class="sr-only">Yol </span>4</span> Capture kartı</button>
+          </div>
+
+          <div class="path" id="yol-1">
+            <div class="guide">
+              <div class="guide-head">
+                <h4>Yol 1: Bilgisayarda oynuyorum</h4>
+                <p>Oyun bilgisayarınızda, görüntü monitörde. Ek kablo gerekmez.</p>
+              </div>
+              <figure class="guide-fig">
+                <a href="img/kurulum/yol1_bilgisayar.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol1_bilgisayar.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 1: oyun bilgisayarda çalışır, görüntü monitörde. Türkçe kutu oyunun İngilizce altyazısının üstünde görünür."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+              </figure>
+              <div class="guide-body">
+                <ol class="obs-steps">
+                  <li><span>Oyunu <em>Pencereli tam ekran</em> modunda açın ve İngilizce altyazıyı açın.</span></li>
+                  <li><span>Robz Vision’da <em>Ana sayfa → Çevrilecek bölge → Ekran bölgesi</em>’ni seçin.</span></li>
+                  <li><span><em>Bölge seç</em>’e basın, altyazının çıktığı alanı fareyle çizin ve <em>Onayla</em>’ya basın.</span></li>
+                  <li><span><em>Başlat</em>’a basın. Türkçe kutu oyunun üstünde belirir.</span></li>
+                  <li><span>Kutuyu <em>Ekranımda → Konumu ayarla</em> ile İngilizce altyazının hemen üstüne taşıyın, <em>Konumu kaydet</em>’e basın.</span></li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <div class="path" id="yol-2">
+            <div class="guide">
+              <div class="guide-head">
+                <h4>Yol 2: PS5’i bilgisayar ekranında oynuyorum</h4>
+                <p>PS5’in görüntüsü ağ üzerinden bilgisayara gelir, kolu bilgisayara takıp oynarsınız. Bunun için ücretsiz bir uzaktan oynatma programı gerekir: açık kaynak <a href="https://chiaki-ng.github.io/chiaki-ng/" rel="noopener">chiaki-ng</a> ya da Sony’nin resmî PS Remote Play uygulaması. İkisiyle de çalışır; adımlar chiaki-ng için.</p>
+              </div>
+              <figure class="guide-fig">
+                <a href="img/kurulum/yol2_ps5_bilgisayar.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol2_ps5_bilgisayar.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 2: PS5 Ethernet kablosuyla modeme, bilgisayar aynı modeme bağlı. DualSense kol USB-C kabloyla bilgisayara takılı. Bilgisayarda chiaki-ng ve Robz Vision açık."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+              </figure>
+              <div class="guide-body">
+                <h5>PS5’te</h5>
+                <ol class="obs-steps">
+                  <li><span>PS5’i Ethernet kablosuyla modeme bağlayın; bilgisayar da aynı modeme bağlı olsun. Kablo şart değil ama görüntüyü netleştirir.</span></li>
+                  <li><span><em>Ayarlar → Sistem → Uzaktan Oynama → Uzaktan Oynama’yı Etkinleştir</em>’i açın.</span></li>
+                  <li><span>İsterseniz PS5’i dinlenme modundan bilgisayardan açabilirsiniz: <em>Ayarlar → Sistem → Güç Tasarrufu → Dinlenme Modunda Kullanılabilen Özellikler</em>’de <em>İnternete Bağlı Kalın</em> ve <em>PS5 Sisteminin Ağdan Açılmasını Etkinleştir</em>’i açın.</span></li>
+                </ol>
+                <h5>Bilgisayarda</h5>
+                <ol class="obs-steps" start="4" style="counter-reset: s 3">
+                  <li><span>chiaki-ng’yi <a href="https://chiaki-ng.github.io/chiaki-ng/setup/installation/" rel="noopener">resmî kurulum sayfasındaki</a> gibi kurun ya da komut isteminde <code class="inline">winget install --id=StreetPea.chiaki-ng -e</code> yazın. Yalnız resmî kaynaklardan indirin.</span></li>
+                  <li><span>chiaki-ng’yi açın. Açılan pencerede PSN hesabınızla bir kez giriş yapın. PS5 aynı ağdaysa listede kendiliğinden görünür.</span></li>
+                  <li><span>PS5’i kaydedin. “Automatic Registration Available” yazıyorsa kod gerekmez. Yazmıyorsa PS5’te <em>Ayarlar → Sistem → Uzaktan Oynama → Cihazı Eşleştir</em>’i açın ve ekrandaki sayıyı chiaki-ng’ye girin.</span></li>
+                  <li><span>chiaki-ng’nin ayarlarında (dişli simgesi) 1080p ve 60 FPS’i seçin.</span></li>
+                  <li><span>DualSense’i USB-C kabloyla bilgisayara takın. Bluetooth ile de bağlanır.</span></li>
+                  <li><span>chiaki-ng’de PS5’e bağlanın, oyunu açın ve İngilizce altyazıyı açın.</span></li>
+                </ol>
+                <h5>Robz Vision’da</h5>
+                <ol class="obs-steps" start="10" style="counter-reset: s 9">
+                  <li><span><em>Ana sayfa → Çevrilecek bölge → Uygulama penceresi</em>’ni seçin, listeden chiaki-ng penceresini seçin.</span></li>
+                  <li><span><em>Bölge seç</em> ile altyazı alanını çizin, <em>Onayla</em>’ya ve <em>Başlat</em>’a basın.</span></li>
+                  <li><span>Kutuyu <em>Ekranımda → Konumu ayarla</em> ile altyazının üstüne yerleştirin, <em>Konumu kaydet</em>’e basın.</span></li>
+                </ol>
+                <p class="note">chiaki-ng penceresi başka pencerelerin arkasında kalsa da okunur; simge durumuna küçültmeyin.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="path" id="yol-3">
+            <div class="guide">
+              <div class="guide-head">
+                <h4>Yol 3: PS5’i televizyonda oynuyorum</h4>
+                <p>Yol 2’deki kuruluma bir HDMI kablo eklenir: bilgisayar TV’ye bağlanır, TV bilgisayarın ekranı olur. TV markası fark etmez.</p>
+                <div class="no-tv" role="note">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4M3.5 3.5l17 17"/></svg>
+                  <p><strong>Robz Vision bilgisayarda çalışır</strong>Televizyonda ya da PS5’te çalışmaz. PS5’i doğrudan TV’ye bağlarsanız çeviri görünmez; görüntü bilgisayardan geçmeli.</p>
+                </div>
+              </div>
+              <figure class="guide-fig">
+                <a href="img/kurulum/yol3_ps5_tv.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol3_ps5_tv.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 3: Yol 2’deki kurulum, ek olarak bilgisayar HDMI kabloyla televizyona bağlı. TV markası fark etmez; Win+K ile kablosuz yansıtma da olur. Robz Vision bilgisayarda çalışır."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+              </figure>
+              <div class="guide-body">
+                <ol class="obs-steps">
+                  <li><span>Önce <a href="#yol-2">Yol 2</a>’yi kurun: PS5’in görüntüsü bilgisayarda chiaki-ng penceresinde açılsın.</span></li>
+                  <li><span>Bilgisayarı HDMI kabloyla TV’ye bağlayın.</span></li>
+                  <li><span>TV kumandasındaki <em>Kaynak</em> (Source, Input) düğmesiyle kabloyu taktığınız HDMI girişini seçin.</span></li>
+                  <li><span>TV’de oyun modunu açın, gecikmeyi azaltır. Menüdeki adı markaya göre değişir.</span></li>
+                  <li><span>Bilgisayarda <kbd>Win</kbd>+<kbd>P</kbd>’ye basıp <em>Yalnızca ikinci ekran</em>’ı seçin. Görüntü hem monitörde hem TV’de olsun isterseniz <em>Çoğalt</em>’ı seçin.</span></li>
+                  <li><span>chiaki-ng’yi tam ekran yapın.</span></li>
+                  <li><span>Türkçe kutuyu <em>Ana sayfa → Ekranımda → Konumu ayarla</em> ile TV’de altyazının üstüne sürükleyin, <em>Konumu kaydet</em>’e basın.</span></li>
+                </ol>
+                <h5>Kablosuz</h5>
+                <p>TV’niz kablosuz yansıtmayı destekliyorsa kablo yerine <kbd>Win</kbd>+<kbd>K</kbd> ile bilgisayar ekranını TV’ye yansıtabilirsiniz. Gecikme artar. Türkçe kutu TV’de görünmezse <em>Ekranımda</em> altındaki <em>Yayında da görünsün</em>’ü açın.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="path" id="yol-4">
+            <div class="guide">
+              <div class="guide-head">
+                <h4>Yol 4: Capture kartıyla oynuyorum</h4>
+                <p>PS5’in görüntüsü capture kartından bilgisayara gelir. Sıkıştırma olmadığı için altyazı en net bu yolda okunur. Kol PS5’e bağlı kalır.</p>
+                <div class="no-tv" role="note">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4M3.5 3.5l17 17"/></svg>
+                  <p><strong>Kartın HDMI çıkışında çeviri görünmez</strong>TV’yi kartın HDMI çıkışına (passthrough) bağlarsanız görüntü bilgisayardan geçmez. Çeviriyi görmek için TV’yi ya da monitörü bilgisayara bağlayın.</p>
+                </div>
+              </div>
+              <figure class="guide-fig">
+                <a href="img/kurulum/yol4_capture.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol4_capture.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 4: PS5 HDMI ile capture kartına, kart USB ile bilgisayara, bilgisayar HDMI ile televizyona ya da monitöre bağlı. PS5’te HDCP kapalı. Kartın HDMI çıkışındaki görüntüde çeviri görünmez."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+              </figure>
+              <div class="guide-body">
+                <ol class="obs-steps">
+                  <li><span>PS5’te <em>Ayarlar → Sistem → HDMI → HDCP’yi Etkinleştir</em>’i kapatın. Açıkken kart görüntüyü alamaz.</span></li>
+                  <li><span>PS5’i HDMI kabloyla capture kartının girişine, kartı USB ile bilgisayara bağlayın.</span></li>
+                  <li><span>Kartın görüntüsünü OBS’e kaynak olarak ekleyin. Kaynağa sağ tıklayıp <em>Pencereli Projektör (Kaynak)</em>’ı açın. Bu pencere yalnız oyun görüntüsünü gösterir.</span></li>
+                  <li><span>Robz Vision’da <em>Ana sayfa → Çevrilecek bölge → Uygulama penceresi</em> ile projektör penceresini seçin.</span></li>
+                  <li><span><em>Bölge seç</em> ile altyazı alanını çizin, <em>Onayla</em>’ya ve <em>Başlat</em>’a basın.</span></li>
+                  <li><span>TV’de oynayacaksanız bilgisayarı HDMI ile TV’ye bağlayın; adımlar <a href="#yol-3">Yol 3</a>’te.</span></li>
+                </ol>
+                <p class="note">OBS önizlemesini seçmeyin, orada Türkçe altyazı da olur. Projektör penceresi başka pencerelerin arkasında kalabilir ama simge durumuna küçültülmemeli.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-part" id="kurulum-yayin">
+        <div class="guide">
+          <div class="guide-head">
+            <h3><span class="part-n" aria-hidden="true">4</span>Yayına ekleyin</h3>
+            <p>Yayın yapmıyorsanız bu adımı atlayın. İzleyiciler Türkçe altyazıyı yayında görür; ekranınızdaki kutu varsayılan olarak yayına girmez.</p>
+          </div>
+          <figure class="guide-fig">
+            <a href="img/kurulum/yayin_obs.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yayin_obs.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yayın: Robz Vision’ın Ana sayfasındaki adres kopyalanır, OBS’e Tarayıcı kaynağı olarak eklenir ve Türkçe altyazı yayında görünür."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+          </figure>
+          <div class="guide-body">
+            <ol class="obs-steps">
+              <li><span>Robz Vision’ın Ana sayfasındaki OBS adresini kopyalayın. Varsayılan adres <code class="inline">http://127.0.0.1:8765/</code></span></li>
+              <li><span>OBS’te <strong>Kaynaklar</strong> altındaki <strong>+</strong> düğmesine basıp <strong>Tarayıcı</strong>’yı seçin. Adresi <strong>URL</strong> alanına yapıştırın, genişlik ve yüksekliği tuvalle aynı yapın, örneğin 1920 × 1080.</span></li>
+              <li><span>Kaynağı listede oyun görüntüsünün üstüne taşıyın.</span></li>
+            </ol>
+            <p class="note">Ayrıntılar ve ipuçları <a href="#yayin">Yayıncılar için</a> bölümünde.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-part guide-help" id="kurulum-yardim">
+        <h3>Takılırsanız</h3>
+        <ul class="facts">
+          <li><strong>PS5 listede görünmüyor.</strong> PS5 ile bilgisayarın aynı modeme bağlı olduğunu ve <em>Uzaktan Oynama</em>’nın açık olduğunu kontrol edin.</li>
+          <li><strong>Türkçe kutu TV’de yok.</strong> Kutuyu <em>Konumu ayarla</em> ile TV ekranına sürükleyin. Kablosuz yansıtıyorsanız <em>Yayında da görünsün</em>’ü açın.</li>
+          <li><strong>Okumalar bozuk.</strong> Uzaktan oynatma görüntüsü sıkıştırılır. chiaki-ng’de 1080p’yi seçin ya da oyunda altyazı boyutunu büyütün.</li>
+        </ul>
+        <p>Başka sorular için <a href="#sss">Sık sorulanlar</a>, ayrıntılı anlatım için <a href="https://github.com/kutsalkiremitci/robz-vision/blob/main/docs/KULLANIM.md">kullanım kılavuzu</a>.</p>
       </div>
     </div>
   </section>
@@ -1136,28 +1409,74 @@ code.inline {
     }).catch(function () { /* bağlantılar sürüm sayfasına gitmeye devam eder */ });
   }
 
-  /* 3. Ekran görüntüsü sekmeleri */
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
-  function select(tab) {
-    tabs.forEach(function (t) {
-      var on = t === tab;
-      t.setAttribute("aria-selected", String(on));
-      t.tabIndex = on ? 0 : -1;
-      document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+  /* 3. Sekmeler: her sekme grubu kendi içinde (ekran görüntüleri, kurulum yolları) */
+  function tabset(list) {
+    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+    function panel(t) { return document.getElementById(t.getAttribute("aria-controls")); }
+    function select(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute("aria-selected", String(on));
+        t.tabIndex = on ? 0 : -1;
+        panel(t).hidden = !on;
+      });
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener("click", function () { select(t); });
+      t.addEventListener("keydown", function (e) {
+        var j = null;
+        if (e.key === "ArrowRight") j = (i + 1) % tabs.length;
+        else if (e.key === "ArrowLeft") j = (i - 1 + tabs.length) % tabs.length;
+        else if (e.key === "Home") j = 0;
+        else if (e.key === "End") j = tabs.length - 1;
+        if (j === null) return;
+        e.preventDefault(); select(tabs[j]); tabs[j].focus();
+      });
+    });
+    return { tabs: tabs, panel: panel, select: select };
+  }
+  var shots = document.querySelector('.viewer [role="tablist"]');
+  if (shots) tabset(shots);
+
+  /* Kurulum yolları: betik yoksa dört yol alt alta görünür; varsa sekmeye dönüşür.
+     Sayfa içi bağlantı (ör. #yol-3 ya da yolun içindeki bir öğe) o yolun sekmesini açar. */
+  var pathList = document.querySelector(".path-tabs");
+  if (pathList) {
+    var ways = tabset(pathList);
+    ways.tabs.forEach(function (t) {
+      var p = ways.panel(t);
+      p.setAttribute("role", "tabpanel");
+      p.setAttribute("aria-labelledby", t.id);
+      p.tabIndex = 0;
+    });
+    pathList.hidden = false;
+    var openFor = function (id) {
+      var el = id && document.getElementById(id);
+      if (!el) return null;
+      for (var i = 0; i < ways.tabs.length; i++) {
+        if (ways.panel(ways.tabs[i]).contains(el)) {
+          var hidden = ways.panel(ways.tabs[i]).hidden;
+          ways.select(ways.tabs[i]);
+          return hidden ? el : null; // yalnız yeni açıldıysa kaydırmak gerekir
+        }
+      }
+      return null;
+    };
+    var hashId = function () {
+      try { return decodeURIComponent(location.hash.slice(1)); } catch (err) { return ""; }
+    };
+    ways.select(ways.tabs[0]);
+    var first = openFor(hashId());
+    if (first) first.scrollIntoView();
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+      if (a) openFor(a.getAttribute("href").slice(1)); // tarayıcı ardından açılan yola kaydırır
+    });
+    window.addEventListener("hashchange", function () {
+      var el = openFor(hashId());
+      if (el) el.scrollIntoView();
     });
   }
-  tabs.forEach(function (t, i) {
-    t.addEventListener("click", function () { select(t); });
-    t.addEventListener("keydown", function (e) {
-      var j = null;
-      if (e.key === "ArrowRight") j = (i + 1) % tabs.length;
-      else if (e.key === "ArrowLeft") j = (i - 1 + tabs.length) % tabs.length;
-      else if (e.key === "Home") j = 0;
-      else if (e.key === "End") j = tabs.length - 1;
-      if (j === null) return;
-      e.preventDefault(); select(tabs[j]); tabs[j].focus();
-    });
-  });
 
   /* 4. Komutu kopyala */
   if (navigator.clipboard && window.isSecureContext) {

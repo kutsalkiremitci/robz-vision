@@ -1,9 +1,11 @@
 # Robz Vision kullanım kılavuzu
 
 Bu kılavuz, Robz Vision'ı ilk kez kuran birinin oyunda Türkçe altyazı görene kadar yapacağı her adımı
-anlatır. Sonda tek başına oynayanlar, konsol oyuncuları ve yayıncılar için ayrı ipuçları var.
+anlatır. [Senaryolar](#8-senaryolar) bölümünde oyunu nerede oynadığınıza göre dört yol (bilgisayar, PS5 ve
+bilgisayar, televizyon, capture kartı) çizimleriyle ve yayıncılar için ipuçları var.
 
-Kurulum için [README'deki Kurulum bölümüne](../README.md#kurulum) bakın.
+Kurulum için [README'deki Kurulum bölümüne](../README.md#kurulum), kısa ve çizimli bir başlangıç için
+[Adım adım kurulum rehberi](../README.md#adım-adım-kurulum-rehberi)'ne bakın.
 
 | Oyunun kendi altyazısı | Robz Vision açıkken |
 |---|---|
@@ -23,21 +25,41 @@ Türkçe kutu uygulamanın kendi çizim koduyla çizilmiştir (`tools/readme_gor
 6. [Görünümü ayarlayın](#6-görünümü-ayarlayın)
 7. [Çeviriyi iyileştirin](#7-çeviriyi-iyileştirin)
 8. [Senaryolar](#8-senaryolar)
+   - [Yol 1: Bilgisayarda oynuyorum](#yol-1-bilgisayarda-oynuyorum)
+   - [Yol 2: PS5'i bilgisayar ekranında oynuyorum](#yol-2-ps5i-bilgisayar-ekranında-oynuyorum)
+   - [Yol 3: PS5'i televizyonda oynuyorum](#yol-3-ps5i-televizyonda-oynuyorum)
+   - [Yol 4: Capture kartıyla oynuyorum](#yol-4-capture-kartıyla-oynuyorum)
+   - [Yayın yapıyorum](#yayın-yapıyorum)
 9. [Kısayollar](#9-kısayollar)
 10. [Sorun giderme](#10-sorun-giderme)
 
 ## 1. Başlamadan önce
 
-**Oyun görüntüsü bilgisayar ekranında olmalı.** Robz Vision Windows'ta çalışır ve ekranda gördüğünü okur.
-PC'de oynuyorsanız ek bir şey gerekmez. Konsolda oynuyorsanız görüntüyü bilgisayara şu yollardan biriyle
-getirin:
+**Oyun görüntüsü bilgisayar ekranında olmalı.** Robz Vision Windows'ta çalışır ve ekranda gördüğünü okur;
+televizyonda ya da konsolda çalışmaz. PC'de oynuyorsanız ek bir şey gerekmez. Konsolda oynuyorsanız görüntüyü
+bilgisayara şu yollardan biriyle getirin:
 
-- **PS Remote Play** ya da **Xbox uygulaması** ile konsolu bilgisayardan oynatın.
+- **chiaki-ng**, **PS Remote Play** ya da **Xbox uygulaması** ile konsolu bilgisayardan oynatın
+  ([Yol 2](#yol-2-ps5i-bilgisayar-ekranında-oynuyorum)). Bilgisayarı TV'ye bağlarsanız çeviri TV'de görünür
+  ([Yol 3](#yol-3-ps5i-televizyonda-oynuyorum)).
 - **Capture kartının** görüntüsünü bir pencerede açın: kartın kendi uygulaması ya da OBS'in
-  *Pencereli Projektör (Kaynak)* penceresi. Ayrıntılar [Senaryolar](#8-senaryolar) bölümünde.
+  *Pencereli Projektör (Kaynak)* penceresi ([Yol 4](#yol-4-capture-kartıyla-oynuyorum)).
 
 **Oyunda İngilizce altyazıyı açın.** Robz Vision ses dinlemez, yalnızca ekrandaki yazıyı okur.
 Altyazı ne kadar okunaklıysa (büyük, kenarlı ya da arka planlı) sonuç o kadar iyi olur.
+
+### Neler lazım
+
+![Neler lazım çizimi: Windows bilgisayar ve monitör (yerel yapay zekâ çevirisi için ekran kartı notuyla), PS5, DualSense kol, PS5'in kutusundan çıkan USB-C şarj kablosu, HDMI kablo, Ethernet kablosu (önerilir), modem, HDMI girişli televizyon (her marka) ve isteğe bağlı capture kartı; her malzemenin yanında hangi yolda gerektiğini gösteren küçük Yol 1–4 işaretleri](gorseller/kurulum/neler_lazim.png)
+
+- **Her yolda:** Windows 10 (2004 ve sonrası) ya da Windows 11, 64 bit bir bilgisayar ve monitör. Ekran kartı
+  gerekmez; yerel yapay zekâ çevirisi için en az 8 GB bellekli NVIDIA ya da AMD kart gerekir
+  ([Sistem gereksinimleri](../README.md#sistem-gereksinimleri)).
+- **PS5'i bilgisayardan oynamak için (Yol 2):** PS5 ve DualSense; kolu bilgisayara bağlayan USB-C kablo (PS5'in
+  kutusundan çıkan şarj kablosu; Bluetooth da olur); PS5'in ve bilgisayarın bağlı olduğu modem; ücretsiz
+  chiaki-ng. PS5'i modeme bağlayan bir Ethernet kablosu önerilir: görüntü netleşir, okuma iyileşir.
+- **Televizyonda oynamak için (Yol 3):** ayrıca bir HDMI kablo ve HDMI girişli bir TV. Marka fark etmez.
+- **Capture kartıyla (Yol 4):** PS5, capture kartı, HDMI kablolar ve OBS.
 
 ### İlk açılış
 
@@ -166,6 +188,8 @@ Konum ipuçları:
 - **Sıfırla** kutuyu varsayılan konumuna döndürür. Kutudaki yazının görünümünü (boyut, renk, arka plan)
   *Görünüm* sayfasında **Ekranımda** seçiliyken ayarlarsınız; yayındaki altyazı bundan etkilenmez.
 - Kutu oyunun üstünde görünmüyorsa oyunu *Pencereli tam ekran* (kenarlıksız) modunda çalıştırın.
+- Birden çok ekranınız varsa (ör. monitör ve TV) kutuyu oyunun açık olduğu ekrana sürükleyin. Bölge seçici
+  de bütün ekranlarda açılır.
 
 **Yayında da görünsün** seçeneği kutuyu ekran yakalamaya açar. Yalnızca OBS'te *Ekran Yakalama* ile yayın
 yapıyor ve tarayıcı kaynağı kullanmak istemiyorsanız açın. Bu seçenek açıkken kutu okunan bölgenin üstüne
@@ -318,45 +342,142 @@ kullanılabilir. Bunu istemiyorsanız yerel motorlarda kalın.
 
 ## 8. Senaryolar
 
-### PC'de tek başıma oynuyorum
+Oyunu nerede oynadığınıza göre dört yol var. Robz Vision her yolda **bilgisayarda** çalışır; televizyona ya da
+konsola kurulmaz. Robz Vision'ı henüz kurmadıysanız önce
+[README'deki rehberin 1. adımını](../README.md#1-robz-visionı-kurun) yapın.
+
+![Karar şeması: “Oyunu nerede oynuyorsun?” sorusundan dört kol çıkar: Yol 1 Bilgisayarda; Yol 2 PS5 ve bilgisayar; Yol 3 PS5, bilgisayar ve televizyon; Yol 4 Capture kartı. Altta ikinci soru: “Yayın yapacak mısın?” Evetse OBS'e Tarayıcı kaynağı](gorseller/kurulum/yol_secimi.png)
+
+- **[Yol 1](#yol-1-bilgisayarda-oynuyorum):** oyun bilgisayarda.
+- **[Yol 2](#yol-2-ps5i-bilgisayar-ekranında-oynuyorum):** PS5'i bilgisayar ekranında oynuyorsunuz.
+- **[Yol 3](#yol-3-ps5i-televizyonda-oynuyorum):** PS5'i televizyonda oynuyorsunuz; bilgisayar TV'ye HDMI ile
+  bağlı.
+- **[Yol 4](#yol-4-capture-kartıyla-oynuyorum):** capture kartıyla; en net görüntü.
+- Yayın yapacaksanız yolunuzu kurduktan sonra [Yayın yapıyorum](#yayın-yapıyorum) bölümüne geçin.
+
+### Yol 1: Bilgisayarda oynuyorum
+
+![Yol 1 çizimi: bilgisayar monitöre bağlı; monitörde oyun görüntüsü, İngilizce altyazının hemen üstünde Robz Vision'ın Türkçe kutusu](gorseller/kurulum/yol1_bilgisayar.png)
 
 1. Oyunu *Pencereli tam ekran* modunda açın, İngilizce altyazıyı açın.
-2. Robz Vision'da **Ekran bölgesi** ile altyazı alanını seçin, **Başlat**'a basın.
-3. **Konumu ayarla** ile kutuyu İngilizce altyazının hemen üstüne yerleştirin.
+2. Robz Vision'da **Ekran bölgesi** ile altyazı alanını seçin ([Bölgeyi seçin](#2-bölgeyi-seçin)),
+   **Başlat**'a basın.
+3. **Konumu ayarla** ile kutuyu İngilizce altyazının hemen üstüne yerleştirin
+   ([Türkçe kutuyu yerleştirin](#4-türkçe-kutuyu-ekranınıza-yerleştirin)).
 
 OBS ile uğraşmanıza gerek yok. Oyun sırasında `Ctrl+Alt+H` ile çeviriyi gizleyip gösterebilirsiniz.
 
-### Konsolda oynuyorum (uzaktan oynatma)
+### Yol 2: PS5'i bilgisayar ekranında oynuyorum
 
-1. PS Remote Play ya da Xbox uygulamasıyla konsolu bilgisayarda açın.
-2. Robz Vision'da **Uygulama penceresi**'ni seçin, listeden uzaktan oynatma penceresini seçip altyazı alanını
-   işaretleyin. Pencereyi tam ekran kullanıyorsanız **Ekran bölgesi** de olur.
-3. **Başlat**'a basın ve kutuyu yerleştirin.
+![Yol 2 çizimi: PS5 Ethernet kablosuyla modeme, bilgisayar aynı modeme Ethernet ya da Wi-Fi ile bağlı; DualSense bilgisayara USB-C kabloyla (ya da Bluetooth ile) bağlı; bilgisayarda chiaki-ng (1080p, 60 FPS) ve Robz Vision çalışıyor, monitörde oyun ve Türkçe kutu](gorseller/kurulum/yol2_ps5_bilgisayar.png)
 
-Uzaktan oynatma görüntüsü sıkıştırıldığı için altyazı bulanık olabilir. Okumalar bozuksa uygulamanın
-görüntü kalitesini yükseltin ya da oyunda altyazı boyutunu büyütün.
+PS5 yerinde kalır; görüntüsü ev ağı üzerinden bilgisayara gelir, oyunu bilgisayardan oynarsınız. Burada
+ücretsiz ve açık kaynak uzaktan oynatma programı chiaki-ng'i anlatıyoruz; Sony'nin resmî PS Remote Play
+uygulaması da çalışır.
 
-### Konsoldan capture kartıyla yayın yapıyorum
+**PS5'te (bir kez)**
 
+1. PS5'i Ethernet kablosuyla modeme bağlayın (önerilir). Bilgisayar da aynı modeme bağlı olsun, kabloyla ya da
+   Wi-Fi ile.
+2. *Ayarlar > Sistem > Uzaktan Oynama > Uzaktan Oynama'yı Etkinleştir*'i açın.
+3. PS5'i dinlenme modundan bilgisayarla açabilmek için *Ayarlar > Sistem > Güç Tasarrufu > Dinlenme Modunda
+   Kullanılabilen Özellikler*'de *İnternete Bağlı Kalın*'ı ve *PS5 Sisteminin Ağdan Açılmasını Etkinleştir*'i
+   açın (isteğe bağlı).
+
+**chiaki-ng'de (bir kez)**
+
+4. chiaki-ng'i [GitHub sürüm sayfasından](https://github.com/chiaki-ng/chiaki-ng/releases/latest)
+   (`chiaki-ng-win_x64-MSYS2-installer.exe`) ya da `winget install --id=StreetPea.chiaki-ng -e` ile kurun.
+   Yalnız bu resmî kaynakları kullanın; chiaki-ng adını taşıyan başka siteler projenin değildir.
+5. PS5 açık ya da dinlenme modundayken chiaki-ng'i açın; PS5 aynı ağdaysa listede kendiliğinden görünür.
+   chiaki-ng'in istediği PlayStation Network girişini bir kez yapın ve ekrandaki yönergeye uyun.
+6. PS5'in altında *Automatic Registration Available* yazıyorsa PS5'e tıklayıp onaylayın; kod gerekmez.
+   Yazmıyorsa PS5'te *Ayarlar > Sistem > Uzaktan Oynama > Cihazı Eşleştir*'i seçin, ekranda çıkan sayıyı
+   chiaki-ng'de *Remote Play PIN* alanına yazıp *Register*'a basın.
+7. Sağ üstteki dişliden *Stream Settings* sekmesini açın; çözünürlüğü *1080p*, kare hızını *60 fps* yapın.
+8. DualSense'i USB-C kabloyla (PS5'in kutusundan çıkan şarj kablosu) bilgisayara takın. Bluetooth için kolun
+   **Oluştur** düğmesini basılı tutarken ışıklı çubuk yanıp sönene kadar **PS** düğmesini basılı tutun, sonra
+   Windows'un Bluetooth ayarlarında kolu seçin. Kolu yeniden PS5'te kullanmak için USB kabloyla PS5'e takıp PS
+   düğmesine basın.
+
+**Her oynayışta**
+
+9. chiaki-ng'de PS5'e tıklayın; görüntü bir pencerede açılır. Pencereyi büyütün ya da tam ekran yapın.
+10. Robz Vision'da **Uygulama penceresi**'ni seçin, listeden chiaki-ng'in oyun penceresini seçip altyazı
+    alanını işaretleyin ([Bölgeyi seçin](#2-bölgeyi-seçin)). Pencereyi tam ekran kullanıyorsanız
+    **Ekran bölgesi** de olur.
+11. **Başlat**'a basın ve kutuyu yerleştirin.
+
+Uzaktan oynatma görüntüsü sıkıştırıldığı için altyazı bulanık olabilir. Okumalar bozuksa PS5'i modeme kabloyla
+bağlayın, uygulamanın görüntü kalitesini yükseltin (chiaki-ng'de 1080p ve 60 fps) ya da oyunda altyazı boyutunu
+büyütün. chiaki-ng'in penceresi boş kalırsa Başlat menüsünden *chiaki-ng (OpenGL)*'i açın.
+
+PS Remote Play kullanacaksanız 4–7. adımlar yerine onu kurun. Xbox'ta aynı yolu Xbox uygulamasıyla izlersiniz:
+konsolu bilgisayarda açıp Robz Vision'da onun penceresini seçin.
+
+### Yol 3: PS5'i televizyonda oynuyorum
+
+![Yol 3 çizimi: Yol 2'deki bağlantılar aynı, ama bilgisayar televizyona HDMI kablosuyla bağlı; TV'de oyun ve Türkçe kutu. Notlar: “TV markası fark etmez”, “Robz Vision TV'de değil bilgisayarda çalışır”. Kesik çizgiyle alternatif: “Win+K ile kablosuz yansıt (gecikme artar)”](gorseller/kurulum/yol3_ps5_tv.png)
+
+Robz Vision televizyonun kendisinde çalışamaz: TV uygulamaları HDMI'dan gelen konsol görüntüsünü okuyamaz.
+Bilgisayarı TV'ye bağlarsınız; TV bilgisayarın ekranı olur, Türkçe kutu TV'de oyunun üstünde görünür. TV'nin
+markası fark etmez, HDMI girişi olması yeter.
+
+1. [Yol 2](#yol-2-ps5i-bilgisayar-ekranında-oynuyorum)'nin 1–8. adımlarını yapın.
+2. HDMI kablonun bir ucunu bilgisayarın HDMI çıkışına (masaüstü bilgisayarda ekran kartının üstündeki
+   çıkışa), öbür ucunu TV'nin HDMI girişine takın.
+3. TV'nin kumandasında *Kaynak*, *Source* ya da *Input* düğmesiyle kabloyu taktığınız HDMI girişini seçin.
+4. Bilgisayarda *Win+P*'ye basın: *Yalnızca ikinci ekran* görüntüyü yalnız TV'ye verir, *Çoğalt* monitörde ve
+   TV'de aynı görüntüyü gösterir.
+5. TV'de *Oyun modu*nu açarsanız gecikme azalır. Adı ve yeri markaya göre değişir.
+6. chiaki-ng penceresini TV'de tam ekran yapın, sonra Yol 2'nin 9–11. adımlarını yapın.
+
+**Monitör de açık kalsın isterseniz** *Win+P*'de *Genişlet*'i seçin: chiaki-ng penceresini TV'ye taşıyın,
+Robz Vision monitörde kalsın. Bölge seçici bütün ekranlarda açılır; Türkçe kutuyu *Ekranımda → Konumu ayarla*
+ile TV ekranına sürükleyin.
+
+**Kablo yerine kablosuz.** TV'niz kablosuz ekran yansıtmayı (Miracast) destekliyorsa bilgisayarda *Win+K*'ye
+basıp listeden TV'yi seçin (LG'de *Screen Share*). Gecikme artar; hikâye oyunlarında genelde sorun olmaz.
+Türkçe kutu TV'de görünmezse Ana sayfada **Yayında da görünsün**'ü açın; kutu okunan bölgenin üstüne gelirse
+Robz Vision uyarır, kutuyu biraz kaydırın.
+
+### Yol 4: Capture kartıyla oynuyorum
+
+![Yol 4 çizimi: PS5 HDMI kablosuyla capture kartına, kart USB ile bilgisayara, bilgisayar HDMI ile TV'ye ya da monitöre bağlı; bilgisayarda OBS'in Pencereli Projektör penceresini Robz Vision okuyor. Notlar: PS5'te HDCP kapalı; kartın passthrough çıkışında çeviri görünmez](gorseller/kurulum/yol4_capture.png)
+
+Remote Play sıkıştırması olmadığı için altyazı en net bu yolda okunur. Kol PS5'e her zamanki gibi bağlı kalır.
 Robz Vision'ın OBS önizlemesini değil, ham oyun görüntüsünü okuması gerekir; önizlemede Türkçe altyazı da
 vardır.
 
-1. OBS'te capture kartı kaynağına sağ tıklayıp **Pencereli Projektör (Kaynak)**'ı açın. Bu pencere yalnızca
-   oyun görüntüsünü gösterir.
-2. Robz Vision'da **Uygulama penceresi** ile bu projektör penceresini seçin ve altyazı alanını işaretleyin.
+1. PS5'te *Ayarlar → Sistem → HDMI → HDCP'yi Etkinleştir*'i kapatın; açıkken kart görüntüyü alamaz.
+2. PS5'in HDMI çıkışını capture kartının HDMI girişine, kartı USB ile bilgisayara takın. TV ya da monitör
+   bilgisayara bağlı kalır.
+3. Kartı OBS'e kaynak olarak ekleyin. OBS'te capture kartı kaynağına sağ tıklayıp
+   **Pencereli Projektör (Kaynak)**'ı açın. Bu pencere yalnızca oyun görüntüsünü gösterir; oyunu bu pencereden
+   oynarsınız. Kartın kendi önizleme uygulaması da olur.
+4. Robz Vision'da **Uygulama penceresi** ile bu projektör penceresini seçin ve altyazı alanını işaretleyin.
    Projektör penceresi başka pencerelerin arkasında kalabilir, ama simge durumuna küçültülmemeli.
-3. Ana sayfadaki adresi OBS'e **Tarayıcı** kaynağı olarak ekleyin ve capture kartı kaynağının üstüne taşıyın.
-4. İsterseniz *Görünüm → Yayınımda → Gelişmiş ayarlar → OBS'te orijinali kapat* ile İngilizce altyazıyı
-   yayında gizleyin.
+5. **Başlat**'a basın ve kutuyu yerleştirin.
+6. Yayın yapıyorsanız Ana sayfadaki adresi OBS'e **Tarayıcı** kaynağı olarak ekleyin ve capture kartı
+   kaynağının üstüne taşıyın. İsterseniz *Görünüm → Yayınımda → Gelişmiş ayarlar → OBS'te orijinali kapat* ile
+   İngilizce altyazıyı yayında gizleyin.
 
-Kendiniz oyunu televizyondan ya da kartın düşük gecikmeli çıkışından oynuyorsanız ekrandaki kutuyu
-kapatabilirsiniz (**Ekranımda → Kapalı**); çeviriyi OBS önizlemesinde görürsünüz.
+**Kartın kendi HDMI çıkışı (passthrough).** Bazı kartların TV'ye giden düşük gecikmeli bir çıkışı vardır. Bu
+görüntü bilgisayardan geçmez, orada çeviri görünmez. Kendiniz oyunu televizyondan ya da kartın bu çıkışından
+oynuyorsanız Türkçeyi bilgisayarın ekranında okursunuz. Ekrandaki kutuyu kapatabilirsiniz
+(**Ekranımda → Kapalı**); çeviriyi OBS önizlemesinde görürsünüz.
 
-### PC'de oynayıp aynı bilgisayardan yayın yapıyorum
+### Yayın yapıyorum
 
-1. Oyunu OBS'e her zamanki gibi *Oyun Yakalama* ya da *Ekran Yakalama* ile ekleyin.
+![Yayın çizimi: Robz Vision'ın Ana sayfasındaki adres OBS'e Tarayıcı kaynağı olarak eklenir; OBS yayını Kick, Twitch ya da YouTube'a gönderir; izleyiciler oyunu Türkçe altyazıyla görür](gorseller/kurulum/yayin_obs.png)
+
+Yolunuz hangisi olursa olsun yayın aynıdır:
+
+1. Oyun görüntüsünü OBS'e her zamanki gibi ekleyin: PC oyununu *Oyun Yakalama* ya da *Ekran Yakalama* ile,
+   PS5'i chiaki-ng penceresi ya da capture kartı kaynağı olarak.
 2. Robz Vision'da bölgeyi seçin, **Başlat**'a basın, kendi kutunuzu yerleştirin.
-3. İzleyiciler için adresi **Tarayıcı** kaynağı olarak ekleyin.
+3. İzleyiciler için Ana sayfadaki adresi **Tarayıcı** kaynağı olarak ekleyin ve oyun görüntüsünün üstüne
+   taşıyın ([OBS'e ekleyin](#5-obse-ekleyin)). İzleyiciler Kick, Twitch ya da YouTube'da Türkçe altyazıyı görür.
 
 Ekrandaki kutu varsayılan olarak yayına girmez, izleyiciler altyazıyı iki kez görmez. Tarayıcı kaynağı
 yerine ekrandaki kutuyu yayında göstermek isterseniz *Ekran Yakalama* kullanın ve **Yayında da görünsün**'ü
