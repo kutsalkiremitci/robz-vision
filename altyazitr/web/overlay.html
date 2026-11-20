@@ -44,7 +44,8 @@
     transition: opacity var(--fade) ease; opacity: 0;
   }
   .cover.on { opacity: 1; }
-  .cover .tx { text-align: center; -webkit-text-stroke-width: calc(var(--stroke) * var(--k, 1)); }
+  /* kapakta kelime ortadan bölünmez: sığmayan tek kelimede kutu iki yana genişler (ekrandaki kutu gibi, placeCover) */
+  .cover .tx { text-align: center; overflow-wrap: normal; -webkit-text-stroke-width: calc(var(--stroke) * var(--k, 1)); }
   /* Akış: son satırlar alt alta, en yenisi altta. Yığın alta yaslı; eskiler yukarı kayar. */
   #stack {
     position: absolute; left: 0; right: 0; bottom: var(--bottom);
@@ -326,10 +327,19 @@
       return n;
     };
     const s = coverSize((v) => measured.get(v) ?? linesAt(v), Math.max(1, c.rows | 0), c.font * H, c.min * H);
-    const n = linesAt(s);  // seçilen boy uygulanır
-    const bw = Math.min(W, w), bh = Math.min(H, Math.max(h, n * s * LINE_H + 2 * COVER_INNER[1] * s));
+    let n = linesAt(s);  // seçilen boy uygulanır
+    let bw = Math.min(W, w);
+    if (tx.scrollWidth > tx.clientWidth + 1) {
+      // tek kelime kutunun genişliğine sığmıyor (ör. sabit yazı boyu): kutu iki yana genişler (ekrandaki kutu gibi,
+      // bkz. overlay.ScreenOverlay); ekrandan taşmaz
+      bw = Math.min(W, tx.scrollWidth + 2 * COVER_INNER[0] * s);
+      tx.style.width = Math.max(1, bw - 2 * COVER_INNER[0] * s) + 'px';
+      n = Math.max(1, Math.round(tx.getBoundingClientRect().height / (s * LINE_H)));
+    }
+    const bh = Math.min(H, Math.max(h, n * s * LINE_H + 2 * COVER_INNER[1] * s));
     Object.assign(cover.style, {
-      left: Math.min(Math.max(x, 0), W - bw) + 'px', top: Math.min(Math.max(y + h - bh, 0), H - bh) + 'px',
+      left: Math.min(Math.max(x + (w - bw) / 2, 0), W - bw) + 'px',
+      top: Math.min(Math.max(y + h - bh, 0), H - bh) + 'px',
       width: bw + 'px', height: bh + 'px'
     });
     // kenar kalınlığı görünümdeki yazı / kenar oranıyla (--stroke görünümün yazı boyuna göredir)

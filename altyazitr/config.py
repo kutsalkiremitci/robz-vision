@@ -117,7 +117,13 @@ class StyleCfg:
     # Oyun altyazısının üzerine yerleştir: çeviri, oyunun İngilizce altyazısının tam yerine yazılır; altyazıyı İngilizce
     # yazı hiç görünmesin diye opak bir kutu (rengi mask_color) örter, genişliği altyazınınki kadardır. Açıkken bu
     # görünümün konumu (alt boşluk, genişlik, ekrandaki kutunun yeri) ve OBS maskesi kullanılmaz (bkz. display).
+    # Yeni kurulumda açık gelir (bkz. new_style); buradaki varsayılan kapalıdır ki anahtarı olmayan eski ayar dosyasında
+    # kullanıcının düzeni değişmesin.
     cover_original: bool = False
+    # Akıllı yazı boyu (örtme açıkken): yazı oyunun yazısıyla aynı boyda, Türkçe sığmazsa biraz küçülür (görünümün
+    # boyu üst sınır). Kapalıysa yazı görünümün boyunda sabittir; kutu yine İngilizceyi örter, Türkçe sığmazsa satır
+    # kaydırılır ve kutu büyür (bkz. display.SubtitleDisplay._cover).
+    cover_fit: bool = True
 
 
 @dataclass
@@ -238,6 +244,17 @@ def _from_dict(cls, data: Any):
     return obj
 
 
+def new_style() -> StyleCfg:
+    """Yeni kurulumun görünümü: "Oyun altyazısının üzerine" açık, akıllı yazı boyu açık. Görünüm sayfasındaki
+    "Varsayılana dön" de buna döner."""
+    return StyleCfg(cover_original=True)
+
+
+def new_settings() -> Settings:
+    """Ayar dosyası yokken (yeni kurulum) kullanılan ayarlar: iki görünümde de yerleşim oyun altyazısının üzerine."""
+    return Settings(style=new_style(), screen_style=new_style())
+
+
 def load_settings() -> Settings:
     try:
         with open(SETTINGS_FILE, encoding="utf-8") as fp:
@@ -279,14 +296,14 @@ def load_settings() -> Settings:
         log.info("Ayarlar yüklendi: %s", SETTINGS_FILE)
         return s
     except FileNotFoundError:
-        return Settings()
-    except Exception:  # bozuk dosya: yedekle, varsayılanla devam et
+        return new_settings()
+    except Exception:  # bozuk dosya: yedekle, yeni kurulumun ayarlarıyla devam et
         log.exception("Ayar dosyası okunamadı, varsayılanlar kullanılacak")
         try:
             os.replace(SETTINGS_FILE, SETTINGS_FILE.with_suffix(".bozuk.json"))
         except OSError:
             pass
-        return Settings()
+        return new_settings()
 
 
 def save_settings(s: Settings) -> None:

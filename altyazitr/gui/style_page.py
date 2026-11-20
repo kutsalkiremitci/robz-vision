@@ -17,7 +17,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy,
                                QVBoxLayout, QWidget)
 
-from altyazitr.config import StyleCfg
+from altyazitr.config import StyleCfg, new_style
 from altyazitr.gui import icons
 from altyazitr.gui.controls import Collapsible, FontPicker, PresetCard, Segmented, SliderRow, SubtitlePreview, SwatchRow
 from altyazitr.gui.tokens import C, ICON, RADIUS, SPACE
@@ -30,7 +30,7 @@ SCREEN, STREAM = "screen", "stream"
 # üzerine" kutusunun rengidir). Kopyalama bunlara ve yerleşime (PLACEMENT) dokunmaz.
 STREAM_ONLY = frozenset({"bottom_percent", "max_width_percent", "mask_original", "mask_color", "mask_opacity",
                          "mask_pad_percent"})
-PLACEMENT = frozenset({"cover_original"})
+PLACEMENT = frozenset({"cover_original", "cover_fit"})
 LOOK_FIELDS = tuple(f.name for f in dataclasses.fields(StyleCfg) if f.name not in STREAM_ONLY | PLACEMENT)
 DEFAULT_BOX = (0.66, 0.17)  # ekrandaki kutunun ekrana oranı bilinmiyorsa (overlay.default_box ile aynı)
 
@@ -101,6 +101,14 @@ COVER_SIZE_NOTE = {
     SCREEN: "Oyunun altyazısının üzerine açık: yazı oyunun yazısıyla aynı boyda; Boyut ve Yazı ölçeği üst sınır.",
     STREAM: "Oyunun altyazısının üzerine açık: yazı oyunun yazısıyla aynı boyda; Boyut üst sınır.",
 }
+# Akıllı yazı boyu kapalıyken (StyleCfg.cover_fit): yazı Boyut'ta sabit, kutu yine İngilizceyi örter
+COVER_FIXED_NOTE = {
+    SCREEN: "Oyunun altyazısının üzerine açık, akıllı yazı boyu kapalı: yazı Boyut ve Yazı ölçeğiyle sabit boyda.",
+    STREAM: "Oyunun altyazısının üzerine açık, akıllı yazı boyu kapalı: yazı Boyut'taki sabit boyda.",
+}
+COVER_FIT_TIP = ("Açıkken Türkçe, oyunun yazısıyla aynı boyda yazılır ve sığmazsa biraz küçülür. Kapalıyken yazı "
+                 "Boyut ayarındaki sabit boyda yazılır; kutu yine İngilizceyi örter, sığmazsa alt satıra geçer ve "
+                 "kutu büyür.")
 
 # --- düzen ölçüleri ----------------------------------------------------------------
 WIDE_MIN = 1080            # sayfa bu genişlikten itibaren iki sütun: ayarlar solda, önizleme sağda sabit
@@ -347,6 +355,10 @@ class StylePage(QWidget):
         self.cover_color = SwatchRow(MASK_COLORS)
         self.cover_color.changed.connect(lambda c: self._set("mask_color", c))
         cov.add(self._field("Oyun altyazısının üzerine", self.cover, tip=COVER_TIP))
+        self.cover_fit = Segmented([("Kapalı", False), ("Açık", True)])
+        self.cover_fit.changed.connect(lambda v: self._set("cover_fit", bool(v)))
+        self._cover_fit_row = self._field("Akıllı yazı boyu", self.cover_fit, tip=COVER_FIT_TIP)
+        cov.add(self._cover_fit_row)
         self._cover_color_row = self._field("Kutu rengi", self.cover_color, tip=COVER_COLOR_TIP)
         cov.add(self._cover_color_row)
         self._cover_hint = label("", "muted", wrap=True)
@@ -655,6 +667,7 @@ class StylePage(QWidget):
             self.mask.setValue(bool(st.mask_original))
             self.mask_alpha.setValue(st.mask_opacity)
             self.cover.setValue(bool(st.cover_original))
+            self.cover_fit.setValue(bool(st.cover_fit))
         finally:
             self._loading = False
         self._refresh_preview()
@@ -680,8 +693,9 @@ class StylePage(QWidget):
         self._orig_row.setVisible(bool(self.st.show_original) and not cover)
         self._show_orig_row.setVisible(not cover)
         self._bg_card.setVisible(not cover)
-        self._size_note.setText(COVER_SIZE_NOTE[self._prof])
+        self._size_note.setText((COVER_SIZE_NOTE if self.st.cover_fit else COVER_FIXED_NOTE)[self._prof])
         self._size_note.setVisible(cover)
+        self._cover_fit_row.setVisible(cover)
         self.mask_color.setColor(self.st.mask_color)
         self.cover_color.setColor(self.st.mask_color)
         self._cover_color_row.setVisible(cover)
@@ -697,7 +711,7 @@ class StylePage(QWidget):
             return
         setattr(self.st, attr, value)
         if attr in ("bg_opacity", "outline_width", "show_original", "mask_original", "highlight", "cover_original",
-                    "mask_color"):
+                    "cover_fit", "mask_color"):
             self._sync_bg()
         self._changed()
 
@@ -708,8 +722,8 @@ class StylePage(QWidget):
         self._changed()
 
     def _reset(self) -> None:
-        """Yalnız seçili görünümü ilk hâline döndürür."""
-        d = StyleCfg()
+        """Yalnız seçili görünümü ilk hâline (yeni kurulumdaki görünüme, bkz. config.new_style) döndürür."""
+        d = new_style()
         for f in dataclasses.fields(StyleCfg):
             setattr(self.st, f.name, getattr(d, f.name))
         self.sync()
@@ -718,7 +732,7 @@ class StylePage(QWidget):
     def _copy_other(self) -> None:
         """Öbür görünümün yazı/renk/kenar/arka plan ayarlarını seçili görünüme kopyalar (yerinde; başka
         bileşenler bu nesneleri tutar). Yalnız yayına ait konum, genişlik ve maske, bir de yerleşim ("oyun
-        altyazısının üzerine") kopyalanmaz."""
+        altyazısının üzerine", akıllı yazı boyu) kopyalanmaz."""
         src = self._style(STREAM if self._prof == SCREEN else SCREEN)
         for name in LOOK_FIELDS:
             setattr(self.st, name, getattr(src, name))

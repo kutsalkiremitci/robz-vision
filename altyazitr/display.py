@@ -577,11 +577,13 @@ class SubtitleDisplay(QObject):
             item["spans"] = [list(sp) for sp in x["spans"]]
         return item
 
-    def _cover(self, ln: dict, roi: Sequence[float], top: float, floor: float) -> dict:
+    def _cover(self, ln: dict, roi: Sequence[float], top: float, floor: float, fit: bool = True) -> dict:
         """Kapak kutusunun bir çıktıdaki yeri ve yazı boyları (iki çıktıda aynı kural). roi: bölgenin o çıktıdaki yeri
         (x, y, genişlik, yükseklik); top: görünümün yazı boyu, floor: okunur alt sınır (yükseklik biriminde). Kutu
-        oyunun altyazısı + pay (cover_area); yazı oyunun satırı boyunda (cover_fonts). Örnek satırın oyunda yeri
-        olmadığından kutusu bölgenin altında, görünümün yazı boyunda tek satırdır (_TEST_COVER)."""
+        oyunun altyazısı + pay (cover_area); yazı oyunun satırı boyunda (cover_fonts). fit (akıllı yazı boyu) kapalıysa
+        yazı görünümün boyunda sabittir (küçülmez): kutu yine oyunun altyazısını örter, Türkçe sığmazsa çizen taraf
+        satırı kaydırıp kutuyu büyütür. Örnek satırın oyunda yeri olmadığından kutusu bölgenin altında, görünümün yazı
+        boyunda tek satırdır (_TEST_COVER)."""
         x, y, w, h = (float(v) for v in roi)
         if ln["until"] is not None:
             left, bottom, width = _TEST_COVER
@@ -589,7 +591,7 @@ class SubtitleDisplay(QObject):
             rect, rows = (left, bottom - lh, width, lh), 1
         else:
             rect, rows, lh = cover_area(ln.get("box"))
-        font, low = cover_fonts(COVER_FONT * lh * h if lh else top, top, floor)
+        font, low = cover_fonts(COVER_FONT * lh * h if lh else top, top, floor) if fit else (top, top)
         line = self._item(ln)
         line.pop("original")  # örtülen yazının kendisi: kapakta gösterilmez
         out = {"rect": [x + rect[0] * w, y + rect[1] * h, rect[2] * w, rect[3] * h], "rows": rows,
@@ -603,7 +605,8 @@ class SubtitleDisplay(QObject):
         frac = self._region_frac()
         if not frac:
             return None
-        c = self._cover(ln, frac, float(self.s.style.font_size) / 1080.0, COVER_MIN_PX / 1080.0)
+        st = self.s.style
+        c = self._cover(ln, frac, float(st.font_size) / 1080.0, COVER_MIN_PX / 1080.0, bool(st.cover_fit))
         c["rect"] = [round(v, 5) for v in c["rect"]]
         c["font"], c["min"] = round(c["font"], 5), round(c["min"], 5)
         return c
@@ -623,7 +626,8 @@ class SubtitleDisplay(QObject):
             scale = max(0.1, float(self.s.overlay.scale))
         except (TypeError, ValueError):
             scale = 1.0
-        c = self._cover(ln, roi, float(self.s.screen_style.font_size) * k * scale, COVER_MIN_PX * k)
+        sc = self.s.screen_style
+        c = self._cover(ln, roi, float(sc.font_size) * k * scale, COVER_MIN_PX * k, bool(sc.cover_fit))
         c["bounds"] = list(bounds)
         return c
 

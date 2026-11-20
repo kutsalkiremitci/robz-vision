@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from altyazitr.config import Settings, StyleCfg
+from altyazitr.config import Settings, StyleCfg, new_style
 
 
 @pytest.fixture(scope="module")
@@ -246,8 +246,8 @@ def test_reset_only_active_side(qapp):
     pg.side.group.button(1).click()
     pg.size.slider.setValue(90)
     screen_before = asdict(s.screen_style)
-    pg._reset_btn.click()
-    assert asdict(s.style) == asdict(StyleCfg())
+    pg._reset_btn.click()  # yeni kurulumdaki görünüme döner: yerleşim oyun altyazısının üzerine
+    assert asdict(s.style) == asdict(new_style()) and s.style.cover_original and s.style.cover_fit
     assert asdict(s.screen_style) == screen_before
     assert pg.size.slider.value() == StyleCfg().font_size
 

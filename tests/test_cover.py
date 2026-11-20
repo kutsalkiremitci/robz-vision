@@ -576,6 +576,14 @@ class El {
     const perLine = Math.max(1, Math.floor(width / (size * 0.5)));
     return { top: 0, height: Math.ceil(this.textContent.length / perLine) * size * 1.28 };
   }
+  // sahte taşma: en uzun kelime satır genişliğinden uzunsa içerik o kadar geniştir
+  get clientWidth() { return this.classList.contains('tx') ? parseFloat(this.style.width) : 0; }
+  get scrollWidth() {
+    if (!this.classList.contains('tx')) return 0;
+    const size = parseFloat(this.parent.style.fontSize);
+    const word = Math.max(0, ...this.textContent.split(/\s+/).map((w) => w.length));
+    return Math.max(this.clientWidth, word * size * 0.5);
+  }
 }
 const cover = new El('div');
 const tx = cover.add(new El('div', 'tx'));
@@ -772,3 +780,138 @@ def test_gorunum_sayfasinda_iki_gorunumde_ayri(page):
     before = asdict(s.screen_style)
     pg._copy_btn.click()  # kopyalama yerleşimi taşımaz
     assert s.style.cover_original is True and s.screen_style.cover_original == before["cover_original"]
+
+
+# --- yeni kurulumda açık yerleşim ve akıllı yazı boyu ------------------------------------------------------------------
+def test_yeni_kurulumda_yerlesim_acik_eski_ayar_dosyasi_korunur(tmp_path, monkeypatch):
+    """Ayar dosyası yoksa (yeni kurulum) iki görünümde de yerleşim oyun altyazısının üzerine ve akıllı yazı boyu
+    açık gelir. Var olan dosyada kullanıcının seçimi (ya da anahtarı olmayan eski dosyada eski düzen) korunur."""
+    from altyazitr import config as cfg
+
+    monkeypatch.setattr(cfg, "SETTINGS_FILE", tmp_path / "yok.json")
+    s = cfg.load_settings()
+    assert s.style.cover_original and s.screen_style.cover_original
+    assert s.style.cover_fit and s.screen_style.cover_fit
+
+    path = tmp_path / "ayarlar.json"
+    monkeypatch.setattr(cfg, "SETTINGS_FILE", path)
+    path.write_text(json.dumps({"style": {"font_size": 50}}), encoding="utf-8")  # yerleşimden önceki sürüm
+    s = cfg.load_settings()
+    assert not s.style.cover_original and not s.screen_style.cover_original and s.style.font_size == 50
+    assert s.style.cover_fit and s.screen_style.cover_fit  # akıllı yazı boyu eskiden de hep açıktı
+    path.write_text(json.dumps({"style": {"cover_original": False}, "screen_style": {"cover_original": True}}),
+                    encoding="utf-8")
+    s = cfg.load_settings()
+    assert s.style.cover_original is False and s.screen_style.cover_original is True
+
+    s.screen_style.cover_fit = False
+    cfg.save_settings(s)
+    assert cfg.load_settings().screen_style.cover_fit is False and cfg.load_settings().style.cover_fit is True
+
+    path.write_text("{bozuk", encoding="utf-8")  # okunamayan dosya: yeni kurulum gibi başlar
+    assert cfg.load_settings().screen_style.cover_original is True
+
+
+def test_akilli_yazi_boyu_kapaliyken_obs_yazisi_sabit(make_display):
+    """OBS: akıllı yazı boyu kapalıyken yazı görünümün boyunda sabit (küçülmez); kutu yine oyunun altyazısının
+    yerinde ve boyunda (İngilizceyi örter). Açılınca eski kurala döner."""
+    d, out, _box = make_display(stream=True)
+    d.on_subtitle(_ev(1, "Arabaya bin.", original="Get in the car."))
+    smart = out.covers[-1]
+    top = d.s.style.font_size / 1080
+    assert smart["font"] < top - 1e-3  # oyunun yazısı görünümün boyundan küçük: akıllı boy onu izler
+
+    d.s.style.cover_fit = False
+    d.push_style()
+    fixed = out.covers[-1]
+    assert fixed["font"] == pytest.approx(top, abs=1e-5) and fixed["min"] == fixed["font"]
+    assert fixed["rect"] == smart["rect"] and fixed["rows"] == smart["rows"] and fixed["line"] == smart["line"]
+
+    d.s.style.cover_fit = True
+    d.push_style()
+    assert out.covers[-1] == smart
+
+
+def test_akilli_yazi_boyu_kapaliyken_ekran_yazisi_sabit(make_display, monkeypatch):
+    """Ekrandaki kutu: sabit boy görünümün boyu × ekran / 1080 × ölçektir; kutunun yeri değişmez. Yayın görünümü
+    etkilenmez (iki görünüm ayrı)."""
+    import altyazitr.display as dmod
+    from altyazitr.overlay import to_logical
+
+    monkeypatch.setattr(dmod, "screen_area", lambda r: to_logical(r, [((0, 0, 1536, 864), 1.25)]))
+    d, out, box = make_display(stream=True, screen=True)
+    d.s.overlay.enabled, d.s.overlay.scale = True, 1.5
+    d.s.screen_style.font_size = 30
+    d.on_subtitle(_ev(1, "Bir", {**BOX, "screen": [192, 756, 1536, 216]}))
+    smart, stream = box.last("cover"), out.covers[-1]
+    d.s.screen_style.cover_fit = False
+    d.push_style()
+    fixed = box.last("cover")
+    assert fixed["font"] == pytest.approx(30 * 864 / 1080 * 1.5) and fixed["min"] == fixed["font"]
+    assert fixed["rect"] == smart["rect"] and fixed["bounds"] == smart["bounds"]
+    assert out.covers[-1] == stream
+
+
+def test_obs_kapagi_tek_uzun_kelimede_iki_yana_genisler(tmp_path):
+    """Sabit yazı boyunda tek kelime kutunun genişliğine sığmazsa OBS kutusu (ekrandaki gibi) iki yana, ortası
+    oyunun altyazısında kalarak genişler; sığan yazıda kutu tam altyazının yerindedir."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js yok: OBS sayfasının betiği çalıştırılamadı")
+    rect = [0.45, 0.8, 0.1, 0.05]  # 192 × 54 piksel
+    word = "Kesinlikleeeeeeeee!"  # 19 harf × 22 px = 418 px: kutudan geniş
+    cov = {"rect": rect, "rows": 1, "font": 44 / 1080, "min": 44 / 1080, "line": {"text": word, "speaker": None}}
+    fits = {**cov, "line": {"text": "Evet.", "speaker": None}}
+    harness = tmp_path / "kapak.js"
+    harness.write_text(_COVER_HARNESS, encoding="utf-8")
+    msgs = [{"type": "cover", "cover": cov}, {"type": "cover", "cover": fits}]
+    r = subprocess.run([node, str(harness), str(resource_dir() / "web" / "overlay.html"), json.dumps(msgs)],
+                       capture_output=True, text=True, encoding="utf-8", timeout=30)
+    assert r.returncode == 0, r.stderr
+    wide, ok = json.loads(r.stdout)
+    from altyazitr.render import COVER_INNER
+
+    left, width = float(wide["style"]["left"][:-2]), float(wide["style"]["width"][:-2])
+    assert width == pytest.approx(len(word) * 22 + 2 * COVER_INNER[0] * 44)
+    assert left + width / 2 == pytest.approx(864 + 96)  # ortası oyunun altyazısının ortası
+    assert [float(ok["style"][k][:-2]) for k in ("left", "width")] == pytest.approx([864, 192])
+
+
+def test_gorunum_sayfasinda_akilli_yazi_boyu(page):
+    """"Akıllı yazı boyu" yalnız yerleşim açıkken görünür; kapatınca Boyut notu sabit boyu anlatır. İki görünümde
+    ayrıdır, kopyalama taşımaz; varsayılana dönme yeni kurulumdaki gibi açar."""
+    pg, s, calls = page()
+    sc = s.screen_style
+    assert not _vis(pg, "_cover_fit_row")
+    pg.cover.group.button(1).click()
+    assert _vis(pg, "_cover_fit_row") and pg.cover_fit.group.checkedId() == 1
+    assert "aynı boyda" in pg._size_note.text()
+    pushes = calls["push"]
+    pg.cover_fit.group.button(0).click()
+    assert sc.cover_fit is False and s.style.cover_fit is True and calls["push"] == pushes + 1
+    assert "sabit" in pg._size_note.text() and "Yazı ölçeği" in pg._size_note.text()
+    assert pg.cover_fit.toolTip().startswith("Açıkken Türkçe")
+
+    pg.side.group.button(1).click()  # Yayınımda: kendi değeri (açık); örtme kapalı olduğundan satır gizli
+    assert pg.cover_fit.group.checkedId() == 1 and not _vis(pg, "_cover_fit_row")
+    pg._copy_btn.click()  # kopyalama akıllı yazı boyunu taşımaz
+    assert s.style.cover_fit is True and sc.cover_fit is False
+
+    pg.side.group.button(0).click()
+    pg._reset_btn.click()  # Ekranımda varsayılana döner: yerleşim açık, akıllı boy açık
+    assert sc.cover_original is True and sc.cover_fit is True and _vis(pg, "_cover_fit_row")
+
+
+def test_ekran_kutusu_sabit_boyda_kuculmez_ingilizceyi_orter(overlay):
+    """Akıllı yazı boyu kapalıyken (font = min) ekrandaki kutu yazıyı küçültmez: uzun Türkçe alt satıra geçer ve kutu
+    yukarı büyür, sığmayan tek kelimede iki yana genişler; her durumda oyunun altyazısının yerini tümüyle örter."""
+    from PySide6.QtCore import QRect
+
+    english = QRect(300, 500, 120, 40)
+    word = overlay._place_cover(_cover("Kesinlikleeeeee!", rect=(300, 500, 120, 40), font=36.0, low=36.0))
+    assert word[1] == 36.0 and word[0].contains(english) and word[0].width() > 120
+    assert abs(word[0].center().x() - english.center().x()) <= 1  # iki yana eşit genişledi
+    long = overlay._place_cover(_cover("Bu çeviri oyunun İngilizce altyazısından çok daha uzun, tek satıra hiç "
+                                       "sığmıyor.", rect=(100, 500, 400, 40), font=36.0, low=36.0))
+    assert long[1] == 36.0 and long[0].contains(QRect(100, 500, 400, 40)) and long[0].bottom() == 539
+    assert long[0].top() < 500  # alt kenar sabit, yukarı büyüdü
