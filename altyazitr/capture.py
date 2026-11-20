@@ -167,6 +167,13 @@ class WindowCapturer:
         with self._lock:
             return self._full
 
+    def peek_full(self) -> np.ndarray | None:
+        """İstemci alanının son tam karesi, beklemeden (canlı önizleme); bir sonraki gelen kare için yenisi istenir.
+        Pencere değişmiyorsa Windows yeni kare vermez: son kare geçerli kalır."""
+        self._want_full = True
+        with self._lock:
+            return self._full
+
     @property
     def alive(self) -> bool:
         return not self.closed and winutil.is_window(self.hwnd)

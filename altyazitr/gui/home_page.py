@@ -1,5 +1,6 @@
-"""Ana sayfa: canlı başlık bandı (başlat/durdur + durum), çevrilecek bölge ve canlı önizleme, son çeviriler
-(gui/history.py), ekran altyazısı, OBS.
+"""Ana sayfa: canlı başlık bandı (başlat/durdur + durum), çevrilecek bölgenin canlı kaynak önizlemesi (OBS önizlemesi
+gibi: ekranın ya da pencerenin tamamı, bölge doğrudan üstünde düzenlenir; gui/source_view.py), son çeviriler
+(gui/history.py), ekran altyazısı, OBS. Geniş pencerede kaynak sağda kaymayan sütunda her zaman görünür.
 
 Sayfanın tek cesur öğesi canlı başlık bandıdır (DESIGN.md → "Cesaret tek yerde"); geri kalan bölümler
 başlık + ince ayırıcıyla ayrılan sade bantlardır.
@@ -15,21 +16,28 @@ from PySide6.QtWidgets import (QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit
                                QVBoxLayout, QWidget)
 
 from altyazitr import winutil
-from altyazitr.capture import WindowCapturer, grab_screen_rect
 from altyazitr.gui import icons
 from altyazitr.gui.common import _repolish, _tip
 from altyazitr.gui.controls import Segmented
 from altyazitr.gui.dialogs import OBS_NOT_CONNECTED_TIP, show_obs_help
 from altyazitr.gui.history import PRIVACY_TIP, HistoryPanel
-from altyazitr.gui.region_dialog import bgr_to_pixmap
 from altyazitr.gui.region_picker import logical_to_physical
+from altyazitr.gui.source_view import (IDLE_S, RUNNING_S, SourceGrabber, SourceView, frac_to_rect,
+                                       list_monitors, monitor_index_for, rect_to_frac)
 from altyazitr.gui.tokens import ICON, RADIUS, SPACE, SUNSET_STOPS, C, F, motion_ms
 from altyazitr.gui.widgets import Card, bind_check, label, page
 
 log = logging.getLogger(__name__)
 
-PREVIEW_TIP = ("Seçilen bölgenin canlı görüntüsü. Çalışırken yeşil boyalı alanlar 'metin' olarak algılanan "
-               "yerlerdir.")
+PREVIEW_TIP = "İşlem hattının okuduğu bölge. Yeşil boyalı alanlar 'metin' olarak algılanan yerlerdir."
+SOURCE_TIP = ("Kaynağın canlı görüntüsü (OBS önizlemesi gibi). Bölgeyi fareyle çizin, ortasından tutup taşıyın, "
+              "köşelerinden boyutlandırın; ok tuşları taşır, Shift ile ok tuşları boyutlandırır. Değişiklik hemen "
+              "geçerli olur, çeviri sürerken de.")
+SOURCE_HINT = "Altyazının çıktığı alanı fareyle çizin"
+SOURCE_NOTE = "Önizlemede çizin, taşıyın, köşelerinden boyutlandırın"
+WIDE_MIN = 980                 # sayfa bu genişlikten itibaren iki sütun: kaynak sağda, kaymayan sütunda
+RIGHT_MIN, RIGHT_MAX = 420, 820
+RIGHT_SHARE = 0.54             # geniş düzende kaynak sütununun sayfaya oranı
 PILL_H = 22  # durum rozeti yüksekliği (temadaki rozet köşe yarıçapının iki katı)
 
 
@@ -228,22 +236,61 @@ class _Metrics(QWidget):
 
 # --- sayfa ---------------------------------------------------------------------------------------
 class HomePage(QWidget):
+    """Üstte sabit başlık ve canlı bant (Başlat her zaman görünür). Geniş pencerede sağda kaymayan kaynak sütunu
+    (canlı önizleme ve okunan bölge, OBS önizlemesi gibi), solda son çeviriler, Ekranımda ve OBS; dar pencerede
+    hepsi alt alta, kaynak en üstte."""
+
     def __init__(self, win):
         super().__init__()
         self.win = win
         self.ctx = ctx = win.ctx
         s = ctx.s
-        sa, lay = page("Ana sayfa")
-        outer = QHBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(sa)
+        m = SPACE["xxl"]
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        lay.addWidget(self._build_live())
-        lay.addWidget(self._build_region())
-        lay.addWidget(self._build_history())
-        lay.addWidget(self._build_overlay())
-        lay.addWidget(self._build_obs())
-        lay.addStretch(1)
+        head = QWidget()
+        head.setObjectName("page")
+        hl = QVBoxLayout(head)
+        hl.setContentsMargins(m, m - 6, m, 0)
+        hl.setSpacing(SPACE["xl"])
+        hl.addWidget(label("Ana sayfa", "pageTitle"))
+        hl.addWidget(self._build_live())
+        root.addWidget(head)
+
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(0)
+        root.addLayout(body, 1)
+        self._sa, self._lay = page(None)
+        self._lay.setContentsMargins(m, SPACE["xl"], m, m)
+        body.addWidget(self._sa, 1)
+        self._side, self._side_lay = page(None)
+        self._side_lay.setContentsMargins(0, SPACE["xl"], m, m)
+        self._side.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._side.hide()
+        body.addWidget(self._side)
+
+        self.source_card = self._build_region()
+        self._lay.addWidget(self.source_card)
+        self._lay.addWidget(self._build_history())
+        self._lay.addWidget(self._build_overlay())
+        self._lay.addWidget(self._build_obs())
+        self._lay.addStretch(1)
+        self._side_lay.addStretch(1)
+        self._wide = False
+
+        # --- canlı kaynak önizlemesi
+        self.grabber = SourceGrabber(self)
+        self.grabber.frame.connect(self._on_frame)
+        self.grabber.failed.connect(self._on_grab_failed)
+        self._mons: list[tuple[int, int, int, int]] = []
+        self._mon_pick: int | None = None  # kullanıcının seçtiği monitör; None: bölgenin bulunduğu
+        self._hwnd = 0
+        self._target: tuple = ()
+        self._ticks = 0
+        self._watch = QTimer(self, interval=1000, timeout=self._watchdog)
 
         # --- sinyaller
         p = ctx.pipeline
@@ -258,9 +305,6 @@ class HomePage(QWidget):
         self.vis.setToolTip(f"Altyazıyı gizle/göster ({s.hotkeys.visibility})")
         self.btn.setToolTip(f"Çeviriyi başlat/durdur ({s.hotkeys.toggle})")
 
-        self._prev_timer = QTimer(self, interval=300, timeout=self._tick_preview)
-        self._wincap: WindowCapturer | None = None
-        self._wincap_key: tuple | None = None
         self._on_running(ctx.pipeline.running)
         self._on_visibility(ctx.display.visible)
         self.refresh_windows()
@@ -317,9 +361,9 @@ class HomePage(QWidget):
 
     def _build_region(self) -> Card:
         s = self.ctx.s
-        self.mode = Segmented([("Ekran bölgesi", "screen"), ("Uygulama penceresi", "window")],
+        self.mode = Segmented([("Ekran", "screen"), ("Uygulama penceresi", "window")],
                               icons=["monitor", "app-window"])
-        self.mode.group.button(0).setToolTip("Ekranın herhangi bir yerini fareyle seçin (önerilen)")
+        self.mode.group.button(0).setToolTip("Ekranın herhangi bir yerinden okuyun (önerilen)")
         self.mode.group.button(1).setToolTip("Belirli bir pencereden okuyun. Pencere başka pencerelerin "
                                              "arkasında kalsa da okunur; simge durumuna küçültmeyin.")
         self.mode.setValue(s.capture.mode)
@@ -328,57 +372,62 @@ class HomePage(QWidget):
 
         self.win_row = QWidget()
         self.win_combo = QComboBox()
-        self.win_combo.setMinimumWidth(220)
+        self.win_combo.setMinimumWidth(160)
         self.win_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.win_combo.setToolTip("Altyazının okunacağı pencere")
         self.win_combo.setAccessibleName("Okunacak pencere")
         self.win_combo.activated.connect(self._window_chosen)
         refresh = _icon_button("refresh", "Pencere listesini yenile")
         refresh.clicked.connect(self.refresh_windows)
-        wr = _hbox((self.win_combo, 1), refresh)
-        self.win_row.setLayout(wr)
+        self.win_row.setLayout(_hbox((self.win_combo, 1), refresh))
         rc.add(self.win_row)
 
-        # önizleme yüzeyi; bölge seçilmemişken içinde boş durum (ikon + açıklama + Bölge seç) durur
+        # birden çok ekran varsa önizlenen ekran
+        self.mon_combo = QComboBox()
+        self.mon_combo.setToolTip("Önizlenen ekran; bölgeyi bu ekranın görüntüsünde çizersiniz")
+        self.mon_combo.setAccessibleName("Önizlenen ekran")
+        self.mon_combo.activated.connect(self._mon_chosen)
+        self.mon_row = QWidget()
+        self.mon_row.setLayout(_hbox((self.mon_combo, 1)))
+        self.mon_row.hide()
+        rc.add(self.mon_row)
+
+        # canlı kaynak: ekranın ya da pencerenin tamamı, üstünde okunan bölge (önizlemede düzenlenir)
+        self.source = SourceView()
+        self.source.setToolTip(SOURCE_TIP)
+        self.source.committed.connect(self._region_committed)
+        rc.add(self.source)
+
+        self.b_region = QPushButton("Tam ekranda seç")
+        self.b_region.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.b_region.setIconSize(QSize(ICON["s"], ICON["s"]))
+        _set_icon(self.b_region, "crop", C.TEXT_2)
+        self.b_region.setToolTip("Bölgeyi gerçek boyutunda, ekranın üstünde çizin (ince ayar için)")
+        self.b_region.clicked.connect(self.win.select_region)
+        self.src_note = _ElidedLabel(SOURCE_NOTE)
+        self.src_note.setObjectName("muted")
+        self.src_note.setMinimumWidth(10)
+        self.src_note.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        rc.add(layout=_hbox(self.b_region, SPACE["s"], (self.src_note, 1)))
+
+        # okunan bölge (yalnız çeviri sürerken): işlem hattının gördüğü kare, metin sanılan yerler yeşil
         self.preview = QLabel()
         self.preview.setObjectName("preview")
         self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview.setMinimumHeight(148)
+        self.preview.setMinimumHeight(64)
         self.preview.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.preview.setToolTip(PREVIEW_TIP)
-        self.preview.setAccessibleName("Bölge önizlemesi")
-
-        self.b_region = QPushButton("Bölge seç")
-        self.b_region.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.b_region.setIconSize(QSize(ICON["s"], ICON["s"]))
-        self.b_region.setToolTip("Altyazının çıktığı alanı fareyle işaretleyin")
-        self.b_region.clicked.connect(self.win.select_region)
-
-        self._empty = QWidget(self.preview)
-        el = QVBoxLayout(self._empty)
-        el.setContentsMargins(0, 0, 0, 0)
-        el.setSpacing(SPACE["s"])
-        mark = QLabel()
-        mark.setPixmap(icons.pixmap("crop", ICON["l"], C.TEXT_3))
-        mark.setStyleSheet("background: transparent;")
-        msg = label("Henüz bölge seçilmedi", "muted")
-        el.addWidget(mark, 0, Qt.AlignmentFlag.AlignHCenter)
-        el.addWidget(msg, 0, Qt.AlignmentFlag.AlignHCenter)
-        el.addSpacing(SPACE["xs"])
-        self._empty_lay = el
-        pv = QVBoxLayout(self.preview)
-        pv.setContentsMargins(SPACE["l"], SPACE["l"], SPACE["l"], SPACE["l"])
-        pv.addWidget(self._empty, 0, Qt.AlignmentFlag.AlignCenter)
-        self._empty.hide()
-        self._empty_on = False
-        rc.add(self.preview)
-
+        self.preview.setAccessibleName("Okunan bölge")
         self.ink = _pill(label("", "pill"))
         self.ink.hide()
-        self._region_bar = QWidget()
-        self._bar_lay = _hbox(self.b_region, None, self.ink)
-        self._region_bar.setLayout(self._bar_lay)
-        rc.add(self._region_bar)
+        self.read_box = QWidget()
+        rb = QVBoxLayout(self.read_box)
+        rb.setContentsMargins(0, 0, 0, 0)
+        rb.setSpacing(SPACE["s"])
+        rb.addLayout(_hbox(label("Okunan bölge", "muted"), None, self.ink))
+        rb.addWidget(self.preview)
+        self.read_box.hide()
+        rc.add(self.read_box)
         return rc
 
     def _build_history(self) -> Card:
@@ -438,52 +487,51 @@ class HomePage(QWidget):
         obs.add(layout=_hbox((self.url, 1), copy, helpb))
         return obs
 
+    # --- duyarlı düzen ---------------------------------------------------------------------------
+    def resizeEvent(self, e) -> None:  # noqa: N802
+        super().resizeEvent(e)
+        self._relayout()
+
+    def _relayout(self) -> None:
+        """Geniş pencerede kaynak sağdaki kaymayan sütuna geçer (her zaman görünür); darda en üste döner."""
+        w = self.width()
+        wide = w >= WIDE_MIN
+        if wide != self._wide:
+            self._wide = wide
+            if wide:
+                self._lay.removeWidget(self.source_card)
+                self._side_lay.insertWidget(0, self.source_card)
+                self._side.show()
+            else:
+                self._side_lay.removeWidget(self.source_card)
+                self._lay.insertWidget(0, self.source_card)
+                self._side.hide()
+            self.source_card.show()
+        if wide:
+            right = max(RIGHT_MIN, min(RIGHT_MAX, int(w * RIGHT_SHARE)))
+            if self._side.width() != right:
+                self._side.setFixedWidth(right)
+
     # --- genel ----------------------------------------------------------------------
     def refresh(self) -> None:
-        c = self.ctx.s.capture
-        ready = c.is_ready() and (c.mode == "window" or len(c.rect) == 4)
-        self.b_region.setText("Bölgeyi değiştir" if ready else "Bölge seç")
-        _repolish(self.b_region, "" if ready else "primary")
-        _set_icon(self.b_region, "crop", C.TEXT_2 if ready else C.INVERSE)
-        if not ready and not self.ctx.pipeline.running:
-            self.preview.setPixmap(QPixmap())
-            self.preview.setText("")
-            self._set_empty(True)
-        else:
-            self._set_empty(False)
+        self._sync_source()
         self._check_overlap()
-
-    def _set_empty(self, on: bool) -> None:
-        """Boş durum: önizleme yüzeyinde ikon + 'Henüz bölge seçilmedi' + Bölge seç (b_region buraya taşınır).
-        Bölge seçiliyken b_region önizlemenin altındaki satıra döner."""
-        if on == self._empty_on:
-            return
-        self._empty_on = on
-        if on:
-            self._bar_lay.removeWidget(self.b_region)
-            self._empty_lay.addWidget(self.b_region, 0, Qt.AlignmentFlag.AlignHCenter)
-        else:
-            self._empty_lay.removeWidget(self.b_region)
-            self._bar_lay.insertWidget(0, self.b_region)
-        self.b_region.show()
-        self._empty.setVisible(on)
-        self._region_bar.setVisible(not on)
-        self.preview.setToolTip("" if on else PREVIEW_TIP)
 
     def showEvent(self, e) -> None:  # noqa: N802
         super().showEvent(e)
-        self._prev_timer.start()
+        self._mons = []  # ekran düzeni değişmiş olabilir: yeniden okunur
+        self._sync_source()
+        self._watch.start()
 
     def hideEvent(self, e) -> None:  # noqa: N802
         super().hideEvent(e)
-        self._prev_timer.stop()
-        self._stop_wincap()
+        self._watch.stop()
+        self.grabber.stop()
 
     # --- bölge / pencere ------------------------------------------------------------------
     def _mode_changed(self, mode, initial: bool = False) -> None:
         c = self.ctx.s.capture
         self.win_row.setVisible(mode == "window")
-        self._stop_wincap()
         if not initial and mode != c.mode:
             c.mode = mode
             self.ctx.save_later()
@@ -515,58 +563,138 @@ class HomePage(QWidget):
             return
         c = self.ctx.s.capture
         c.window_exe, c.window_title = data
-        self._stop_wincap()
         self.ctx.save_later()
         self.ctx.request_restart()
         self.refresh()
 
-    # --- canlı önizleme ------------------------------------------------------------------------
-    def _stop_wincap(self) -> None:
-        if self._wincap is not None:
-            self._wincap.stop()
-            self._wincap = None
-            self._wincap_key = None
+    def _mon_chosen(self, i: int) -> None:
+        if 0 <= i < len(self._mons):
+            self._mon_pick = i
+            self._sync_source()
 
-    def _tick_preview(self) -> None:
-        if self.ctx.pipeline.running:
-            self._stop_wincap()
-            return
+    # --- canlı kaynak --------------------------------------------------------------------------
+    def _monitors(self) -> list[tuple[int, int, int, int]]:
+        if not self._mons:
+            self._mons = list_monitors()
+            self.mon_combo.blockSignals(True)
+            self.mon_combo.clear()
+            for i, (_x, _y, w, h) in enumerate(self._mons):
+                self.mon_combo.addItem(f"Ekran {i + 1} ({w} × {h})")
+            self.mon_combo.blockSignals(False)
+        return self._mons
+
+    def _current_mon(self) -> tuple[int, int, int, int] | None:
+        mons = self._monitors()
+        if not mons:
+            return None
         c = self.ctx.s.capture
-        img = None
-        if c.mode == "screen":
-            if len(c.rect) == 4:
-                img = grab_screen_rect(c.rect)
-        elif c.window_exe or c.window_title:
-            key = (c.window_exe, c.window_title)
-            if self._wincap is None or self._wincap_key != key or not self._wincap.alive:
-                self._stop_wincap()
-                w = winutil.find_window(c.window_exe, c.window_title)
-                if w is not None:
-                    try:
-                        self._wincap = WindowCapturer(w.hwnd, tuple(c.region), 5)
-                        self._wincap.start()
-                        self._wincap_key = key
-                    except Exception:
-                        log.debug("Önizleme yakalaması başlatılamadı", exc_info=True)
-                        self._wincap = None
-            if self._wincap is not None:
-                self._wincap.set_region(tuple(c.region))
-                img = self._wincap.grab_roi()
-        if img is not None and img.size:
-            self._set_preview(bgr_to_pixmap(img))
+        if self._mon_pick is not None and self._mon_pick < len(mons):
+            i = self._mon_pick
+        else:
+            i = monitor_index_for(c.rect, mons) if len(c.rect) == 4 else 0
+        if self.mon_combo.currentIndex() != i:
+            self.mon_combo.setCurrentIndex(i)
+        return mons[i]
 
-    def _set_preview(self, pm: QPixmap) -> None:
-        if self._empty_on:  # bölge yokken boş durumun altına görüntü çizme
+    def _sync_source(self) -> None:
+        """Önizlenen kaynağı (ekran ya da pencere), bölgeyi ve açıklamaları ayarla eşitler; yakalayıcıyı ayarlar."""
+        c = self.ctx.s.capture
+        view = self.source
+        if c.mode == "window":
+            self.mon_row.hide()
+            win = winutil.find_window(c.window_exe, c.window_title) if (c.window_exe or c.window_title) else None
+            self._hwnd = win.hwnd if win is not None else 0
+            target: tuple = ("window", self._hwnd)
+            view.set_region(tuple(c.region) if len(c.region) == 4 else None)
+            view.set_hint("")
+            view.set_editable(bool(self._hwnd))
+            if not (c.window_exe or c.window_title):
+                msg = "Yukarıdaki listeden okunacak pencereyi seçin"
+            elif not self._hwnd:
+                msg = "Pencere açık değil. Oyunu ya da uzaktan oynatma uygulamasını açın."
+            else:
+                msg = "Pencerenin görüntüsü bekleniyor…"
+        else:
+            mon = self._current_mon()
+            self.mon_row.setVisible(len(self._mons) > 1)
+            target = ("screen", mon)
+            frac = rect_to_frac(c.rect, mon) if (mon and c.is_ready()) else None
+            view.set_region(frac)
+            view.set_editable(mon is not None)
+            view.set_hint("" if frac is not None else SOURCE_HINT)
+            msg = "Ekran görüntüsü bekleniyor…" if mon else "Ekran okunamadı"
+        if target != self._target:  # başka kaynak: eski kare yeni bölgeyle karışmasın
+            self._target = target
+            view.set_frame(None)
+        view.set_message(msg)
+        self._sync_grabber()
+
+    def _active(self) -> bool:
+        win = self.window()
+        return self.isVisible() and win is not None and win.isVisible() and not win.isMinimized()
+
+    def _sync_grabber(self) -> None:
+        """Önizleme yalnız sayfa görünürken ve pencere simge durumunda değilken çalışır; çeviri sürerken yavaşlar."""
+        if not self._active():
+            self.grabber.stop()
             return
-        w, h = max(100, self.preview.width() - 8), max(60, self.preview.height() - 8)
-        self.preview.setPixmap(pm.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio,
-                                         Qt.TransformationMode.SmoothTransformation))
+        c, pipe = self.ctx.s.capture, self.ctx.pipeline
+        running = bool(getattr(pipe, "running", False))
+        if c.mode == "window":
+            self.grabber.set_window(self._hwnd or None)
+            peek = getattr(pipe, "peek_full_frame", None)
+            self.grabber.set_borrow(peek if running and callable(peek) else None)
+        else:
+            self.grabber.set_borrow(None)
+            self.grabber.set_screen(self._target[1] if len(self._target) > 1 else None)
+        self.grabber.set_interval(RUNNING_S if running else IDLE_S)
+        self.grabber.set_max_width(round(self.source.width() * self.source.devicePixelRatioF()))
+        self.grabber.start()
+
+    def _watchdog(self) -> None:
+        """Saniyede bir: simge durumu / görünürlük değiştiyse yakalayıcı durur ya da sürer; pencere modunda pencere
+        sonradan açıldıysa bulunur."""
+        self._ticks += 1
+        if self.ctx.s.capture.mode == "window" and not self._hwnd and self._ticks % 3 == 0:
+            self._sync_source()
+        else:
+            self._sync_grabber()
+
+    def _on_frame(self, img, size) -> None:
+        if not self.isVisible():
+            return
+        self.source.set_frame(img, size)
+        self.source.set_message("")
+
+    def _on_grab_failed(self, err: str) -> None:
+        self.src_note.setText(err or SOURCE_NOTE)
+        self.src_note.setToolTip(err or "")
+
+    def _region_committed(self, frac) -> None:
+        """Önizlemede bölge değişti: hemen kaydedilir ve geçerli olur (çeviri sürüyorsa da)."""
+        c = self.ctx.s.capture
+        if c.mode == "window":
+            c.region = [round(float(v), 4) for v in frac]
+        else:
+            mon = self._current_mon()
+            if mon is None:
+                return
+            c.rect = frac_to_rect(frac, mon)
+            self.source.set_hint("")
+        edited = getattr(self.win, "region_edited", None)
+        if callable(edited):
+            edited()
+        else:
+            self.ctx.save_later()
+            self._check_overlap()
 
     def _on_pipeline_preview(self, img, ink: float) -> None:
         if not self.isVisible():
             return
-        self._set_empty(False)
-        self._set_preview(QPixmap.fromImage(img))
+        self.read_box.show()
+        w, h = max(100, self.preview.width() - 8), max(48, self.preview.height() - 8)
+        self.preview.setPixmap(QPixmap.fromImage(img).scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio,
+                                                             Qt.TransformationMode.SmoothTransformation))
         on = ink >= 0.003
         self.ink.setText("Metin var" if on else "Metin yok")
         self.ink.show()
@@ -585,6 +713,9 @@ class HomePage(QWidget):
             self.history.forget_lines()  # yeniden başlayan işlem hattı satır kimliklerini baştan sayabilir
         else:
             self.ink.hide()
+            self.read_box.hide()
+            self.preview.setPixmap(QPixmap())
+        self._sync_grabber()  # çeviri sürerken önizleme yavaşlar; pencere modunda hattın yakalaması paylaşılır
 
     def _on_status(self, msg: str) -> None:
         self.status.setText(msg)

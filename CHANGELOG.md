@@ -6,6 +6,25 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+### Eklendi
+
+- **Ana sayfada canlı kaynak önizlemesi (OBS önizlemesi gibi).** Ekranın ya da seçilen pencerenin tamamı canlı
+  görünür, okunan bölge üstünde çerçeveyle işaretlidir. Bölge doğrudan önizlemede çizilir, ortasından taşınır,
+  köşelerinden boyutlandırılır (ok tuşları da çalışır); değişiklik hemen, çeviri sürerken de geçerli olur.
+  Tam ekran seçici *Tam ekranda seç* olarak kaldı. Birden çok ekran varsa önizlenen ekran seçilir.
+- Geniş pencerede Ana sayfa iki sütun: kaynak sağda, kaymayan sütunda her zaman görünür; Başlat bandı üstte
+  sabit. Dar pencerede hepsi alt alta, kaynak en üstte. Pencere 1080p ekranda 1280×840 açılır (önce 980×760).
+- Çeviri sürerken okunan bölge (metin sanılan yerler yeşil) önizlemenin altında görünür.
+
+### Değişti
+
+- Önizleme düşük yükle çalışır: kare önizlemenin piksel genişliğine küçültülür, boşta 4, çeviri sürerken 2
+  kare/sn; sayfa görünmüyorken ya da pencere simge durumundayken durur. Pencere modunda çeviri sürerken işlem
+  hattının yakalaması paylaşılır (ikinci yakalama açılmaz). Ölçüm (1080p monitör): kare başına ~12,5 ms işlemci,
+  boşta bir çekirdeğin ~%5'i, çeviri sürerken ~%2,5'i.
+- Görünüm: "Oyun altyazısının üzerine" açıkken etkisiz ayarlar (Arka plan, İngilizce orijinal) gizlenir; Boyut'un
+  altında üst sınır notu.
+
 ### Düzeltildi
 
 - Güncelleme penceresi, sürüm notları uzunsa notların sonuna kaydırılmış açılıyordu; artık baştan başlar.

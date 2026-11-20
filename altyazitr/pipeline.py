@@ -639,6 +639,12 @@ class Pipeline(QObject):
         cap = self.capturer
         return cap.grab_full(timeout) if isinstance(cap, WindowCapturer) else None
 
+    def peek_full_frame(self) -> np.ndarray | None:
+        """Pencere modunda çalışan yakalamanın son tam karesi, beklemeden (Ana sayfanın canlı önizlemesi; ikinci bir
+        yakalama açılmasın). Ekran modunda ya da yakalama yokken None."""
+        cap = self.capturer
+        return cap.peek_full() if isinstance(cap, WindowCapturer) else None
+
     # --- yakalama + değişim algılama -----------------------------------
     def _open_capturer(self):
         c = self.s.capture

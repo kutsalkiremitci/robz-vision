@@ -164,12 +164,13 @@ STEPS: tuple[Step, ...] = (
          "Kısa bir turla nasıl kullanılacağını görün.",
          page="home"),
     Step("region", "Önce bölgeyi seçin",
-         "Altyazının çıktığı alanı fareyle işaretleyin. Belirli bir pencereden okumak isterseniz "
-         "yukarıdan Uygulama penceresi'ni seçin.",
+         "Canlı görüntüde altyazının çıktığı alanı fareyle çizin; ortasından taşıyın, köşelerinden "
+         "boyutlandırın. Pencereden okumak için Uygulama penceresi'ni seçin.",
+         (_home("source"),), page="home"),
+    Step("preview", "Tam ekranda seçim",
+         "İnce ayar için bölgeyi ekranın üstünde, gerçek boyutunda çizin. Çalışırken okunan bölge önizlemenin "
+         "altında görünür, metin sanılan yerler yeşildir.",
          (_home("b_region"),), page="home"),
-    Step("preview", "Canlı önizleme",
-         "Seçtiğiniz alan burada görünür. Çalışırken metin olarak algılanan yerler yeşille işaretlenir.",
-         (_home("preview"),), page="home"),
     Step("start", "Başlat", _start_body, (_home("btn"),), page="home"),
     Step("last", "Son çeviriler",
          "Okunan satırlar İngilizcesiyle burada birikir, en yenisi üstte. Kaçırdığınızı buradan okuyun; "

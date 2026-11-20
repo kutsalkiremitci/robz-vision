@@ -28,6 +28,7 @@ from PySide6.QtGui import (
     QColor,
     QFont,
     QFontMetrics,
+    QGuiApplication,
     QImage,
     QPainter,
     QPainterPath,
@@ -497,7 +498,15 @@ class MainWindow(QMainWindow):
         self.ctx = ctx
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(app_icon())
-        self.resize(980, 760)
+        # Ana sayfanın geniş düzeni (canlı kaynak sağda her zaman görünür) 1080p ekranda varsayılan olsun: ekran
+        # yeterince büyükse pencere 1280×840'a kadar büyür; eski varsayılanın (980×760) altına hiç inmez.
+        scr = QGuiApplication.primaryScreen()
+        avail = scr.availableGeometry() if scr is not None else None
+        w, h = 980, 760
+        if avail is not None:
+            w = max(w, min(1280, int(avail.width() * 0.92)))
+            h = max(h, min(840, int(avail.height() * 0.92)))
+        self.resize(w, h)
         self.setMinimumSize(780, 560)
         self._tray_notified = False
         self._quitting = False
@@ -917,12 +926,18 @@ class MainWindow(QMainWindow):
             c.region = [round(v, 4) for v in dlg.result_fraction]
             self._region_saved()
 
-    def _region_saved(self) -> None:
+    def _region_saved(self, toast: bool = True) -> None:
         self.ctx.save_later()
         self.ctx.pipeline.tracker.key = None
         self.refresh_all()
         self.ctx.display.push_style()
-        self.toast("Bölge kaydedildi", "success")
+        if toast:
+            self.toast("Bölge kaydedildi", "success")
+
+    def region_edited(self) -> None:
+        """Ana sayfanın canlı önizlemesinde bölge değişti (sürükleyip bırakma, ok tuşu): kaydedilir ve hemen geçerli
+        olur; değişikliği kullanıcı zaten gördüğü için bildirim yok."""
+        self._region_saved(toast=False)
 
     # --- hata / ilk çalıştırma -------------------------------------------------
     def _show_error(self, msg: str) -> None:

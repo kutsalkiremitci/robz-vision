@@ -249,7 +249,8 @@ def _home(qapp, monkeypatch):
 
     import altyazitr.gui.home_page as homemod
 
-    monkeypatch.setattr(homemod, "grab_screen_rect", lambda r: None)  # gerçek ekran yakalanmaz
+    monkeypatch.setattr(homemod, "list_monitors", lambda: [(0, 0, 1920, 1080)])  # gerçek ekran okunmaz
+    monkeypatch.setattr(homemod.SourceGrabber, "start", lambda self: None)  # gerçek ekran yakalanmaz
     monkeypatch.setattr(homemod.winutil, "list_windows", lambda: [])
 
     class Pipe(QObject):
