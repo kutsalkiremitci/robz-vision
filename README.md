@@ -253,7 +253,7 @@ monitörde ister televizyonda görürsünüz.
 
 <p align="center">
   <img src="docs/gorseller/kurulum/neler_lazim.png" width="860"
-       alt="Neler lazım çizimi: Windows bilgisayar ve monitör (yerel yapay zekâ çevirisi için ekran kartı notuyla), PS5, DualSense kol, PS5'in kutusundan çıkan USB-C şarj kablosu, HDMI kablo, Ethernet kablosu (önerilir), modem, HDMI girişli televizyon (her marka) ve isteğe bağlı capture kartı. Her malzemenin yanında hangi yolda gerektiğini gösteren küçük Yol 1–4 işaretleri var.">
+       alt="Gerekenler: bilgisayar ve monitör, PS5, DualSense, televizyon, modem, Ethernet kablosu, USB-C kablo, HDMI kablo ve isteğe bağlı capture kartı">
 </p>
 
 | Malzeme | Ne işe yarar | Hangi yolda |
@@ -269,7 +269,7 @@ monitörde ister televizyonda görürsünüz.
 
 <p align="center">
   <img src="docs/gorseller/kurulum/robz_vision_kurulum.png" width="860"
-       alt="Robz Vision kurulumu, soldan sağa adımlar: Releases sayfasından Setup.exe'yi indir; Windows uyarısında Ek bilgi, sonra Yine de çalıştır; kurulum sihirbazında İleri; ilk açılışta Yapay zekâ ile; modeller iner; Bölge seç; Onayla; Başlat.">
+       alt="Robz Vision'ı kurmanın dört adımı: 1 İndir ve kur, 2 Yapay zekâ ile, 3 Bölge seç, 4 Başlat">
 </p>
 
 1. **İndirin.** [Releases](https://github.com/kutsalkiremitci/robz-vision/releases/latest) sayfasında
@@ -291,7 +291,7 @@ yolunuzun adımlarında anlatılıyor. Kurulumun ayrıntıları: [Kurulum](#kuru
 
 <p align="center">
   <img src="docs/gorseller/kurulum/yol_secimi.png" width="860"
-       alt="Karar şeması: “Oyunu nerede oynuyorsun?” sorusundan dört kol çıkar: Yol 1 Bilgisayarda; Yol 2 PS5 ve bilgisayar; Yol 3 PS5, bilgisayar ve televizyon; Yol 4 Capture kartı. Altta ikinci soru: “Yayın yapacak mısın?” Evetse OBS'e Tarayıcı kaynağı.">
+       alt="Nerede oynuyorsun? Dört yol: Yol 1 Bilgisayarda, Yol 2 PS5 + bilgisayar, Yol 3 PS5 + TV, Yol 4 Capture kartı">
 </p>
 
 | | Kimin için | Ne gerekir |
@@ -314,7 +314,7 @@ Oyun bilgisayarda çalışıyor ve ekranda İngilizce altyazı var. Ek kablo ya 
 
 <p align="center">
   <img src="docs/gorseller/kurulum/yol1_bilgisayar.png" width="860"
-       alt="Yol 1 çizimi: bilgisayar monitöre bağlı. Monitörde oyun görüntüsü; İngilizce altyazının hemen üstünde Robz Vision'ın Türkçe kutusu.">
+       alt="Yol 1: bilgisayar HDMI kablosuyla monitöre bağlı; monitörde İngilizce altyazının üstünde Robz Vision'ın Türkçe kutusu">
 </p>
 
 1. **Oyunu hazırlayın.** Oyunun ayarlarında İngilizce altyazıyı açın. Oyunu *Pencereli tam ekran*
@@ -343,7 +343,7 @@ uygulaması da çalışır.
 
 <p align="center">
   <img src="docs/gorseller/kurulum/yol2_ps5_bilgisayar.png" width="860"
-       alt="Yol 2 çizimi: PS5 Ethernet kablosuyla modeme bağlı; bilgisayar aynı modeme Ethernet ya da Wi-Fi ile bağlı. DualSense bilgisayara USB-C kabloyla (ya da Bluetooth ile) bağlı. Bilgisayarda chiaki-ng (1080p, 60 FPS) ve Robz Vision çalışıyor; monitörde oyun ve Türkçe kutu.">
+       alt="Yol 2: PS5 ve bilgisayar Ethernet kablosuyla modeme, DualSense USB-C kabloyla bilgisayara, bilgisayar HDMI ile monitöre bağlı; monitörde Türkçe altyazı">
 </p>
 
 **PS5'te (bir kez)**
@@ -406,7 +406,7 @@ etmez, HDMI girişi olması yeter.
 
 <p align="center">
   <img src="docs/gorseller/kurulum/yol3_ps5_tv.png" width="860"
-       alt="Yol 3 çizimi: Yol 2'deki bağlantılar aynı (PS5 Ethernet ile modeme, bilgisayar modeme, DualSense USB-C ile bilgisayara), ama bilgisayar televizyona HDMI kablosuyla bağlı; TV'de oyun ve Türkçe kutu. Notlar: “TV markası fark etmez”, “Robz Vision TV'de değil bilgisayarda çalışır”. Kesik çizgiyle alternatif: “Win+K ile kablosuz yansıt (gecikme artar)”.">
+       alt="Yol 3: PS5 ve bilgisayar Ethernet kablosuyla modeme, DualSense USB-C kabloyla bilgisayara, bilgisayar HDMI ile televizyona bağlı; televizyonda Türkçe altyazı">
 </p>
 
 1. **PS5'i ve chiaki-ng'i hazırlayın.** [Yol 2](#yol-2-ps5i-bilgisayar-ekranında-oynuyorum)'nin 1–8.
@@ -444,7 +444,7 @@ sıkıştırması olmadığı için altyazı en net bu yolda okunur. Kol PS5'e h
 
 <p align="center">
   <img src="docs/gorseller/kurulum/yol4_capture.png" width="860"
-       alt="Yol 4 çizimi: PS5 HDMI kablosuyla capture kartına, kart USB ile bilgisayara, bilgisayar HDMI ile TV'ye ya da monitöre bağlı. Bilgisayarda OBS'in Pencereli Projektör penceresini Robz Vision okuyor. Notlar: PS5'te HDCP kapalı; kartın passthrough çıkışında çeviri görünmez.">
+       alt="Yol 4: PS5 HDMI ile capture kartına, capture kartı USB ile bilgisayara, bilgisayar HDMI ile TV ya da monitöre bağlı; ekranda Türkçe altyazı">
 </p>
 
 1. **HDCP'yi kapatın.** PS5'te *Ayarlar → Sistem → HDMI → HDCP'yi Etkinleştir* kapalı olmalı; açıkken kart
@@ -472,7 +472,7 @@ bakacaksanız ekrandaki kutuyu kapatabilirsiniz (**Ekranımda → Kapalı**).
 
 <p align="center">
   <img src="docs/gorseller/kurulum/yayin_obs.png" width="860"
-       alt="Yayın çizimi: Robz Vision'ın Ana sayfasındaki adres OBS'e Tarayıcı kaynağı olarak eklenir; OBS yayını Kick, Twitch ya da YouTube'a gönderir; izleyiciler oyunu Türkçe altyazıyla görür.">
+       alt="Yayın: Robz Vision (adres 127.0.0.1:8765) → OBS Tarayıcı kaynağı → yayın; izleyiciler Türkçe altyazıyı görür">
 </p>
 
 İzleyicilerinizin de Türkçe görmesi için Robz Vision'ın adresini OBS'e ekleyin. İzleyiciler hiçbir şey

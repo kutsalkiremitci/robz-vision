@@ -345,10 +345,11 @@ h3 { font-size: 1.375rem; }
 /* adım adım kurulum: her bölüm başlık + çizim + adımlar; adımlar .obs-steps, sekmeler .tabs */
 .guide-part { margin-top: clamp(48px, 6vw, 72px); padding-top: clamp(28px, 4vw, 40px); border-top: 1px solid var(--line); }
 .section-head + .guide-part { margin-top: 0; padding-top: 0; border-top: 0; }
-.guide { display: grid; gap: 20px; grid-template-areas: "head" "fig" "body"; }
+/* Çizim her genişlikte kap kadar geniş (masaüstünde 1160 px'e kadar), adımlar altında okunur satır boyunda */
+.guide { display: grid; gap: clamp(20px, 3vw, 32px); grid-template-areas: "head" "fig" "body"; }
 .guide-head { grid-area: head; }
 .guide-fig { grid-area: fig; margin: 0; }
-.guide-body { grid-area: body; min-width: 0; }
+.guide-body { grid-area: body; min-width: 0; max-width: 48rem; }
 .guide-head h3 { display: flex; align-items: center; gap: 14px; font-size: clamp(1.5rem, 1.3rem + .8vw, 1.875rem); }
 .guide-head p { margin-top: 12px; max-width: 36em; }
 .guide-fig a { display: block; border-radius: 10px; cursor: zoom-in; }
@@ -583,11 +584,6 @@ code.inline {
   .features { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: start; }
   .viewer { position: sticky; top: 24px; }
   .dl { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 56px; }
-  .guide {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-rows: auto 1fr;
-    grid-template-areas: "head fig" "body fig"; gap: 20px 56px; align-items: start;
-  }
-  .guide-fig { position: sticky; top: 24px; }
 }
 @media (max-width: 819px) {
   .steps li { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 16px; }
@@ -595,6 +591,9 @@ code.inline {
   .steps h3 { align-self: center; margin-bottom: 8px; }
 }
 @media (max-width: 640px) {
+  /* telefonda kurulum çizimleri kenardan kenara: her piksel okunurluğa gitsin */
+  .guide-fig { margin-inline: calc(-1 * var(--gutter)); }
+  .guide-fig a, .guide-fig img { border-radius: 0; border-inline: 0; }
   .who caption { display: block; }
   .who, .who tbody, .who tr, .who th, .who td { display: block; width: auto; }
   .who thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -757,7 +756,7 @@ code.inline {
             <p>Hepsi her yolda gerekmez. Yolunuzu 3. adımda seçeceksiniz.</p>
           </div>
           <figure class="guide-fig">
-            <a href="img/kurulum/neler_lazim.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/neler_lazim.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Gerekenlerin çizimi: Windows bilgisayar ve monitörü, PS5, DualSense kol, PS5 kutusundan çıkan USB-C kablo, HDMI kablo, Ethernet kablosu, modem, HDMI girişli televizyon ve isteğe bağlı capture kartı."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+            <a href="img/kurulum/neler_lazim.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/neler_lazim.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Gerekenler: bilgisayar ve monitör, PS5, DualSense, televizyon, modem, Ethernet kablosu, USB-C kablo, HDMI kablo ve isteğe bağlı capture kartı"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
           </figure>
           <div class="guide-body">
             <dl class="feats">
@@ -777,7 +776,7 @@ code.inline {
             <p>Her yolda aynı. Robz Vision her zaman bilgisayarda çalışır.</p>
           </div>
           <figure class="guide-fig">
-            <a href="img/kurulum/robz_vision_kurulum.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/robz_vision_kurulum.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Robz Vision kurulumu adım adım: dosyayı indir, Windows uyarısında Ek bilgi ve Yine de çalıştır, sihirbazda İleri, ilk açılışta Yapay zekâ ile, modeller iner, sonra Bölge seç, Onayla ve Başlat."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+            <a href="img/kurulum/robz_vision_kurulum.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/robz_vision_kurulum.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Robz Vision'ı kurmanın dört adımı: 1 İndir ve kur, 2 Yapay zekâ ile, 3 Bölge seç, 4 Başlat"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
           </figure>
           <div class="guide-body">
             <ol class="obs-steps">
@@ -798,7 +797,7 @@ code.inline {
             <p>Oyunu nerede oynuyorsunuz? Size uyan yolu açın.</p>
           </div>
           <figure class="guide-fig">
-            <a href="img/kurulum/yol_secimi.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol_secimi.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Karar şeması. Oyunu nerede oynuyorsunuz? Bilgisayarda ise Yol 1. PS5’i bilgisayar ekranında oynuyorsanız Yol 2. PS5’i televizyonda oynuyorsanız Yol 3, araya bilgisayar girer. Capture kartınız varsa Yol 4. Yayın yapacaksanız OBS’e Tarayıcı kaynağı eklenir."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+            <a href="img/kurulum/yol_secimi.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol_secimi.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Nerede oynuyorsun? Dört yol: Yol 1 Bilgisayarda, Yol 2 PS5 + bilgisayar, Yol 3 PS5 + TV, Yol 4 Capture kartı"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
           </figure>
           <div class="guide-body">
             <ul class="facts">
@@ -826,7 +825,7 @@ code.inline {
                 <p>Oyun bilgisayarınızda, görüntü monitörde. Ek kablo gerekmez.</p>
               </div>
               <figure class="guide-fig">
-                <a href="img/kurulum/yol1_bilgisayar.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol1_bilgisayar.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 1: oyun bilgisayarda çalışır, görüntü monitörde. Türkçe kutu oyunun İngilizce altyazısının üstünde görünür."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+                <a href="img/kurulum/yol1_bilgisayar.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol1_bilgisayar.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 1: bilgisayar HDMI kablosuyla monitöre bağlı; monitörde İngilizce altyazının üstünde Robz Vision'ın Türkçe kutusu"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
               </figure>
               <div class="guide-body">
                 <ol class="obs-steps">
@@ -847,7 +846,7 @@ code.inline {
                 <p>PS5’in görüntüsü ağ üzerinden bilgisayara gelir, kolu bilgisayara takıp oynarsınız. Bunun için ücretsiz bir uzaktan oynatma programı gerekir: açık kaynak <a href="https://chiaki-ng.github.io/chiaki-ng/" rel="noopener">chiaki-ng</a> ya da Sony’nin resmî PS Remote Play uygulaması. İkisiyle de çalışır; adımlar chiaki-ng için.</p>
               </div>
               <figure class="guide-fig">
-                <a href="img/kurulum/yol2_ps5_bilgisayar.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol2_ps5_bilgisayar.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 2: PS5 Ethernet kablosuyla modeme, bilgisayar aynı modeme bağlı. DualSense kol USB-C kabloyla bilgisayara takılı. Bilgisayarda chiaki-ng ve Robz Vision açık."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+                <a href="img/kurulum/yol2_ps5_bilgisayar.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol2_ps5_bilgisayar.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 2: PS5 ve bilgisayar Ethernet kablosuyla modeme, DualSense USB-C kabloyla bilgisayara, bilgisayar HDMI ile monitöre bağlı; monitörde Türkçe altyazı"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
               </figure>
               <div class="guide-body">
                 <h5>PS5’te</h5>
@@ -887,7 +886,7 @@ code.inline {
                 </div>
               </div>
               <figure class="guide-fig">
-                <a href="img/kurulum/yol3_ps5_tv.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol3_ps5_tv.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 3: Yol 2’deki kurulum, ek olarak bilgisayar HDMI kabloyla televizyona bağlı. TV markası fark etmez; Win+K ile kablosuz yansıtma da olur. Robz Vision bilgisayarda çalışır."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+                <a href="img/kurulum/yol3_ps5_tv.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol3_ps5_tv.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 3: PS5 ve bilgisayar Ethernet kablosuyla modeme, DualSense USB-C kabloyla bilgisayara, bilgisayar HDMI ile televizyona bağlı; televizyonda Türkçe altyazı"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
               </figure>
               <div class="guide-body">
                 <ol class="obs-steps">
@@ -916,7 +915,7 @@ code.inline {
                 </div>
               </div>
               <figure class="guide-fig">
-                <a href="img/kurulum/yol4_capture.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol4_capture.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 4: PS5 HDMI ile capture kartına, kart USB ile bilgisayara, bilgisayar HDMI ile televizyona ya da monitöre bağlı. PS5’te HDCP kapalı. Kartın HDMI çıkışındaki görüntüde çeviri görünmez."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+                <a href="img/kurulum/yol4_capture.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yol4_capture.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yol 4: PS5 HDMI ile capture kartına, capture kartı USB ile bilgisayara, bilgisayar HDMI ile TV ya da monitöre bağlı; ekranda Türkçe altyazı"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
               </figure>
               <div class="guide-body">
                 <ol class="obs-steps">
@@ -941,7 +940,7 @@ code.inline {
             <p>Yayın yapmıyorsanız bu adımı atlayın. İzleyiciler Türkçe altyazıyı yayında görür; ekranınızdaki kutu varsayılan olarak yayına girmez.</p>
           </div>
           <figure class="guide-fig">
-            <a href="img/kurulum/yayin_obs.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yayin_obs.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yayın: Robz Vision’ın Ana sayfasındaki adres kopyalanır, OBS’e Tarayıcı kaynağı olarak eklenir ve Türkçe altyazı yayında görünür."><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
+            <a href="img/kurulum/yayin_obs.webp" target="_blank" rel="noopener"><img class="shot" src="img/kurulum/yayin_obs.webp" width="1600" height="900" loading="lazy" decoding="async" alt="Yayın: Robz Vision (adres 127.0.0.1:8765) → OBS Tarayıcı kaynağı → yayın; izleyiciler Türkçe altyazıyı görür"><span class="sr-only"> (büyük boyutu yeni sekmede açılır)</span></a>
           </figure>
           <div class="guide-body">
             <ol class="obs-steps">

@@ -50,7 +50,7 @@ Altyazı ne kadar okunaklıysa (büyük, kenarlı ya da arka planlı) sonuç o k
 
 ### Neler lazım
 
-![Neler lazım çizimi: Windows bilgisayar ve monitör (yerel yapay zekâ çevirisi için ekran kartı notuyla), PS5, DualSense kol, PS5'in kutusundan çıkan USB-C şarj kablosu, HDMI kablo, Ethernet kablosu (önerilir), modem, HDMI girişli televizyon (her marka) ve isteğe bağlı capture kartı; her malzemenin yanında hangi yolda gerektiğini gösteren küçük Yol 1–4 işaretleri](gorseller/kurulum/neler_lazim.png)
+![Gerekenler: bilgisayar ve monitör, PS5, DualSense, televizyon, modem, Ethernet kablosu, USB-C kablo, HDMI kablo ve isteğe bağlı capture kartı](gorseller/kurulum/neler_lazim.png)
 
 - **Her yolda:** Windows 10 (2004 ve sonrası) ya da Windows 11, 64 bit bir bilgisayar ve monitör. Ekran kartı
   gerekmez; yerel yapay zekâ çevirisi için en az 8 GB bellekli NVIDIA ya da AMD kart gerekir
@@ -346,7 +346,7 @@ Oyunu nerede oynadığınıza göre dört yol var. Robz Vision her yolda **bilgi
 konsola kurulmaz. Robz Vision'ı henüz kurmadıysanız önce
 [README'deki rehberin 1. adımını](../README.md#1-robz-visionı-kurun) yapın.
 
-![Karar şeması: “Oyunu nerede oynuyorsun?” sorusundan dört kol çıkar: Yol 1 Bilgisayarda; Yol 2 PS5 ve bilgisayar; Yol 3 PS5, bilgisayar ve televizyon; Yol 4 Capture kartı. Altta ikinci soru: “Yayın yapacak mısın?” Evetse OBS'e Tarayıcı kaynağı](gorseller/kurulum/yol_secimi.png)
+![Nerede oynuyorsun? Dört yol: Yol 1 Bilgisayarda, Yol 2 PS5 + bilgisayar, Yol 3 PS5 + TV, Yol 4 Capture kartı](gorseller/kurulum/yol_secimi.png)
 
 - **[Yol 1](#yol-1-bilgisayarda-oynuyorum):** oyun bilgisayarda.
 - **[Yol 2](#yol-2-ps5i-bilgisayar-ekranında-oynuyorum):** PS5'i bilgisayar ekranında oynuyorsunuz.
@@ -357,7 +357,7 @@ konsola kurulmaz. Robz Vision'ı henüz kurmadıysanız önce
 
 ### Yol 1: Bilgisayarda oynuyorum
 
-![Yol 1 çizimi: bilgisayar monitöre bağlı; monitörde oyun görüntüsü, İngilizce altyazının hemen üstünde Robz Vision'ın Türkçe kutusu](gorseller/kurulum/yol1_bilgisayar.png)
+![Yol 1: bilgisayar HDMI kablosuyla monitöre bağlı; monitörde İngilizce altyazının üstünde Robz Vision'ın Türkçe kutusu](gorseller/kurulum/yol1_bilgisayar.png)
 
 1. Oyunu *Pencereli tam ekran* modunda açın, İngilizce altyazıyı açın.
 2. Robz Vision'da **Ekran bölgesi** ile altyazı alanını seçin ([Bölgeyi seçin](#2-bölgeyi-seçin)),
@@ -369,7 +369,7 @@ OBS ile uğraşmanıza gerek yok. Oyun sırasında `Ctrl+Alt+H` ile çeviriyi gi
 
 ### Yol 2: PS5'i bilgisayar ekranında oynuyorum
 
-![Yol 2 çizimi: PS5 Ethernet kablosuyla modeme, bilgisayar aynı modeme Ethernet ya da Wi-Fi ile bağlı; DualSense bilgisayara USB-C kabloyla (ya da Bluetooth ile) bağlı; bilgisayarda chiaki-ng (1080p, 60 FPS) ve Robz Vision çalışıyor, monitörde oyun ve Türkçe kutu](gorseller/kurulum/yol2_ps5_bilgisayar.png)
+![Yol 2: PS5 ve bilgisayar Ethernet kablosuyla modeme, DualSense USB-C kabloyla bilgisayara, bilgisayar HDMI ile monitöre bağlı; monitörde Türkçe altyazı](gorseller/kurulum/yol2_ps5_bilgisayar.png)
 
 PS5 yerinde kalır; görüntüsü ev ağı üzerinden bilgisayara gelir, oyunu bilgisayardan oynarsınız. Burada
 ücretsiz ve açık kaynak uzaktan oynatma programı chiaki-ng'i anlatıyoruz; Sony'nin resmî PS Remote Play
@@ -417,7 +417,7 @@ konsolu bilgisayarda açıp Robz Vision'da onun penceresini seçin.
 
 ### Yol 3: PS5'i televizyonda oynuyorum
 
-![Yol 3 çizimi: Yol 2'deki bağlantılar aynı, ama bilgisayar televizyona HDMI kablosuyla bağlı; TV'de oyun ve Türkçe kutu. Notlar: “TV markası fark etmez”, “Robz Vision TV'de değil bilgisayarda çalışır”. Kesik çizgiyle alternatif: “Win+K ile kablosuz yansıt (gecikme artar)”](gorseller/kurulum/yol3_ps5_tv.png)
+![Yol 3: PS5 ve bilgisayar Ethernet kablosuyla modeme, DualSense USB-C kabloyla bilgisayara, bilgisayar HDMI ile televizyona bağlı; televizyonda Türkçe altyazı](gorseller/kurulum/yol3_ps5_tv.png)
 
 Robz Vision televizyonun kendisinde çalışamaz: TV uygulamaları HDMI'dan gelen konsol görüntüsünü okuyamaz.
 Bilgisayarı TV'ye bağlarsınız; TV bilgisayarın ekranı olur, Türkçe kutu TV'de oyunun üstünde görünür. TV'nin
@@ -443,7 +443,7 @@ Robz Vision uyarır, kutuyu biraz kaydırın.
 
 ### Yol 4: Capture kartıyla oynuyorum
 
-![Yol 4 çizimi: PS5 HDMI kablosuyla capture kartına, kart USB ile bilgisayara, bilgisayar HDMI ile TV'ye ya da monitöre bağlı; bilgisayarda OBS'in Pencereli Projektör penceresini Robz Vision okuyor. Notlar: PS5'te HDCP kapalı; kartın passthrough çıkışında çeviri görünmez](gorseller/kurulum/yol4_capture.png)
+![Yol 4: PS5 HDMI ile capture kartına, capture kartı USB ile bilgisayara, bilgisayar HDMI ile TV ya da monitöre bağlı; ekranda Türkçe altyazı](gorseller/kurulum/yol4_capture.png)
 
 Remote Play sıkıştırması olmadığı için altyazı en net bu yolda okunur. Kol PS5'e her zamanki gibi bağlı kalır.
 Robz Vision'ın OBS önizlemesini değil, ham oyun görüntüsünü okuması gerekir; önizlemede Türkçe altyazı da
@@ -469,7 +469,7 @@ oynuyorsanız Türkçeyi bilgisayarın ekranında okursunuz. Ekrandaki kutuyu ka
 
 ### Yayın yapıyorum
 
-![Yayın çizimi: Robz Vision'ın Ana sayfasındaki adres OBS'e Tarayıcı kaynağı olarak eklenir; OBS yayını Kick, Twitch ya da YouTube'a gönderir; izleyiciler oyunu Türkçe altyazıyla görür](gorseller/kurulum/yayin_obs.png)
+![Yayın: Robz Vision (adres 127.0.0.1:8765) → OBS Tarayıcı kaynağı → yayın; izleyiciler Türkçe altyazıyı görür](gorseller/kurulum/yayin_obs.png)
 
 Yolunuz hangisi olursa olsun yayın aynıdır:
 
