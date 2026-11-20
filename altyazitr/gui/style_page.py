@@ -93,6 +93,14 @@ COVER_HINT = {
     STREAM: "Altyazı OBS'te oyunun altyazısının yerine yazılır; alttan uzaklık, genişlik ve maske kullanılmaz. "
             "Oyun görüntüsü OBS tuvalini tam kaplamalı (Ctrl+F).",
 }
+# Örtme açıkken işe yaramayan ayarlar gizlenir (değerleri silinmez; kapanınca geri gelir): kutunun rengi
+# Yerleşim'deki "Kutu rengi"dir ve hep opaktır (render._cover_painter arka planı çizmez), İngilizce orijinal de
+# zaten örtülen yazıdır. Yazı oyunun satırı boyunda çizilir; görünümün boyu yalnız üst sınırdır (display.cover_fonts).
+COVER_HIDDEN = "Arka plan ve İngilizce orijinal ayarları bu kipte kullanılmadığı için gizlendi."
+COVER_SIZE_NOTE = {
+    SCREEN: "Oyunun altyazısının üzerine açık: yazı oyunun yazısıyla aynı boyda; Boyut ve Yazı ölçeği üst sınır.",
+    STREAM: "Oyunun altyazısının üzerine açık: yazı oyunun yazısıyla aynı boyda; Boyut üst sınır.",
+}
 
 # --- düzen ölçüleri ----------------------------------------------------------------
 WIDE_MIN = 1080            # sayfa bu genişlikten itibaren iki sütun: ayarlar solda, önizleme sağda sabit
@@ -290,6 +298,8 @@ class StylePage(QWidget):
         tc.add(self._field("Kalınlık", self.weight))
         self._size_row = self._field("Boyut", self.size, stretch=True, tip=SIDE_TEXT[STREAM]["size_tip"])
         tc.add(self._size_row)
+        self._size_note = label("", "muted", wrap=True)  # yalnız örtme açıkken (bkz. _sync_bg)
+        tc.add(self._size_note)
         tc.add(self._field("Renk", self.color))
         tc.add(self._field("Vurgulu kelimeler", self.highlight, tip=HIGHLIGHT_TIP))
         self._hl_color_row = self._field("Vurgu rengi", self.highlight_color, tip=HIGHLIGHT_COLOR_TIP)
@@ -327,6 +337,7 @@ class StylePage(QWidget):
         bd.addWidget(self._field("Kutu rengi", self.bg_color))
         bd.addWidget(self._field("Opaklık", self.bg_alpha, stretch=True, tip="Kutunun arkayı ne kadar kapattığı"))
         bc.add(self.bg_details)
+        self._bg_card = bc  # örtme açıkken gizli (bkz. _sync_bg)
         lay.addWidget(bc)
 
         # --- yerleşim: oyun altyazısının üzerine (iki görünümde ayrı) ------------------------------
@@ -389,8 +400,9 @@ class StylePage(QWidget):
                              indent=ind))
         adv.add(self._field("Geçiş süresi", self.fade, stretch=True, tip="Altyazının belirme ve kaybolma süresi",
                              indent=ind))
-        adv.add(self._field("İngilizce orijinal", self.show_orig,
-                             tip="Çevirinin altında İngilizce metni de gösterir", indent=ind))
+        self._show_orig_row = self._field("İngilizce orijinal", self.show_orig,
+                                          tip="Çevirinin altında İngilizce metni de gösterir", indent=ind)
+        adv.add(self._show_orig_row)
         self._orig_row = self._field("Orijinal boyutu", self.orig_size, stretch=True,
                                      tip="İngilizce metnin, çeviriye göre boyutu", indent=ind)
         adv.add(self._orig_row)
@@ -660,15 +672,20 @@ class StylePage(QWidget):
         self.bg_details.setVisible(op > 0.001)
         self.outline_color_row.setVisible(self.st.outline_width > 0)
         self._hl_color_row.setVisible(bool(self.st.highlight))
-        self._orig_row.setVisible(bool(self.st.show_original))
         stream = self._prof == STREAM  # OBS maskesi yalnız yayında
         # "Oyun altyazısının üzerine": kutu rengi maske rengidir (iki seçici aynı alanı gösterir). Açıkken bu
-        # görünümün konumu (alttan uzaklık, genişlik) ve OBS maskesi kullanılmaz: denetimleri pasif.
+        # görünümün konumu (alttan uzaklık, genişlik) ve OBS maskesi kullanılmaz: denetimleri pasif. Arka plan ve
+        # İngilizce orijinal hiç çizilmez: gizlenir (bkz. COVER_HIDDEN); Boyut yalnız üst sınırdır (COVER_SIZE_NOTE).
         cover = bool(self.st.cover_original)
+        self._orig_row.setVisible(bool(self.st.show_original) and not cover)
+        self._show_orig_row.setVisible(not cover)
+        self._bg_card.setVisible(not cover)
+        self._size_note.setText(COVER_SIZE_NOTE[self._prof])
+        self._size_note.setVisible(cover)
         self.mask_color.setColor(self.st.mask_color)
         self.cover_color.setColor(self.st.mask_color)
         self._cover_color_row.setVisible(cover)
-        self._cover_hint.setText(COVER_HINT[self._prof])
+        self._cover_hint.setText(f"{COVER_HINT[self._prof]} {COVER_HIDDEN}")
         self._cover_hint.setVisible(cover)
         for r in (self._bottom_row, self._maxw_row, self._mask_row):
             r.setEnabled(not cover)

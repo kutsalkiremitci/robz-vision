@@ -714,6 +714,39 @@ def _vis(pg, name):
     return getattr(pg, name).isVisibleTo(pg)
 
 
+def test_ortme_acikken_etkisiz_ayarlar_gizlenir_degerler_korunur(page):
+    """Örtme açıkken Arka plan kartı ve İngilizce orijinal satırları gizlenir, Boyut'un altına üst sınır notu
+    gelir; değerler silinmez, kapanınca aynen geri gelir. İki görünüm ayrı; hazır stil kartı geri açmaz."""
+    pg, s, _calls = page()
+    sc = s.screen_style
+    sc.bg_opacity, sc.bg_color, sc.show_original, sc.original_size_percent = 0.9, "#1A1A2E", True, 70
+    pg.sync()
+    assert _vis(pg, "_bg_card") and _vis(pg, "_show_orig_row") and _vis(pg, "_orig_row")
+    assert not _vis(pg, "_size_note")
+
+    pg.cover.group.button(1).click()  # Ekranımda: örtme açık
+    assert sc.cover_original is True
+    assert not _vis(pg, "_bg_card") and not _vis(pg, "_show_orig_row") and not _vis(pg, "_orig_row")
+    assert _vis(pg, "_size_note") and "Yazı ölçeği" in pg._size_note.text()
+    assert "gizlendi" in pg._cover_hint.text() and "Konumu ayarla" in pg._cover_hint.text()
+
+    pg._apply({"bg_opacity": 0.45, "text_color": "#FFE066"})  # hazır stil: yazı değişir, kart gizli kalır
+    assert sc.text_color == "#FFE066" and not _vis(pg, "_bg_card")
+
+    pg.side.group.button(1).click()  # Yayınımda: örtme kapalı, her şey görünür
+    assert not s.style.cover_original and _vis(pg, "_bg_card") and _vis(pg, "_show_orig_row")
+    assert not _vis(pg, "_size_note")
+    pg.cover.group.button(1).click()
+    assert not _vis(pg, "_bg_card") and _vis(pg, "_size_note") and "Yazı ölçeği" not in pg._size_note.text()
+
+    pg.side.group.button(0).click()  # Ekranımda'ya dönüş: hâlâ örtme açık
+    pg.cover.group.button(0).click()  # kapat: değerler aynen, satırlar geri
+    assert sc.cover_original is False and (sc.bg_opacity, sc.bg_color) == (0.45, "#1A1A2E")
+    assert (sc.show_original, sc.original_size_percent) == (True, 70)
+    assert _vis(pg, "_bg_card") and _vis(pg, "_show_orig_row") and _vis(pg, "_orig_row")
+    assert not _vis(pg, "_size_note")
+
+
 def test_gorunum_sayfasinda_iki_gorunumde_ayri(page):
     pg, s, calls = page()
     assert pg.side_key == "screen" and pg.cover.toolTip().startswith("Oyunun İngilizce altyazısını koyu")
