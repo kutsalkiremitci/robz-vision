@@ -6,6 +6,23 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.5.0] - 2026-11-20
+
+### Eklendi
+
+- **Akıllı yazı boyu** (*Görünüm → Yerleşim*, "Oyun altyazısının üzerine" açıkken görünür, *Ekranımda* ve
+  *Yayınımda* ayrı, varsayılan açık). Açıkken Türkçe eskisi gibi oyunun yazısıyla aynı boyda yazılır, sığmazsa
+  biraz küçülür. Kapatılırsa yazı *Boyut* ayarındaki sabit boyda kalır (*Ekranımda* *Ölçek* de uygulanır) ve
+  küçülmez. Kutu yine İngilizceyi örter: Türkçe sığmazsa alt satıra geçer ve kutu yukarı büyür, tek bir kelime
+  sığmazsa kutu iki yana genişler.
+
+### Değişti
+
+- **"Oyun altyazısının üzerine" yeni kurulumda açık gelir** (iki görünümde de). Güncelleyen kullanıcıların seçimi
+  korunur; ayar dosyası okunamayıp sıfırdan başlayan kurulum da yeni kurulum gibi açılır. *Görünüm*'deki
+  "Varsayılana dön" de bu yeni varsayılana döner.
+- OBS'teki kapak kutusu sığmayan tek kelimeyi artık ortasından bölmez; ekrandaki kutu gibi iki yana genişler.
+
 ## [1.4.1] - 2026-11-20
 
 ### Düzeltildi
@@ -382,7 +399,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.4.1...HEAD
+[Yayımlanmadı]: ../../compare/v1.5.0...HEAD
+[1.5.0]: ../../releases/tag/v1.5.0
 [1.4.1]: ../../releases/tag/v1.4.1
 [1.4.0]: ../../releases/tag/v1.4.0
 [1.3.2]: ../../releases/tag/v1.3.2
