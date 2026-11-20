@@ -6,6 +6,16 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.4.1] - 2026-11-20
+
+### Düzeltildi
+
+- **Windows kullanıcı adında Türkçe harf (ö, ü, ş, ç, ğ, ı) olunca çeviri başlamıyordu.** Hızlı çeviri modeli
+  indirilmiş olsa da "Çeviri motoru hazırlanamadı: NOT_FOUND … src.spm.model: No such file or directory" hatası
+  çıkıyordu. Sebep, modelin sözcük bölücüsünün (SentencePiece) Windows'ta ASCII dışı harfli klasör yolunu
+  açamaması. Bölücü modeli artık dosyanın içeriğinden yüklenir; yol ne olursa olsun çalışır. Modeli yeniden indirmek
+  gerekmez ([#3](https://github.com/kutsalkiremitci/robz-vision/issues/3)).
+
 ## [1.4.0] - 2026-11-20
 
 ### Eklendi
@@ -372,7 +382,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.4.0...HEAD
+[Yayımlanmadı]: ../../compare/v1.4.1...HEAD
+[1.4.1]: ../../releases/tag/v1.4.1
 [1.4.0]: ../../releases/tag/v1.4.0
 [1.3.2]: ../../releases/tag/v1.3.2
 [1.3.1]: ../../releases/tag/v1.3.1
