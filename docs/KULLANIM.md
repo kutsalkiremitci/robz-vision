@@ -119,17 +119,35 @@ kendiliğinden yapay zekâya geçer.
 
 ## 2. Bölgeyi seçin
 
-Ana sayfadaki **Çevrilecek bölge** bölümünde iki yol var:
+Ana sayfadaki **Çevrilecek bölge** bölümü (geniş pencerede sağda, büyük) OBS'in önizlemesi gibi kaynağın canlı
+görüntüsünü gösterir: ekranınızın ya da seçtiğiniz pencerenin tamamı. Okunan bölge bu görüntünün üstünde
+camgöbeği çerçeveyle işaretlidir; çerçevenin dışı karartılır, çerçevenin üstünde bölgenin boyutu (piksel)
+yazar. Bölümün başlığındaki seçimle iki yoldan birini seçersiniz:
 
-- **Ekran bölgesi** (önerilen): Ekranın herhangi bir yerini fareyle seçersiniz.
-- **Uygulama penceresi:** Listeden bir pencere seçer, sonra o pencerenin içinde altyazı alanını
-  işaretlersiniz. Pencere başka pencerelerin arkasında kalsa da okunur, ama simge durumuna küçültülmemeli.
-  Oyunu ikinci ekranda ya da başka pencerelerin arkasında tutuyorsanız bu yolu seçin.
+- **Ekran** (önerilen): ekranın herhangi bir yerinden okunur; önizlemede ekranın tamamı görünür. Birden çok
+  ekranınız varsa (ör. monitör ve TV) önizlemenin üstündeki listeden hangi ekranı göreceğinizi seçin.
+- **Uygulama penceresi:** listeden okunacak pencereyi seçersiniz; önizlemede o pencerenin görüntüsü belirir ve
+  bölgeyi pencerenin üstünde çizersiniz. Liste kendiliğinden güncellenir (yeni açılan pencereler eklenir);
+  yenile düğmesiyle de tazelenir. Pencere başka pencerelerin arkasında kalsa da okunur, ama simge durumuna
+  küçültülmemeli; küçültülürse önizlemenin köşesinde uyarı çıkar. Oyunu ikinci ekranda ya da başka pencerelerin
+  arkasında tutuyorsanız bu yolu seçin.
 
-**Bölge seç**'e bastığınızda ekran kararır, oyun arkada akmaya devam eder. Altyazının çıktığı alanı fareyle
-çizin ve **Onayla**'ya basın.
+**Bölgeyi önizlemede çizin.** Oyunun görüntüsü ekrandayken:
 
-![Bölge seçici GTA VI sahnesinin üstünde: altyazı satırının çevresine çizilmiş çerçeve ve altında Onayla, Yeniden seç, İptal düğmeleri](gorseller/gta6_bolge_secimi.png)
+- Altyazının çıktığı alanı önizlemede fareyle çizin: çerçevenin dışında bir yere basıp sürükleyin.
+- Çerçeveyi ortasından tutup taşıyın, kenarlarından ya da köşelerinden boyutlandırın.
+- Önizlemeye tıkladıktan sonra ok tuşları çerçeveyi taşır, Shift ile ok tuşları boyutlandırır.
+- Değişiklik hemen kaydedilir ve geçerli olur, çeviri sürerken de.
+
+**İlk açılışta bölge hazır gelir.** Bölge hiç seçilmemişse birincil ekranın alt-orta altyazı şeridi (GTA VI'nın
+altyazısının yeri) seçili gelir; altyazı oradaysa doğrudan **Başlat**'a basabilirsiniz, değilse çerçeveyi
+kaydırın. Pencere modunda da ilk bölge aynı şerittir. Daha önce seçtiğiniz bölge korunur.
+
+**Tam ekranda seç** (bölümün başlığında) ince ayar içindir: bölgeyi gerçek boyutunda çizersiniz. Ekran
+modunda ekran kararır, oyun arkada akmaya devam eder; alanı fareyle çizip **Onayla**'ya basın. Pencere
+modunda pencerenin o anki görüntüsü ayrı bir pencerede açılır; alanı çizip **Kaydet**'e basın.
+
+![Tam ekranda seç: bölge seçici GTA VI sahnesinin üstünde, altyazı satırının çevresine çizilmiş çerçeve ve altında Onayla, Yeniden seç, İptal düğmeleri](gorseller/gta6_bolge_secimi.png)
 
 İyi bir bölge için:
 
@@ -141,15 +159,19 @@ Ana sayfadaki **Çevrilecek bölge** bölümünde iki yol var:
   kenarsız ya da sola dayalı bir oyunda bu ayarı kapatın.
 - Bölgeyi gereğinden büyük tutmayın. Küçük bölge hem daha hızlı hem daha doğru okunur.
 
-Seçtiğiniz bölgenin canlı görüntüsü Ana sayfada görünür. Program çalışırken metin olarak algılanan yerler
-yeşile boyanır; altyazı geldiğinde yeşil alan görünmüyorsa bölge ya da eşik ayarı yanlıştır.
+Çeviri sürerken önizlemenin altında *Okunan bölge* görünür: programın okuduğu kare. Metin olarak algılanan
+yerler yeşile boyanır, yanında *Metin var* ya da *Metin yok* yazar; altyazı geldiğinde yeşil alan görünmüyorsa
+bölge ya da eşik ayarı yanlıştır.
+
+Canlı önizleme yalnız ekranda gösterilir; kaydedilmez, hiçbir yere gönderilmez. Az yük bindirir (saniyede
+birkaç kare, küçültülmüş) ve Ana sayfa görünmüyorken ya da Robz Vision simge durumundayken durur.
 
 ## 3. Başlatın
 
-**Başlat**'a basın. Üstteki bant *Çalışıyor* olur. Oyunda altyazı belirince Türkçesi ekrandaki kutuda ve
+**Başlat**'a basın. Üstteki çubukta *Çalışıyor* yazar. Oyunda altyazı belirince Türkçesi ekrandaki kutuda ve
 OBS'te görünür.
 
-![Ana sayfa: Başlat düğmesi, bölge önizlemesi, son çeviri, Ekranımda bölümü ve OBS başlığı; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı](gorseller/ana_pencere.png)
+![Ana sayfa: üstte Başlat düğmesi ve durum; solda Son çeviriler; sağda ekranın canlı önizlemesi, altyazı şeridi camgöbeği çerçeveyle işaretli, başlığında Tam ekranda seç ve Ekran / Uygulama penceresi seçimi; altta yan yana Ekranımda ve OBS; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı](gorseller/ana_pencere.png)
 
 - **Test** düğmesi ekranınızda ve OBS'te 5 saniyelik örnek bir altyazı gösterir. Oyun açmadan görünümü
   denemek için kullanın.
@@ -161,8 +183,10 @@ OBS'te görünür.
   3–20 sn arası; uzun satırlara okuma süresi kadar pay eklenir). Böylece oyunda sabit duran bir yazı (tuş
   ipucu, menü) çeviriyi ekranda tutmaz: süresi dolup kalkan satır, yazı oyunda dursa da geri gelmez.
 
-**Son çeviriler** listesi bu oturumda okunan satırları Türkçesi ve İngilizcesiyle gösterir, en yenisi üstte.
-Başlığın yanında en son satırın OCR ve çeviri süreleri durur. Kaçırdığınız bir satırı buradan okuyabilirsiniz:
+En son satırın OCR ve çeviri süreleri üstteki çubukta, **Test** düğmesinin solunda durur.
+
+Ana sayfadaki **Son çeviriler** listesi (geniş pencerede solda, boydan boya) bu oturumda okunan satırları
+Türkçesi ve İngilizcesiyle gösterir, en yenisi üstte. Kaçırdığınız bir satırı buradan okuyabilirsiniz:
 
 - Satırın üzerine gelip sağdaki kopyala simgesine basın, Türkçesi kopyalanır. Sağ tıklayıp
   *İngilizce + Türkçe kopyala*'yı da seçebilirsiniz.
@@ -188,8 +212,9 @@ Konum ipuçları:
 - **Sıfırla** kutuyu varsayılan konumuna döndürür. Kutudaki yazının görünümünü (boyut, renk, arka plan)
   *Görünüm* sayfasında **Ekranımda** seçiliyken ayarlarsınız; yayındaki altyazı bundan etkilenmez.
 - Kutu oyunun üstünde görünmüyorsa oyunu *Pencereli tam ekran* (kenarlıksız) modunda çalıştırın.
-- Birden çok ekranınız varsa (ör. monitör ve TV) kutuyu oyunun açık olduğu ekrana sürükleyin. Bölge seçici
-  de bütün ekranlarda açılır.
+- Birden çok ekranınız varsa (ör. monitör ve TV) kutuyu oyunun açık olduğu ekrana sürükleyin. Bölgeyi de o
+  ekranda seçin: önizlemenin üstündeki listeden ekranı seçip çizin ya da **Tam ekranda seç**'i kullanın (bütün
+  ekranlarda açılır).
 
 **Yayında da görünsün** seçeneği kutuyu ekran yakalamaya açar. Yalnızca OBS'te *Ekran Yakalama* ile yayın
 yapıyor ve tarayıcı kaynağı kullanmak istemiyorsanız açın. Bu seçenek açıkken kutu okunan bölgenin üstüne
@@ -260,6 +285,10 @@ görünümüyle gösterir.
   gerekirse ikinci satıra geçer ve kutu yukarı doğru büyür. Oyun altyazıyı kaldırınca kutu da kalkar. Açıkken o
   tarafın konum ayarları kullanılmaz (*Ekranımda* kutunun kaydettiğiniz yeri korunur, kapatınca oraya döner;
   *Yayınımda* OBS maskesi gerekmez, oyun görüntüsü OBS tuvalini tam kaplamalıdır). Kutunun rengi *Kutu rengi*'nden.
+  Oyun bölgede aynı anda birden çok ayrı yazı gösterirse (ör. altta konuşma, üstünde daha küçük görev yazısı)
+  her biri ayrı okunur ve çevrilir, her birinin üstüne kendi yerinde ve kendi boyunda ayrı bir kutu konur; en çok
+  3 kutu. Biri kaybolunca yalnız onun kutusu kalkar. Yapay zekânın gördüğü önceki satırlara yalnız asıl yazı
+  (en büyük yazılı olan, genellikle konuşma) girer. Örtme iki tarafta da kapalıyken okuma eskisi gibidir.
 - **Ölçek** (yalnız *Ekranımda*): kutudaki yazıyı kenarı ve arka planıyla birlikte büyütür ya da küçültür.
   Kutunun yerini Ana sayfadaki **Konumu ayarla** belirler.
 - **Konum ve genişlik** (yalnız *Yayınımda*): OBS'teki altyazının alt kenara uzaklığı ve en fazla genişliği.
@@ -360,8 +389,8 @@ konsola kurulmaz. Robz Vision'ı henüz kurmadıysanız önce
 ![Yol 1: bilgisayar HDMI kablosuyla monitöre bağlı; monitörde İngilizce altyazının üstünde Robz Vision'ın Türkçe kutusu](gorseller/kurulum/yol1_bilgisayar.png)
 
 1. Oyunu *Pencereli tam ekran* modunda açın, İngilizce altyazıyı açın.
-2. Robz Vision'da **Ekran bölgesi** ile altyazı alanını seçin ([Bölgeyi seçin](#2-bölgeyi-seçin)),
-   **Başlat**'a basın.
+2. Robz Vision'da **Ekran** seçiliyken Ana sayfadaki canlı önizlemede altyazı alanını çizin (ilk açılışta
+   alt-orta şerit seçili gelir; [Bölgeyi seçin](#2-bölgeyi-seçin)), **Başlat**'a basın.
 3. **Konumu ayarla** ile kutuyu İngilizce altyazının hemen üstüne yerleştirin
    ([Türkçe kutuyu yerleştirin](#4-türkçe-kutuyu-ekranınıza-yerleştirin)).
 
@@ -403,9 +432,9 @@ uygulaması da çalışır.
 **Her oynayışta**
 
 9. chiaki-ng'de PS5'e tıklayın; görüntü bir pencerede açılır. Pencereyi büyütün ya da tam ekran yapın.
-10. Robz Vision'da **Uygulama penceresi**'ni seçin, listeden chiaki-ng'in oyun penceresini seçip altyazı
-    alanını işaretleyin ([Bölgeyi seçin](#2-bölgeyi-seçin)). Pencereyi tam ekran kullanıyorsanız
-    **Ekran bölgesi** de olur.
+10. Robz Vision'da **Uygulama penceresi**'ni seçin, listeden chiaki-ng'in oyun penceresini seçin. Önizlemede
+    o pencerenin görüntüsü belirir; altyazı alanını üstünde fareyle çizin ([Bölgeyi seçin](#2-bölgeyi-seçin)).
+    Pencereyi tam ekran kullanıyorsanız **Ekran** da olur.
 11. **Başlat**'a basın ve kutuyu yerleştirin.
 
 Uzaktan oynatma görüntüsü sıkıştırıldığı için altyazı bulanık olabilir. Okumalar bozuksa PS5'i modeme kabloyla
@@ -433,8 +462,9 @@ markası fark etmez, HDMI girişi olması yeter.
 6. chiaki-ng penceresini TV'de tam ekran yapın, sonra Yol 2'nin 9–11. adımlarını yapın.
 
 **Monitör de açık kalsın isterseniz** *Win+P*'de *Genişlet*'i seçin: chiaki-ng penceresini TV'ye taşıyın,
-Robz Vision monitörde kalsın. Bölge seçici bütün ekranlarda açılır; Türkçe kutuyu *Ekranımda → Konumu ayarla*
-ile TV ekranına sürükleyin.
+Robz Vision monitörde kalsın. **Ekran** modunda önizlemenin üstündeki listeden TV'yi seçip bölgeyi onun
+görüntüsünde çizin ya da **Tam ekranda seç** ile doğrudan TV'de çizin (seçici bütün ekranlarda açılır). Türkçe
+kutuyu *Ekranımda → Konumu ayarla* ile TV ekranına sürükleyin.
 
 **Kablo yerine kablosuz.** TV'niz kablosuz ekran yansıtmayı (Miracast) destekliyorsa bilgisayarda *Win+K*'ye
 basıp listeden TV'yi seçin (LG'de *Screen Share*). Gecikme artar; hikâye oyunlarında genelde sorun olmaz.
@@ -446,8 +476,8 @@ Robz Vision uyarır, kutuyu biraz kaydırın.
 ![Yol 4: PS5 HDMI ile capture kartına, capture kartı USB ile bilgisayara, bilgisayar HDMI ile TV ya da monitöre bağlı; ekranda Türkçe altyazı](gorseller/kurulum/yol4_capture.png)
 
 Remote Play sıkıştırması olmadığı için altyazı en net bu yolda okunur. Kol PS5'e her zamanki gibi bağlı kalır.
-Robz Vision'ın OBS önizlemesini değil, ham oyun görüntüsünü okuması gerekir; önizlemede Türkçe altyazı da
-vardır.
+Robz Vision'ın OBS önizlemesini değil, ham oyun görüntüsünü okuması gerekir; OBS önizlemesinde Türkçe altyazı
+da vardır.
 
 1. PS5'te *Ayarlar → Sistem → HDMI → HDCP'yi Etkinleştir*'i kapatın; açıkken kart görüntüyü alamaz.
 2. PS5'in HDMI çıkışını capture kartının HDMI girişine, kartı USB ile bilgisayara takın. TV ya da monitör
@@ -455,8 +485,9 @@ vardır.
 3. Kartı OBS'e kaynak olarak ekleyin. OBS'te capture kartı kaynağına sağ tıklayıp
    **Pencereli Projektör (Kaynak)**'ı açın. Bu pencere yalnızca oyun görüntüsünü gösterir; oyunu bu pencereden
    oynarsınız. Kartın kendi önizleme uygulaması da olur.
-4. Robz Vision'da **Uygulama penceresi** ile bu projektör penceresini seçin ve altyazı alanını işaretleyin.
-   Projektör penceresi başka pencerelerin arkasında kalabilir, ama simge durumuna küçültülmemeli.
+4. Robz Vision'da **Uygulama penceresi** ile bu projektör penceresini seçin; önizlemede pencerenin görüntüsü
+   belirir, altyazı alanını üstünde çizin. Projektör penceresi başka pencerelerin arkasında kalabilir, ama simge
+   durumuna küçültülmemeli.
 5. **Başlat**'a basın ve kutuyu yerleştirin.
 6. Yayın yapıyorsanız Ana sayfadaki adresi OBS'e **Tarayıcı** kaynağı olarak ekleyin ve capture kartı
    kaynağının üstüne taşıyın. İsterseniz *Görünüm → Yayınımda → Gelişmiş ayarlar → OBS'te orijinali kapat* ile

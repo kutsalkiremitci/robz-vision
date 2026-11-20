@@ -40,8 +40,10 @@ Arayüz yeniden tasarlandığında bu betiği yeniden çalıştırmanız yeterli
 
 GİZLİLİK: Görseller hiçbir zaman gerçek ekranı yakalamaz. Arayüz görüntüleri ayrı bir süreçte, masaüstünde
 pencere açmadan alınır; o süreçte ekran/pencere yakalayan her işlev (mss, grab_screen_rect, WindowCapturer,
-snapshot_window, pencere listesi) sahte oyun sahnesi döndüren ya da hiçbir şey döndürmeyen sürümlerle
-değiştirilir. Böylece masaüstündeki sohbetler, sekmeler veya pencere adları görsellere giremez.
+snapshot_window, pencere listesi, monitör listesi) sahte oyun sahnesi döndüren ya da hiçbir şey döndürmeyen
+sürümlerle değiştirilir. Ana sayfanın canlı önizlemesi (SourceGrabber) hiç çalışmaz; önizlemede sahte oyun sahnesi
+görünür (bkz. tools/arayuz_goruntusu.py). Böylece masaüstündeki sohbetler, sekmeler veya pencere adları görsellere
+giremez.
 """
 
 from __future__ import annotations

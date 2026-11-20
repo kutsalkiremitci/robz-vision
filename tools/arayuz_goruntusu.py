@@ -1,9 +1,14 @@
 """Arayüzün tüm ekranlarını masaüstünde pencere açmadan PNG olarak kaydeder (tasarım denetimi için).
 
-Kullanım:  python tools/arayuz_goruntusu.py ÇIKTI_KLASÖRÜ [--genislik 1100]
+Kullanım:  python tools/arayuz_goruntusu.py ÇIKTI_KLASÖRÜ [--genislik 1280] [--yukseklik 840]
 Çıktı: ana_pencere.png, sayfa_<ad>.png (tam yükseklik), secici.png, overlay_ayar.png, overlay_altyazi.png,
        bolge_penceresi.png, obs_yardim.png, guncelleme.png, ikonlar.png
+Pencere varsayılan olarak uygulamanın 1080p ekrandaki açılış boyutunda (1280×840): Ana sayfa geniş düzende.
 Kullanıcının ayar dosyasına yazmaz; boş bir port seçer.
+
+GİZLİLİK: Gerçek ekran ve pencereler hiçbir zaman yakalanmaz. Ana sayfanın canlı önizlemesi (SourceGrabber) hiç
+çalışmaz; yerine sahte oyun sahnesi (tools/test_penceresi.paint_scene) gösterilir. Monitör listesi sabit tek
+1920×1080 ekran, pencere listesi boştur; mss, pencere yakalama ve pencere görüntüsü alma kapatılır.
 """
 
 from __future__ import annotations
@@ -31,10 +36,11 @@ def _free_port() -> int:
 def main() -> int:
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "arayuz_goruntuleri")
     out.mkdir(parents=True, exist_ok=True)
-    width = int(sys.argv[sys.argv.index("--genislik") + 1]) if "--genislik" in sys.argv else 1100
+    width = int(sys.argv[sys.argv.index("--genislik") + 1]) if "--genislik" in sys.argv else 1280
+    height = int(sys.argv[sys.argv.index("--yukseklik") + 1]) if "--yukseklik" in sys.argv else 840
 
     import numpy as np
-    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtCore import QPoint, QSize, Qt
     from PySide6.QtGui import QColor, QPainter, QPixmap
     from PySide6.QtWidgets import QApplication, QScrollArea
 
@@ -65,33 +71,71 @@ def main() -> int:
     s.first_run = False
     s.tour_seen = True  # tanıtım turu ekran görüntülerine karışmasın
     s.server.port = _free_port()
-    s.capture.rect = [240, 820, 1440, 180]
+    from altyazitr.config import DEFAULT_REGION
+    from altyazitr.gui.source_view import frac_to_rect
 
-    # GİZLİLİK: Ana sayfa canlı önizlemesi normalde GERÇEK ekranı yakalar. Bu araçta ekran yerine sahte bir
-    # oyun sahnesi (tools/test_penceresi.paint_scene) kullanılır; görüntülere masaüstü içeriği karışmaz.
+    s.capture.mode = "screen"
+    s.capture.rect = frac_to_rect(DEFAULT_REGION, FAKE_MON)  # yeni kullanıcının varsayılan altyazı şeridi
+
+    # GİZLİLİK: Ana sayfanın canlı önizlemesi normalde GERÇEK ekranı (ya da seçili pencereyi) yakalar. Bu araçta
+    # ekranı ya da pencereleri okuyan her işlev sahte sürümüyle değiştirilir; önizlemede sahte bir oyun sahnesi
+    # (tools/test_penceresi.paint_scene) görünür. Görüntülere masaüstü içeriği, pencere adı ya da sohbet karışmaz.
+    scene = _fake_scene()
     _fake_frame = _fake_region_frame(s.capture.rect)
     import altyazitr.capture as capmod
     import altyazitr.gui.home_page as homemod
+    import altyazitr.gui.main_window as mwmod
+    import altyazitr.gui.source_view as svmod
+    import altyazitr.pipeline as plmod
+    import altyazitr.winutil as wu
 
     def _fake_grab(_rect):
         return _fake_frame.copy()
 
+    def _no_mss(*_a, **_k):
+        raise capmod.CaptureError("Görsel üretiminde ekran yakalama kapalı")
+
+    class _NoCapture:
+        def __init__(self, *_a, **_k):
+            raise capmod.CaptureError("Görsel üretiminde ekran ve pencere yakalama kapalı")
+
     capmod.grab_screen_rect = _fake_grab
-    if hasattr(homemod, "grab_screen_rect"):
-        homemod.grab_screen_rect = _fake_grab
+    capmod._new_mss = _no_mss
+    capmod.snapshot_window = lambda *a, **k: None
+    capmod.WindowCapturer = capmod.RegionCapturer = _NoCapture
+    svmod.SourceGrabber.start = lambda self: None  # önizleme yakalayıcısı hiç çalışmaz
+    svmod.list_monitors = lambda: [FAKE_MON]
+    wu.list_windows = lambda: []
+    wu.find_window = lambda *a, **k: None
+    for mod in (homemod, mwmod, plmod):  # adıyla içe aktarılmış kopyalar da
+        for name, fake in (("grab_screen_rect", _fake_grab), ("snapshot_window", capmod.snapshot_window),
+                           ("WindowCapturer", _NoCapture), ("RegionCapturer", _NoCapture),
+                           ("list_monitors", svmod.list_monitors)):
+            if hasattr(mod, name):
+                setattr(mod, name, fake)
     ctx = appmod.AppContext(s)
     from altyazitr.gui.main_window import PAGES, MainWindow
 
     win = MainWindow(ctx)
     win.tray.hide()
     hide_on_screen(win)
-    win.resize(width, 820)
+    win.resize(width, height)
     win.show()
     pump(0.5)
     # Araç çakışmasın diye rastgele boş bir portta çalışır; görüntülerde varsayılan adres görünsün
     home_url = getattr(win.pages.get("home"), "url", None)
     if home_url is not None:
         home_url.setText(DOC_URL)
+
+    def fake_source() -> None:
+        """Ana sayfanın canlı önizlemesine sahte oyun sahnesi (yakalayıcı çalışmadığı için kare hiç gelmez)."""
+        src = getattr(win.pages.get("home"), "source", None)
+        if src is not None:
+            src.set_frame(scene, QSize(*FAKE_MON[2:]))
+            src.set_message("")
+            src.set_notice("")
+            pump(0.05)
+
     try:
         # örnek içerik: son çeviri + durum
         ctx.pipeline.subtitle.emit({"text": "Arabaya bin, Vice City'ye gidiyoruz.", "speaker": "LUCIA",
@@ -102,6 +146,8 @@ def main() -> int:
         for key, _title, _cls in PAGES:
             win.goto(key)
             pump(0.3)
+            if key == "home":
+                fake_source()
             win.grab().save(str(out / f"ana_pencere_{key}.png"))
             pg = win.pages[key]
             sa = pg.findChild(QScrollArea)
@@ -111,6 +157,7 @@ def main() -> int:
             inner.grab().save(str(out / f"sayfa_{key}.png"))
         win.goto("home")
         pump(0.2)
+        fake_source()
         win.grab().save(str(out / "ana_pencere.png"))
 
         # bölge seçici
@@ -148,10 +195,10 @@ def main() -> int:
         _on_bg(ov.grab()).save(str(out / "overlay_altyazi.png"))
 
         # pencere modu bölge penceresi
-        from altyazitr.gui.region_dialog import RegionDialog
+        from altyazitr.gui.region_dialog import PRESET_BOTTOM, RegionDialog
 
         frame = (np.random.default_rng(0).random((720, 1280, 3)) * 60 + 40).astype(np.uint8)
-        dlg = RegionDialog(frame, (0.12, 0.74, 0.76, 0.22), win)
+        dlg = RegionDialog(frame, PRESET_BOTTOM, win)
         hide_on_screen(dlg)
         dlg.show()
         pump(0.2)
@@ -196,19 +243,33 @@ def main() -> int:
     return 1 if errors else 0
 
 
+FAKE_MON = (0, 0, 1920, 1080)  # görsellerdeki tek sahte ekran (fiziksel piksel)
+_SCENE = []
+
+
+def _fake_scene():
+    """Gerçek ekranın yerine 1920×1080 sahte oyun sahnesi (QImage, RGB888); t=0.5: ilk altyazı ekranda."""
+    if not _SCENE:
+        from PySide6.QtGui import QImage, QPainter
+
+        sys.path.insert(0, str(ROOT / "tools"))
+        from test_penceresi import paint_scene
+
+        W, H = FAKE_MON[2:]
+        img = QImage(W, H, QImage.Format.Format_RGB888)
+        p = QPainter(img)
+        paint_scene(p, 0.5, W, H)
+        p.end()
+        _SCENE.append(img)
+    return _SCENE[0]
+
+
 def _fake_region_frame(rect):
     """Seçili bölgenin yerine sahte oyun sahnesinin aynı kesiti (BGR numpy)."""
     import numpy as np
-    from PySide6.QtGui import QImage, QPainter
 
-    sys.path.insert(0, str(ROOT / "tools"))
-    from test_penceresi import paint_scene
-
-    W, H = 1920, 1080
-    img = QImage(W, H, QImage.Format.Format_RGB888)
-    p = QPainter(img)
-    paint_scene(p, 0.5, W, H)  # t=0.5: ilk altyazı ekranda
-    p.end()
+    img = _fake_scene()
+    W, H = img.width(), img.height()
     a = np.frombuffer(img.constBits(), np.uint8).reshape(H, img.bytesPerLine())[:, :W * 3].reshape(H, W, 3)
     x, y, w, h = rect
     return np.ascontiguousarray(a[y:y + h, x:x + w, ::-1])

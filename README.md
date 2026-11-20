@@ -74,8 +74,8 @@ Oyun görseli © Rockstar Games / Take-Two Interactive.</sub></p>
 <table>
   <tr>
     <td width="33%" valign="top">
-      <img src="docs/gorseller/ana_pencere.png" alt="Robz Vision ana sayfası: Başlat düğmesi, çevrilecek bölgenin önizlemesi, son çeviri, Ekranımda bölümü ve OBS başlığı; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı"><br>
-      <sub><b>Ana sayfa:</b> Başlat, bölge önizlemesi, son çeviriler, Ekranımda ve OBS; kenar çubuğunda sürüm ve Kick bağlantısı.</sub>
+      <img src="docs/gorseller/ana_pencere.png" alt="Robz Vision ana sayfası: üstte Başlat düğmesi, durum ve son satırın OCR ve çeviri süreleri; solda Son çeviriler listesi; sağda Çevrilecek bölge, başlığında Tam ekranda seç düğmesi ve Ekran / Uygulama penceresi seçimi, altında ekranın canlı önizlemesi ve üstünde camgöbeği çerçeveyle işaretli altyazı şeridi; altta yan yana Ekranımda ve OBS; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı"><br>
+      <sub><b>Ana sayfa:</b> üstte Başlat; solda son çeviriler, sağda bölgesi çerçeveli canlı önizleme (bölge doğrudan üstünde çizilir), altında Ekranımda ve OBS.</sub>
     </td>
     <td width="33%" valign="top">
       <img src="docs/gorseller/gorunum.png" alt="Görünüm sayfası: Ekranımda ve Yayınımda seçici, pembe vurgulu örnek altyazıyla canlı önizleme, beş hazır stil ve yazı ayarları"><br>
@@ -109,7 +109,7 @@ Oyun görseli © Rockstar Games / Take-Two Interactive.</sub></p>
       Bölgeyi tam ortalı seçmeniz gerekmez.</td>
     <td width="33%" valign="top"><b>Oyun altyazısının üzerine</b><br>
       İsterseniz Türkçe, İngilizcenin tam yerine yazılır: koyu kutu İngilizceyi örter, oyun Türkçe altyazılıymış
-      gibi görünür.</td>
+      gibi görünür. Konuşma ve görev yazısı aynı anda çıkarsa ikisi de kendi kutusuyla örtülür.</td>
   </tr>
   <tr>
     <td valign="top"><b>Ekranınızda ve yayında</b><br>
@@ -160,11 +160,13 @@ Oyun görseli © Rockstar Games / Take-Two Interactive.</sub></p>
 - **Oyun altyazısının üzerine** (*Görünüm → Yerleşim*, *Ekranımda* ve *Yayınımda* ayrı, varsayılan kapalı).
   Türkçe çeviri oyunun İngilizce altyazısının tam yerine yazılır; koyu, tamamen kapalı bir kutu İngilizceyi
   örter. Kutu her satırda altyazının yerine ve genişliğine oturur, Türkçe oyunun yazısıyla aynı boydadır; uzun
-  çeviride yazı biraz küçülür, gerekirse kutu yukarı doğru büyür.
+  çeviride yazı biraz küçülür, gerekirse kutu yukarı doğru büyür. Oyun aynı anda birden çok yazı gösterirse
+  (altta konuşma, üstünde küçük görev yazısı) her biri ayrı çevrilir ve kendi kutusuyla örtülür; en çok 3 kutu.
 - **İki ayrı çıktı.** Kendi ekranınızda taşıyıp boyutlandırabileceğiniz bir altyazı kutusu, izleyicileriniz
   için de bir OBS Tarayıcı Kaynağı. İkisinin konumu birbirinden bağımsızdır.
-- **Bölge ya da pencere.** Altyazının çıktığı alanı fareyle seçersiniz. İsterseniz belirli bir uygulama
-  penceresinden okursunuz; pencere başka pencerelerin arkasında kalsa da çalışır.
+- **Bölge ya da pencere.** Altyazının çıktığı alanı Ana sayfadaki canlı önizlemede fareyle çizersiniz; ilk
+  açılışta ekranın alt-orta altyazı şeridi seçili gelir. İsterseniz belirli bir uygulama penceresinden
+  okursunuz; pencere başka pencerelerin arkasında kalsa da çalışır.
 - **Satır kaçmaz, takılı kalmaz.** Hızlı konuşmada son çeviriler ekranda ve OBS'te alt alta kalır. Oyunda
   sabit duran bir yazı (tuş ipucu, menü) çeviriyi ekranda tutmaz. Ana sayfadaki *Son çeviriler* listesinden
   kaçırdığınız satırı yeniden okuyup kopyalayabilirsiniz.
@@ -196,14 +198,16 @@ yokken ~0,3 çekirdek. Ayrıntılar [CHANGELOG](CHANGELOG.md)'de. Süreler donan
 1. **İndirin ve kurun.** [Releases](https://github.com/kutsalkiremitci/robz-vision/releases/latest) sayfasından
    `RobzVision-Setup-<sürüm>-x64.exe`'yi indirip sihirbazda **İleri**'ye basın. İlk açılışta *Yapay zekâ ile*'yi
    seçin (ekran kartınız uygunsa önceden seçili gelir); ücretsiz hızlı çeviri modeli inince program açılır.
-2. **Bölgeyi seçin.** Ana sayfada **Bölge seç**'e basın, altyazının çıktığı alanı fareyle çizip **Onayla**'ya basın.
-   Oyun arkada akmaya devam eder.
+2. **Bölgeyi seçin.** Oyunun görüntüsü ekrandayken Ana sayfadaki canlı önizlemede altyazının çıktığı alanı
+   fareyle çizin. İlk açılışta ekranın alt-orta altyazı şeridi seçili gelir; altyazı oradaysa dokunmanız
+   gerekmez. İnce ayar için **Tam ekranda seç**: bölgeyi oyunun üstünde, gerçek boyutunda çizersiniz.
 3. **Başlatın.** **Başlat**'a basın; altyazı ekrana geldiğinde Türkçesi de gelir. Kutunun yerini
    *Ekranımda → Konumu ayarla* ile bir kez seçin. Yayıncıysanız Ana sayfadaki adresi OBS'e **Tarayıcı** kaynağı
    olarak ekleyin.
 
 <p align="center">
-  <img src="docs/gorseller/gta6_bolge_secimi.png" width="760" alt="Bölge seçici GTA VI sahnesinin üstünde: İngilizce altyazı satırının çevresine çizilmiş camgöbeği çerçeve, köşede 1200 × 160 ölçüsü, altında Onayla, Yeniden seç ve İptal düğmeleri">
+  <img src="docs/gorseller/gta6_bolge_secimi.png" width="760" alt="Tam ekranda seç: bölge seçici GTA VI sahnesinin üstünde, İngilizce altyazı satırının çevresine çizilmiş camgöbeği çerçeve, köşede 1200 × 160 ölçüsü, altında Onayla, Yeniden seç ve İptal düğmeleri"><br>
+  <sub><b>Tam ekranda seç:</b> bölge oyunun üstünde, gerçek boyutunda çizilir; <b>Onayla</b> ile kaydedilir.</sub>
 </p>
 
 Kısayollar: `Ctrl+Alt+T` başlat/durdur, `Ctrl+Alt+H` gizle/göster, `Ctrl+Alt+C` temizle (Ayarlar sayfasından
@@ -215,14 +219,17 @@ değiştirilebilir). Adım adım anlatım, ekran görüntüleri ve senaryolara g
 <br>
 
 <p align="center">
-  <img src="docs/gorseller/ana_pencere.png" width="760" alt="Robz Vision ana sayfası: Başlat düğmesi, çevrilecek bölgenin önizlemesi, son çeviri, Ekranımda bölümü ve OBS başlığı; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı">
+  <img src="docs/gorseller/ana_pencere.png" width="860" alt="Robz Vision ana sayfası: üstte Başlat düğmesi, durum ve son satırın OCR ve çeviri süreleri; solda Son çeviriler listesi; sağda Çevrilecek bölge, başlığında Tam ekranda seç düğmesi ve Ekran / Uygulama penceresi seçimi, altında ekranın canlı önizlemesi ve üstünde camgöbeği çerçeveyle işaretli altyazı şeridi; altta yan yana Ekranımda ve OBS; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı">
 </p>
 
 1. **İlk açılış.** Program çevirinin nasıl yapılacağını sorar: *Yapay zekâ ile* ya da *Yalnız hızlı çeviri*
    ([ayrıntılar](#yerel-yapay-zekâ-çevirisi-önerilen)). Ana pencere açılınca kısa bir tur arayüzün bölümlerini
    gösterir. Atlarsanız *Ayarlar → Tanıtım turunu başlat* ile yeniden açabilirsiniz.
-2. **Bölge seç.** Ana sayfada **Bölge seç**'e basın. Ekran kararır, oyun arkada akmaya devam eder.
-   Altyazının çıktığı alanı fareyle çizip **Onayla**'ya basın.
+2. **Bölgeyi seçin.** Ana sayfanın sağındaki canlı önizleme ekranınızın tamamını gösterir; okunan bölge
+   camgöbeği çerçevelidir. İlk açılışta birincil ekranın alt-orta altyazı şeridi seçili gelir. Altyazı başka
+   yerdeyse önizlemede altyazının çıktığı alanı fareyle çizin; çerçeveyi ortasından tutup taşıyın,
+   köşelerinden boyutlandırın. Değişiklik hemen geçerli olur. Bölgeyi oyunun üstünde gerçek boyutunda çizmek
+   için önizlemenin başlığındaki **Tam ekranda seç**'e basın.
 3. **Başlat.** Altyazı ekrana geldiğinde Türkçesi de gelir.
 4. **Ekranımda → Konumu ayarla.** Türkçe kutuyu istediğiniz yere sürükleyin, kenarlarından boyutlandırın,
    bitirmek için çift tıklayın.
@@ -284,8 +291,8 @@ monitörde ister televizyonda görürsünüz.
 5. **Modeller iner.** Hızlı çeviri modeli (404 MB) inince **Şimdi başla**'ya basın. Yapay zekâ (yaklaşık
    10 GB) arka planda iner, hazır olunca kendiliğinden devreye girer.
 
-Çizimdeki son üç adımı (**Bölge seç**, **Onayla**, **Başlat**) oyunun görüntüsü ekrandayken yaparsınız;
-yolunuzun adımlarında anlatılıyor. Kurulumun ayrıntıları: [Kurulum](#kurulum).
+Çizimdeki son iki adımı (bölgeyi seçmek ve **Başlat**) oyunun görüntüsü ekrandayken yaparsınız; yolunuzun
+adımlarında anlatılıyor. Kurulumun ayrıntıları: [Kurulum](#kurulum).
 
 ### 2. Yolunuzu seçin
 
@@ -319,9 +326,9 @@ Oyun bilgisayarda çalışıyor ve ekranda İngilizce altyazı var. Ek kablo ya 
 
 1. **Oyunu hazırlayın.** Oyunun ayarlarında İngilizce altyazıyı açın. Oyunu *Pencereli tam ekran*
    (kenarlıksız) modunda çalıştırın; bazı oyunlar özel tam ekran modunda Türkçe kutuyu üstte göstermez.
-2. **Bölgeyi seçin.** Robz Vision'ın Ana sayfasında *Çevrilecek bölge* altında **Ekran bölgesi** seçili olsun.
-   **Bölge seç**'e basın, altyazının çıktığı alanı fareyle çizip **Onayla**'ya basın. Oyun arkada akmaya
-   devam eder.
+2. **Bölgeyi seçin.** Robz Vision'ın Ana sayfasında *Çevrilecek bölge* başlığının yanında **Ekran** seçili
+   olsun. Canlı önizlemede oyunun ekranı görünür; altyazının çıktığı alanı fareyle çizin (ilk açılışta alt-orta
+   şerit seçili gelir). İnce ayar için **Tam ekranda seç**.
 3. **Başlatın.** **Başlat**'a basın. Oyunda altyazı belirince Türkçesi kutuda görünür.
 4. **Kutuyu yerleştirin.** *Ekranımda → Konumu ayarla* ile kutuyu İngilizce altyazının hemen üstüne
    sürükleyin; bitirmek için çift tıklayın.
@@ -381,10 +388,10 @@ uygulaması da çalışır.
 
 9. **PS5'e bağlanın.** chiaki-ng'de PS5'e tıklayın; PS5'in görüntüsü bir pencerede açılır. Pencereyi büyütün
    ya da tam ekran yapın. Oyunda İngilizce altyazıyı açın.
-10. **Robz Vision'da pencereyi seçin.** Ana sayfada *Çevrilecek bölge* altında **Uygulama penceresi**'ni
-    seçin, listeden chiaki-ng'in oyun penceresini seçin. **Bölge seç**'e basıp altyazının çıktığı alanı
-    çizin, **Onayla**'ya basın. Pencere başka pencerelerin arkasında kalsa da okunur, ama simge durumuna
-    küçültülmemeli. chiaki-ng tam ekransa **Ekran bölgesi** de olur.
+10. **Robz Vision'da pencereyi seçin.** Ana sayfada *Çevrilecek bölge* başlığının yanında **Uygulama
+    penceresi**'ni seçin, listeden chiaki-ng'in oyun penceresini seçin. Önizlemede o pencerenin görüntüsü
+    belirir; altyazının çıktığı alanı pencerenin üstünde fareyle çizin. Pencere başka pencerelerin arkasında
+    kalsa da okunur, ama simge durumuna küçültülmemeli. chiaki-ng tam ekransa **Ekran** da olur.
 11. **Başlatın ve kutuyu yerleştirin.** **Başlat**'a basın. *Ekranımda → Konumu ayarla* ile Türkçe kutuyu
     İngilizce altyazının hemen üstüne sürükleyin; bitirmek için çift tıklayın.
 
@@ -423,8 +430,9 @@ etmez, HDMI girişi olması yeter.
    bölgeyi seçip **Başlat**'a basın, Türkçe kutuyu yerleştirin (Yol 2'nin 9–11. adımları).
 
 **Monitör de açık kalsın isterseniz** *Win+P*'de *Genişlet*'i seçin: chiaki-ng penceresini TV'ye taşıyın,
-Robz Vision monitörde kalsın. Bölge seçici bütün ekranlarda açılır. Türkçe kutuyu *Ekranımda → Konumu ayarla*
-ile TV ekranına sürükleyin.
+Robz Vision monitörde kalsın. **Ekran** modunda önizlemenin üstündeki listeden TV'yi seçip bölgeyi onun
+görüntüsünde çizin ya da **Tam ekranda seç** ile doğrudan TV'de çizin (seçici bütün ekranlarda açılır).
+Türkçe kutuyu *Ekranımda → Konumu ayarla* ile TV ekranına sürükleyin.
 
 **Kablo yerine kablosuz.** TV'niz kablosuz ekran yansıtmayı (Miracast) destekliyorsa bilgisayarda *Win+K*'ye
 basıp listeden TV'yi seçin (LG'de *Screen Share*). Gecikme artar; hikâye oyunlarında genelde sorun olmaz.
@@ -454,10 +462,11 @@ sıkıştırması olmadığı için altyazı en net bu yolda okunur. Kol PS5'e h
 3. **Görüntüyü bir pencerede açın.** Capture kartını OBS'e kaynak olarak ekleyin. Kaynağa sağ tıklayıp
    **Pencereli Projektör (Kaynak)**'ı açın; bu pencere yalnız oyun görüntüsünü gösterir. Oyunu bu pencereden
    oynarsınız; pencereyi TV'de ya da monitörde büyütebilirsiniz. Kartın kendi önizleme uygulaması da olur.
-4. **Robz Vision'da pencereyi seçin.** *Çevrilecek bölge* altında **Uygulama penceresi** ile projektör
-   penceresini seçin; **Bölge seç** ile altyazı alanını çizip **Onayla**'ya basın. Robz Vision'ın OBS
-   önizlemesini değil bu pencereyi okuması gerekir: önizlemede Türkçe altyazı da vardır. Projektör penceresi
-   başka pencerelerin arkasında kalabilir, ama simge durumuna küçültülmemeli.
+4. **Robz Vision'da pencereyi seçin.** *Çevrilecek bölge* başlığının yanında **Uygulama penceresi**'ni seçin,
+   listeden projektör penceresini seçin; Robz Vision'ın önizlemesinde o pencerenin görüntüsü belirir, altyazı
+   alanını üstünde fareyle çizin. Robz Vision'ın OBS önizlemesini değil bu pencereyi okuması gerekir: OBS
+   önizlemesinde Türkçe altyazı da vardır. Projektör penceresi başka pencerelerin arkasında kalabilir, ama
+   simge durumuna küçültülmemeli.
 5. **Başlatın ve kutuyu yerleştirin.** **Başlat**'a basın; *Ekranımda → Konumu ayarla* ile kutuyu
    yerleştirin.
 
@@ -701,15 +710,17 @@ Robz Vision oyuna kod eklemez, belleğini ya da dosyalarını okumaz; yalnızca 
    kaybolur. Kısa süren bir altyazının çevirisi okunabilecek kadar ekranda kalır. Her satır en fazla
    *En uzun kalma* süresi kadar görünür (varsayılan 7 sn); oyunda sabit duran bir yazı (tuş ipucu, menü)
    çeviriyi ekranda tutmaz. *Oyun altyazısının üzerine* açıkken çeviri, okumanın verdiği altyazı kutusunun tam
-   yerine yazılır. Ekrandaki kutu varsayılan olarak ekran yakalamaya girmez: OCR kendi Türkçe yazısını okumaz,
-   yayında da iki kez görünmez.
+   yerine yazılır; bölgede aynı anda birden çok ayrı yazı varsa (konuşma ve üstünde görev yazısı) her biri ayrı
+   okunur, ayrı çevrilir ve kendi kutusuyla örtülür (en çok 3). Ekrandaki kutu varsayılan olarak ekran
+   yakalamaya girmez: OCR kendi Türkçe yazısını okumaz, yayında da iki kez görünmez.
 
 </details>
 
 ## Gizlilik
 
 - Varsayılan ayarlarla ekran görüntüsü, OCR ve çeviri bilgisayarınızda kalır. Görüntüler diske kaydedilmez,
-  uygulama kullanım verisi toplamaz.
+  uygulama kullanım verisi toplamaz. Ana sayfadaki canlı önizleme de yalnız ekranda gösterilir; kaydedilmez,
+  gönderilmez.
 - Ana sayfadaki *Son çeviriler* listesi yalnız bellekte tutulur, diske yazılmaz; uygulama kapanınca silinir.
 - Robz Vision yeni sürüm olup olmadığını açılıştan kısa süre sonra ve sonra saatte bir GitHub'a sorar
   (`api.github.com`, tek kısa istek; istekte yalnız uygulamanın adı ve sürümü bulunur, kişisel bilgi ya da kullanım

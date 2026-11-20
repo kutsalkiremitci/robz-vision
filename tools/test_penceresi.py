@@ -4,7 +4,7 @@ Hareketli bir arka plan üzerinde sırayla İngilizce altyazılar gösterir (kon
 iki satırlı ve daktilo efektli örnekler dahil).
 
 Kullanım:  python tools/test_penceresi.py
-Robz Vision'da "Bölge seç" ile pencerenin altyazı alanını seçin (veya "Uygulama penceresi"
+Robz Vision'ın Ana sayfasındaki canlı önizlemede pencerenin altyazı alanını çizin (veya "Uygulama penceresi"
 modunda 'Robz Vision Test Oyunu' penceresini seçin).
 """
 
