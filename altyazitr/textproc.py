@@ -93,22 +93,47 @@ def _caps_name(name: str) -> str:
     return name.replace("l", "I").upper()
 
 
-def subtitle_rows(lines: Sequence[OcrLine], keep_lowest_block: bool = True) -> list[list[OcrLine]]:
-    """Altyazı metnine giren satırlar (bkz. assemble), üstten alta; her satırın parçaları soldan sağa. Satırlar,
-    aralarında boşluk olan öbeklere ayrılır; keep_lowest_block ise yalnız en alttaki öbek (konuşmacı adı dahil)."""
+# "Oyun altyazısının üzerine" açıkken bölgedeki ayrı yazılar (öbekler: konuşma altyazısı, üstünde görev yazısı) ayrı
+# okunur, ayrı çevrilir ve her birinin üstüne ayrı kutu konur. Hız için aynı anda en çok bu kadarı; fazlası varsa en
+# alttakiler (bkz. pipeline, display).
+MAX_SLOTS = 3
+# Üst üste yazılarda (örtme açık; tight) iki satır, aralarındaki boşluk ikisinden küçüğünün bu katını geçerse ayrı
+# yazıdır. Ölçüm (GTA VI, RapidOCR): aynı altyazının satırları arası ≈ 0,15 satır boyu (6 px / 40 px), konuşma ile
+# altındaki görev yazısı arası ≈ 1 satır boyu (29 px / 30 px). Satır kutusunun boyu tek başına güvenilmez: yalnız küçük
+# harfli satırın ("man.") kutusu da kısadır.
+STACK_GAP = 0.45
+
+
+def subtitle_blocks(lines: Sequence[OcrLine], tight: bool = False) -> list[list[list[OcrLine]]]:
+    """Satırların öbekleri, üstten alta: aralarındaki boşluk ortanca satır boyunun 1,2 katını geçen satırlar ayrı
+    öbektir (konuşma altyazısı ile üstündeki görev yazısı gibi). Her öbek satırlarının listesidir (bkz.
+    subtitle_rows). tight (üst üste yazılar, örtme açık): ayrıca boşluğu, komşu iki satırın küçüğünün STACK_GAP
+    katını geçen satırlar da ayrı öbektir (yakın duran konuşma ve görev yazısı ayrılır; aynı altyazının satırları
+    bitişiktir)."""
     rows = _rows(lines)
     if not rows:
         return []
     blocks: list[list[list[OcrLine]]] = [[rows[0]]]
     heights = [max(1.0, max(x.h for x in r)) for r in rows]
     hm = statistics.median(heights)
-    for prev, row in zip(rows, rows[1:]):
+    for (prev, row), (hp, hr) in zip(zip(rows, rows[1:]), zip(heights, heights[1:])):
         prev_bottom = max(x.y + x.h for x in prev)
         top = min(x.y for x in row)
-        if top - prev_bottom > 1.2 * hm:
+        gap = top - prev_bottom
+        if gap > 1.2 * hm or (tight and gap > STACK_GAP * min(hp, hr)):
             blocks.append([row])
         else:
             blocks[-1].append(row)
+    return blocks
+
+
+def subtitle_rows(lines: Sequence[OcrLine], keep_lowest_block: bool = True) -> list[list[OcrLine]]:
+    """Altyazı metnine giren satırlar (bkz. assemble), üstten alta; her satırın parçaları soldan sağa. Satırlar,
+    aralarında boşluk olan öbeklere ayrılır (subtitle_blocks); keep_lowest_block ise yalnız en alttaki öbek (konuşmacı
+    adı dahil)."""
+    blocks = subtitle_blocks(lines)
+    if not blocks:
+        return []
     return blocks[-1] if keep_lowest_block else [r for b in blocks for r in b]
 
 
@@ -116,7 +141,8 @@ def subtitle_box(lines: Sequence[OcrLine], size: Sequence[int], keep_lowest_bloc
     """Altyazının görüntüdeki yeri (çeviriyi oyunun altyazısının tam üstüne yazmak için; bkz. display): assemble'ın
     metne kattığı satırların birleşik kutusu. size: görüntünün (genişlik, yükseklik) pikseli. Sonuç:
     {"rect": [x, y, w, h] görüntüye oransal (0..1), "rows": satır sayısı, "line_h": satır yüksekliği (ortanca,
-    görüntü yüksekliğine oransal), "roi": [genişlik, yükseklik]}. Satırların yeri bilinmiyorsa None."""
+    görüntü yüksekliğine oransal), "roi": [genişlik, yükseklik]}. Satırların yeri bilinmiyorsa None. Tek bir öbeğin
+    kutusu için o öbeğin parçaları keep_lowest_block=False ile verilir."""
     try:
         width, height = (int(v) for v in size[:2])
     except (TypeError, ValueError):
@@ -151,8 +177,16 @@ def assemble(lines: Sequence[OcrLine], keep_lowest_block: bool = True,
         speaker, first = split_speaker(fix_ocr(row_texts[0]))
         if speaker:
             row_texts[0] = first
-    text = fix_ocr(" ".join(row_texts))
-    text = re.sub(r"(?<=[a-z])- (?=[a-z])", "", text)  # satır sonu tirelerini birleştir
+    # Satır sonu tiresi (heceleme: "re-" + "treat") yalnız gerçekten satır sonundaysa birleşir. Satır içindeki
+    # kekeleme ("Just- just take it") olduğu gibi kalır; birleşirse çeviriye anlamsız "Justjust" gider.
+    joined = row_texts[0]
+    for nxt in row_texts[1:]:
+        nxt = nxt.lstrip()
+        if re.search(r"[a-z]-$", joined) and re.match(r"[a-z]", nxt):
+            joined = joined[:-1] + nxt
+        else:
+            joined = f"{joined} {nxt}"
+    text = fix_ocr(joined)
     return text, speaker, confs
 
 
@@ -268,6 +302,27 @@ def without_marks(s: str) -> str:
         return s
     parsed = parse_marks(s)
     return parsed[0] if parsed is not None else s
+
+
+def restore_marks(src: str, spans: Sequence[Sequence[int]], out: str) -> str:
+    """Çevirmen vurgu işaretlerini düşürdüyse (çıktı işaretsiz): kaynakta vurgulu olup çeviride aynen geçen ifade
+    (özel isimler: "Arnold", "Vice City") yeniden işaretlenir, Türkçe eki de kapsar ("[[Arnold'a]]"). İşaretli çıktı
+    ve vurgulu ifadesi çeviride geçmeyen çıktı ("cops" → "polisler") olduğu gibi döner."""
+    if not spans or HL_OPEN in out:
+        return out
+    found: Spans = []
+    for s, e in spans:
+        phrase = src[int(s):int(e)].strip(" .,!?;:\"'“”‘’")
+        if len(phrase) < 2:
+            continue
+        for m in re.finditer(re.escape(phrase), out, flags=re.IGNORECASE):
+            a, b = m.span()
+            if a == 0 or not out[a - 1].isalnum():  # kelime başı ("Arnold", "BeArnold" değil)
+                found.append((a, b))
+                break
+    if not found:
+        return out
+    return mark(out, snap_spans(out, found, whole_words=True))
 
 
 def snap_spans(text: str, spans: Sequence[Sequence[int]], whole_words: bool = False) -> Spans:

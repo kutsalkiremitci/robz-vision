@@ -29,6 +29,8 @@ from altyazitr.gui.tokens import ICON, RADIUS, SPACE, C, F, qcolor
 from altyazitr.gui.widgets import button_icon
 
 HISTORY_MAX = 200
+FILL_MIN_H = 160  # doldurma kipinde (bkz. HistoryView.set_fill) listenin en küçük yüksekliği
+QWIDGETSIZE_MAX = 16777215
 PRIVACY_TIP = (f"Son {HISTORY_MAX} çeviri yalnızca bu oturumda, bellekte tutulur; diske yazılmaz. "
                "Uygulamayı kapatınca silinir.")
 COPY_TIP = "Türkçesini kopyala (sağ tık: İngilizcesiyle birlikte)"
@@ -344,7 +346,21 @@ class HistoryView(QListView):
                 return self.MAX_H
         return total
 
+    def set_fill(self, on: bool) -> None:
+        """Doldurma kipi (Ana sayfanın geniş düzenindeki tam boy sütun): liste içeriğine göre büyümez, bulunduğu
+        alanı doldurur ve kendi içinde kayar. Kapalıyken içeriğe göre büyür, MAX_H'de durur."""
+        self._fill = bool(on)
+        if on:
+            self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.setMinimumHeight(FILL_MIN_H)
+            self.setMaximumHeight(QWIDGETSIZE_MAX)
+        else:
+            self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            self.update_height()
+
     def update_height(self) -> None:
+        if getattr(self, "_fill", False):
+            return
         h = max(48, self.wanted_height())
         if self.minimumHeight() != h or self.maximumHeight() != h:
             self.setFixedHeight(h)
@@ -519,6 +535,12 @@ class HistoryPanel(QWidget):
     def clear(self) -> None:
         self.model.clear()
         self._sync()
+
+    def set_fill(self, on: bool) -> None:
+        """Liste bulunduğu sütunu doldursun (Ana sayfanın geniş düzeni); kapalıyken içeriğe göre büyür."""
+        self.view.set_fill(on)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred,
+                           QSizePolicy.Policy.Expanding if on else QSizePolicy.Policy.Preferred)
 
     def _sync(self) -> None:
         has = self.count() > 0

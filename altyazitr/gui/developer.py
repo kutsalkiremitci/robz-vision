@@ -45,18 +45,32 @@ def kick_logo_path() -> Path:
     return resource_dir() / "data" / "kick.svg"
 
 
+def youtube_logo_path() -> Path:
+    """Paketteki YouTube işareti (kırmızı oynat düğmesi; yalnız geliştiricinin kanalına giden bağlantıda)."""
+    return resource_dir() / "data" / "youtube.svg"
+
+
 def kick_pixmap(size: int, dpr: float = 2.0, scale: float = 1.0) -> QPixmap:
     """Kick logosu: `size` × `size` px kutuda, oranı korunarak ortalanmış; ekranın piksel yoğunluğunda keskin.
     `scale` < 1 logoyu kutunun içinde küçültür (dolu "K", çizgi ikonların yanında aynı boyda görünsün diye).
     Dosya okunamazsa boş QPixmap döner (bağlantı yazısıyla yine çalışır)."""
+    return _logo_pixmap(kick_logo_path(), size, dpr, scale)
+
+
+def youtube_pixmap(size: int, dpr: float = 2.0, scale: float = 1.0) -> QPixmap:
+    """YouTube işareti, kick_pixmap ile aynı kuralla."""
+    return _logo_pixmap(youtube_logo_path(), size, dpr, scale)
+
+
+def _logo_pixmap(path: Path, size: int, dpr: float = 2.0, scale: float = 1.0) -> QPixmap:
     size, dpr, scale = max(1, int(size)), max(1.0, float(dpr)), min(1.0, max(0.1, float(scale)))
-    key = (size, dpr, scale)
+    key = (path.name, size, dpr, scale)
     pm = _PIXMAPS.get(key)
     if pm is not None:
         return pm
     pm = QPixmap()
     try:
-        renderer = QSvgRenderer(str(kick_logo_path()))
+        renderer = QSvgRenderer(str(path))
         if renderer.isValid():
             px = max(1, round(size * dpr))
             pm = QPixmap(px, px)
@@ -69,9 +83,9 @@ def kick_pixmap(size: int, dpr: float = 2.0, scale: float = 1.0) -> QPixmap:
             p.end()
             pm.setDevicePixelRatio(dpr)
         else:
-            log.warning("Kick logosu okunamadı: %s", kick_logo_path())
+            log.warning("Logo okunamadı: %s", path)
     except Exception:
-        log.debug("Kick logosu çizilemedi", exc_info=True)
+        log.debug("Logo çizilemedi: %s", path, exc_info=True)
         pm = QPixmap()
     _PIXMAPS[key] = pm
     return pm
@@ -79,9 +93,18 @@ def kick_pixmap(size: int, dpr: float = 2.0, scale: float = 1.0) -> QPixmap:
 
 def kick_icon() -> QIcon:
     """Düğmeler için Kick logosu (birkaç boyutta; Qt ekran yoğunluğuna uygun olanı seçer)."""
+    return _logo_icon(kick_pixmap)
+
+
+def youtube_icon() -> QIcon:
+    """Düğmeler için YouTube işareti (Ayarlar → Geliştirici)."""
+    return _logo_icon(youtube_pixmap)
+
+
+def _logo_icon(make) -> QIcon:
     ic = QIcon()
     for s in (16, 20, 24, 32):
-        pm = kick_pixmap(s, 1.0, ICON_SCALE)
+        pm = make(s, 1.0, ICON_SCALE)
         if not pm.isNull():
             ic.addPixmap(pm)
     return ic

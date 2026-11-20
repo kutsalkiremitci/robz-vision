@@ -282,11 +282,39 @@ def _first_setup(settings: Settings, ai: AiSetup) -> bool:
     return False
 
 
+def apply_default_screen_region(settings: Settings, screen=None) -> bool:
+    """Ekran modunda bölge hiç seçilmemişse birincil ekrana varsayılan altyazı şeridi (config.DEFAULT_REGION, altta
+    orta) atanır: yeni kullanıcı bölge seçmeden başlayabilir, Ana sayfanın canlı önizlemesinde kaydırır. Bölgesi olan
+    kullanıcıya ve pencere moduna dokunulmaz. Atandıysa True."""
+    c = settings.capture
+    if c.mode != "screen" or c.is_ready():
+        return False
+    from PySide6.QtCore import QRect
+    from PySide6.QtGui import QGuiApplication
+
+    from altyazitr.config import DEFAULT_REGION
+    from altyazitr.gui.region_picker import logical_to_physical
+    from altyazitr.gui.source_view import frac_to_rect
+
+    scr = screen if screen is not None else QGuiApplication.primaryScreen()
+    if scr is None:
+        return False
+    g = scr.geometry()
+    mon = logical_to_physical(scr, QRect(0, 0, g.width(), g.height()))
+    if mon[2] < 100 or mon[3] < 100:
+        return False
+    c.rect = frac_to_rect(DEFAULT_REGION, tuple(mon))
+    log.info("Varsayılan altyazı bölgesi atandı: %s (birincil ekran %s)", c.rect, mon)
+    return True
+
+
 def _open_context() -> AppContext | None:
     """Ayarlar → yerel yapay zekâ kurulum servisi → ilk açılış penceresi → AppContext. Servis ilk açılış
     penceresinden önce oluşur (pencere yapay zekâyı onunla kurar) ve AppContext'e geçer (arayüz ilerlemeyi ve sonucu
     ondan okur). None: kullanıcı ilk kurulumu tamamlamadan çıktı; ana pencere açılmamalı."""
     settings = load_settings()
+    if apply_default_screen_region(settings):
+        save_settings(settings)
     ai = AiSetup(settings, save=lambda: save_settings(settings))
     if not _first_setup(settings, ai):
         return None

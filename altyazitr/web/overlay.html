@@ -35,15 +35,16 @@
   #mask.on { opacity: 1; }
   /* Oyun altyazısının üzerine: oyunun İngilizce altyazısını opak bir kutuyla örter, çeviriyi içinde ortalar. Yeri ve
      yazı boyu uygulamadan gelir (kareye oransal); yazı sığmazsa küçülür, sonra satır kaydırılıp kutu yukarı büyür
-     (bkz. showCover; köşe ve iç pay render.COVER_RADIUS / COVER_INNER ile aynı). */
-  #cover {
+     (bkz. placeCover; köşe ve iç pay render.COVER_RADIUS / COVER_INNER ile aynı). Üst üste yazılarda (konuşma ve
+     görev yazısı) her yazının kendi kutusu vardır: ilki #cover, ötekiler aynı sınıfla sonradan eklenir. */
+  .cover {
     position: absolute; display: none; box-sizing: border-box; overflow: hidden; pointer-events: none;
     flex-direction: column; justify-content: center; align-items: center;
     background: var(--cover); border-radius: .18em;
     transition: opacity var(--fade) ease; opacity: 0;
   }
-  #cover.on { opacity: 1; }
-  #cover .tx { text-align: center; -webkit-text-stroke-width: calc(var(--stroke) * var(--k, 1)); }
+  .cover.on { opacity: 1; }
+  .cover .tx { text-align: center; -webkit-text-stroke-width: calc(var(--stroke) * var(--k, 1)); }
   /* Akış: son satırlar alt alta, en yenisi altta. Yığın alta yaslı; eskiler yukarı kayar. */
   #stack {
     position: absolute; left: 0; right: 0; bottom: var(--bottom);
@@ -111,7 +112,7 @@
 <body>
 <div id="mask"></div>
 <div id="stack"></div>
-<div id="cover"><div class="tx"><span class="sp"></span><span class="t"></span></div></div>
+<div id="cover" class="cover"><div class="tx"><span class="sp"></span><span class="t"></span></div></div>
 <div id="status">Robz Vision bağlantısı yok</div>
 <script>
 (() => {
@@ -126,7 +127,9 @@
   const LINE_H = 1.28;  // .tx satır yüksekliği
   const still = matchMedia('(prefers-reduced-motion: reduce)');
   const live = new Map();  // satır kimliği → öğe (çıkmakta olanlar hariç), eskiden yeniye
-  let delay = 300, everConnected = false, coverMsg = null;
+  const covers = new Map();  // kapağın anahtarı (yazının yuvası) → kapak öğesi
+  const coverPool = [cover];  // bütün kapak öğeleri (ilki sayfadaki #cover); boşta olanlar yeniden kullanılır
+  let delay = 300, everConnected = false, coverList = [];
 
   const fadeMs = () => parseFloat(getComputedStyle(root).getPropertyValue('--fade')) || 0;
 
@@ -270,11 +273,44 @@
     return sizes.find((s) => linesAt(s) <= n);
   }
 
+  const coverOk = (c) => c && c.line && c.line.text && Array.isArray(c.rect);
+
+  // Kapaklar, eskiden yeniye (boş liste: hepsi kalkar). Her kapak yazısının (slot) öğesinde çizilir: yazının yeni
+  // satırı aynı kutuda yerinde değişir, kalkan yazının kutusu solar, yeni yazıya boştaki (ya da yeni) öğe verilir.
+  // Eski uygulamanın tek kapağında slot yoktur: tek kutu, eskisi gibi.
+  function showCovers(list) {
+    list = (Array.isArray(list) ? list : []).filter(coverOk);
+    coverList = list;
+    const keys = list.map((c, i) => (Number.isInteger(c.slot) ? 's' + c.slot : 'i' + i));
+    const want = new Set(keys), freed = new Set();
+    for (const [k, el] of covers) {
+      if (!want.has(k)) { covers.delete(k); el.classList.remove('on'); freed.add(el); }
+    }
+    list.forEach((c, i) => {
+      let el = covers.get(keys[i]);
+      if (!el) { el = freeCover(freed); covers.set(keys[i], el); }
+      placeCover(el, c);
+    });
+  }
+
+  // Boştaki kapak öğesi (az önce solmaya başlayanlar hariç); yoksa yenisi eklenir
+  function freeCover(freed) {
+    const used = new Set(covers.values());
+    let el = coverPool.find((x) => !used.has(x) && !freed.has(x));
+    if (!el) {
+      el = part('div', 'cover');
+      const tx = part('div', 'tx', el);
+      part('span', 'sp', tx);
+      part('span', 't', tx);
+      document.body.appendChild(el);
+      coverPool.push(el);
+    }
+    return el;
+  }
+
   // c: {rect: [x, y, w, h] kareye oransal (oyunun altyazısı + pay), rows, font / min (kare yüksekliğine oransal),
-  // line: {text, speaker, spans}}; null: kutu kalkar. Kutu alttan sabittir, yazı sığmazsa yukarı büyür.
-  function showCover(c) {
-    coverMsg = c || null;
-    if (!c || !c.line || !c.line.text || !Array.isArray(c.rect)) { cover.classList.remove('on'); return; }
+  // line: {text, speaker, spans}}. Kutu alttan sabittir, yazı sığmazsa yukarı büyür.
+  function placeCover(cover, c) {
     const W = innerWidth, H = innerHeight;
     const [x, y, w, h] = [c.rect[0] * W, c.rect[1] * H, c.rect[2] * W, c.rect[3] * H];
     const tx = cover.querySelector('.tx');
@@ -302,7 +338,7 @@
     requestAnimationFrame(() => cover.classList.add('on'));
   }
 
-  window.onresize = () => { if (coverMsg) showCover(coverMsg); };
+  window.onresize = () => { if (coverList.length) showCovers(coverList); };
 
   function connect() {
     let ws;
@@ -313,15 +349,16 @@
       if (m.type === 'lines') showLines(m.lines);
       else if (m.type === 'style') {
         for (const [k, v] of Object.entries(m.vars || {})) css.setProperty('--' + k, v);
-        if (coverMsg) showCover(coverMsg);  // yazı tipi ya da boyu değişti: kutu yeniden ölçülür
+        if (coverList.length) showCovers(coverList);  // yazı tipi ya da boyu değişti: kutular yeniden ölçülür
       }
       else if (m.type === 'mask') showMask(m.rect);
-      else if (m.type === 'cover') showCover(m.cover);
+      // üst üste yazılarda kapak listesi ("covers"); eski uygulama yalnız tek kapak ("cover") gönderir
+      else if (m.type === 'cover') showCovers(Array.isArray(m.covers) ? m.covers : (m.cover ? [m.cover] : []));
       // 'sub' yalnız eski sayfa kopyaları içindir (en yeni satır); bu sayfa 'lines' ile çizer
     };
     ws.onclose = () => {
       // Uygulama kapanırsa ekranda eski yazı kalmasın (hiç bağlanmadıysa ?ornek örneği kalır)
-      if (everConnected) { showLines([]); mask.classList.remove('on'); showCover(null); }
+      if (everConnected) { showLines([]); mask.classList.remove('on'); showCovers([]); }
       if (everConnected && params.has('durum')) status.style.display = 'block';
       setTimeout(connect, delay);
       delay = Math.min(delay * 2, 4000);

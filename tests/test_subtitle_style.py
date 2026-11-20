@@ -186,6 +186,76 @@ def test_ogrenince_kenardaki_ve_baska_boydaki_satir_atilir():
     assert _texts(f.keep(img, [side, big, sub])) == [sub.text]
 
 
+BLUE = (230, 160, 60)
+TALK = "We need to get out of here before the cops show up."
+
+
+def _talk_filter() -> SubtitleFilter:
+    """Alttaki konuşma altyazısının ortasını, boyunu ve satırını dört farklı satırla öğrenmiş süzgeç."""
+    f = SubtitleFilter()
+    for i, text in enumerate(["You said this would be easy.", "Nobody told me the boat was this small.",
+                              "Relax, nobody is following us.", "Get in the car, we are leaving now."]):
+        img = _zemin(seed=i)
+        assert len(f.keep(img, [_yaz(img, [(text, WHITE)], cx=W / 2, y=165)])) == 1
+    assert f.learned() is not None
+    return f
+
+
+@pytest.mark.parametrize("comp", ["temiz", "jpeg", "yuv420"])
+@pytest.mark.parametrize("y, scale", [(110, 0.8), (80, 0.7), (40, 0.6)])
+def test_konusmanin_ustundeki_kucuk_gorev_yazisi_atilmaz(comp, y, scale):
+    """Örtme açıkken bölge altyazı şerididir: altta konuşma, biraz yukarıda ondan küçük, beyaz, kenarlı, ortalı görev
+    yazısı aynı karede. Süzgeç konuşmayı öğrenmiş olsa da görev yazısını "yanlış yer / boy" sayıp atmaz; tek başına
+    kaldığında da. Örtme açık da kapalı da (biçimi belirgin ortalı satırda yer ve boy aranmaz)."""
+    f = _talk_filter()
+    thick = 1 if scale < 0.7 else 2  # küçük yazının çizgisi de incedir
+    img = _zemin(seed=8)
+    sub = _yaz(img, [(TALK, WHITE)], cx=W / 2, y=165)
+    task = _yaz(img, [("Chase ", WHITE), ("Arnold", BLUE), (".", WHITE)], cx=W / 2, y=y, scale=scale, thick=thick)
+    img = _yayin(img, comp)
+    for stacked in (False, True):
+        assert _texts(f.keep(img, [task, sub], stacked=stacked)) == [task.text, sub.text]
+    img2 = _zemin(seed=11)
+    alone = _yaz(img2, [("Chase Arnold.", WHITE)], cx=W / 2, y=y, scale=scale, thick=thick)
+    assert _texts(f.keep(_yayin(img2, comp), [alone], stacked=True)) == [alone.text]
+
+
+@pytest.mark.parametrize("kind", ["renkli", "kalin"])
+def test_ust_uste_yazilarda_yer_ve_boy_gevser_kenar_ve_bicim_kurali_kalir(kind):
+    """Konuşmayı öğrenmiş süzgeç, konuşmanın epey üstündeki küçük görev yazısını (tamamı renkli; ya da kalın çizgili,
+    kenarı seçilmeyen) örtme kapalıyken eskisi gibi atar: öğrenilen altyazı satırında / boyunda değil. Örtme açıkken
+    (stacked) her öbek kendi yerindedir: yazı geçer. Bölgenin kenarındaki tuş ipucu, eğik duvar yazısı ve plaka ikisinde
+    de atılır."""
+    f = _talk_filter()
+    img = _zemin(seed=10)
+    sub = _yaz(img, [(TALK, WHITE)], cx=W / 2, y=165)
+    if kind == "renkli":
+        task = _yaz(img, [("Lose the cops.", BLUE)], cx=W / 2, y=60, scale=0.7)
+    else:
+        task = _yaz(img, [("Chase Arnold.", WHITE)], cx=W / 2, y=40, scale=0.6, thick=2)
+        assert not line_style(img, task).strong
+    side = _yaz(img, [("Press E to enter", WHITE)], x=40, y=40, scale=0.9)
+    wall = _yaz(img, [("PRIVATE PROPERTY", WHITE)], x=760, y=95, scale=0.8, outline=False, shadow=False, angle=-10)
+    plate = _panel(img, "LND 4821", 900, 40, (235, 235, 235), (90, 40, 10), scale=0.8)
+    lines = [task, side, wall, plate, sub]
+    assert _texts(f.keep(img, lines)) == [sub.text]
+    assert _texts(f.keep(img, lines, stacked=True)) == [task.text, sub.text]
+
+
+def test_islem_hatti_ortme_acikken_iki_yaziyi_da_okur(pipe):
+    """Süzgeç açık, örtme açık: gerçek görüntüde konuşma ve üstündeki küçük görev yazısı iki ayrı satır olarak okunur.
+    Örtme kapalıyken eskisi gibi yalnız en alttaki (konuşma)."""
+    img = _zemin(seed=4)
+    sub = _yaz(img, [(TALK, WHITE)], cx=W / 2, y=165)
+    task = _yaz(img, [("Chase Arnold.", WHITE)], cx=W / 2, y=80, scale=0.7)
+    engine = SimpleNamespace(recognize=lambda _img: [task, sub])
+    [(kind, _t, ev)] = pipe._ocr_item(engine, ("text", 1000.0, img))
+    assert kind == "sub" and ev["text"] == TALK
+    pipe.s.screen_style.cover_original = True
+    out = pipe._ocr_item(engine, ("text", 1005.0, img))
+    assert sorted(ev["text"] for kind, _t, ev in out if kind == "sub") == sorted([TALK, "Chase Arnold."])
+
+
 def test_acik_zeminde_kenarsiz_beyaz_altyazi_gecer():
     """Proje bilinen durumu: açık zeminde kenarsız beyaz yazı. Kenar seçilmez, ortalık ve küçük harf yeter."""
     img = _zemin("beton", 2)

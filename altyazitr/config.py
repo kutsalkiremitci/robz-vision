@@ -13,6 +13,12 @@ from altyazitr.paths import SETTINGS_FILE
 log = logging.getLogger(__name__)
 
 
+# Varsayılan altyazı şeridi (kaynağa oranla x, y, genişlik, yükseklik): GTA VI'nın altta ortadaki altyazısı. Geliştirici
+# GTA VI oynarken seçtiği bölgeden (20.11.2026). Pencere modunun varsayılan bölgesi; ekran modunda bölge hiç
+# seçilmemişse açılışta birincil ekrana bu oranla atanır (bkz. app.apply_default_screen_region).
+DEFAULT_REGION = (0.1761, 0.8037, 0.6422, 0.1963)
+
+
 @dataclass
 class CaptureCfg:
     mode: str = "screen"  # "screen" (ekran bölgesi) | "window" (uygulama penceresi)
@@ -21,7 +27,7 @@ class CaptureCfg:
     # Pencere modu: hedef pencere + pencerenin istemci alanına göre oransal bölge (x, y, w, h), 0..1
     window_exe: str = ""
     window_title: str = ""
-    region: list[float] = field(default_factory=lambda: [0.12, 0.74, 0.76, 0.22])
+    region: list[float] = field(default_factory=lambda: list(DEFAULT_REGION))
     # Tarama hızı (kare/sn). Yazı en geç bir kare sonra görülür; metin bulucu yük payını kendisi sınırlar (zayıf
     # işlemcide kare atlar). 1.2.1'e kadar 10'du (bkz. load_settings, sürüm 5).
     fps: int = 20

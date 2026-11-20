@@ -64,6 +64,10 @@ def test_assemble_speaker_and_hyphen():
     text, speaker, _ = assemble(lines)
     assert speaker == "JASON"
     assert text == "we gotta retreat now"
+    # satır içindeki kekeleme birleşmez (yalnız satır sonu tiresi)
+    lines = [OcrLine("Arnold: Just- just take the scraps,", None, 0, 0, 300, 20), OcrLine("man.", None, 0, 22, 60, 20)]
+    text, speaker, _ = assemble(lines)
+    assert speaker == "Arnold" and text == "Just- just take the scraps, man."
 
 
 def test_short_replies_are_valid():

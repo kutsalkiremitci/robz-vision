@@ -95,7 +95,11 @@ def clean_cover(cover) -> dict | None:
     spans = clean_spans(line.get("spans"), len(text))
     if spans:
         item["spans"] = spans
-    return {"rect": rect, "rows": rows, "font": font, "min": min(low, font), "line": item}
+    out = {"rect": rect, "rows": rows, "font": font, "min": min(low, font), "line": item}
+    slot = cover.get("slot")
+    if isinstance(slot, int) and not isinstance(slot, bool):  # üst üste yazılar: hangi yazının kapağı
+        out["slot"] = slot
+    return out
 
 
 def style_vars(st: StyleCfg) -> dict[str, str]:
@@ -135,7 +139,8 @@ class OverlayServer:
         self.on_clients_changed: Callable[[int], None] | None = None
         # Yeni bağlanan sayfaya bu sırayla gönderilir. "lines" sayfanın çizdiği altyazı akışıdır; "sub" yalnızca
         # en yeni satırdır ve eski sayfa kopyaları (OBS'te açık kalmış ya da service worker'ın sakladığı) için
-        # tutulur, yeni sayfa onu yok sayar. "cover" ("oyun altyazısının üzerine") eski kopyalarda yok sayılır.
+        # tutulur, yeni sayfa onu yok sayar. "cover" ("oyun altyazısının üzerine") eski kopyalarda yok sayılır; üst üste
+        # yazılarda "covers" listesini de taşır (bkz. set_cover).
         self.state: dict[str, dict] = {
             "style": {"type": "style", "vars": {}},
             "sub": {"type": "sub", "text": "", "speaker": None, "original": ""},
@@ -251,10 +256,19 @@ class OverlayServer:
         self.state["mask"] = {"type": "mask", "rect": rect}
         await self._broadcast(self.state["mask"])
 
-    async def set_cover(self, cover: dict | None) -> None:
+    async def set_cover(self, cover: dict | list[dict] | None) -> None:
         """"Oyun altyazısının üzerine" kutusu (yayın görünümünde açıkken; yerini SubtitleDisplay hesaplar):
         {"rect": [x, y, w, h] yayın karesine oransal (oyunun altyazısı + pay), "rows": oyundaki satır sayısı,
         "font" / "min": yazının hedef ve en küçük boyu (kare yüksekliğine oransal), "line": {"line", "text", "speaker"
-        ve vurgu varsa "spans"}}; None = kutu yok. Sayfaya {"type": "cover", "cover": …} gider."""
-        self.state["cover"] = {"type": "cover", "cover": clean_cover(cover)}
-        await self._broadcast(self.state["cover"])
+        ve vurgu varsa "spans"}, üst üste yazılarda "slot": yazının kimliği}; None = kutu yok. Sayfaya
+        {"type": "cover", "cover": …} gider.
+
+        Üst üste yazılarda kapak listesi (eskiden yeniye): sayfaya {"type": "cover", "cover": en yenisi, "covers":
+        [hepsi]} gider. Yeni sayfa "covers"u çizer; eski sayfa kopyaları "cover"ı (en yeni satırın kapağını) çizer."""
+        if isinstance(cover, (list, tuple)):
+            covers = [c for c in map(clean_cover, cover) if c is not None]
+            msg = {"type": "cover", "cover": covers[-1] if covers else None, "covers": covers}
+        else:
+            msg = {"type": "cover", "cover": clean_cover(cover)}
+        self.state["cover"] = msg
+        await self._broadcast(msg)

@@ -8,12 +8,13 @@ from PySide6.QtCore import QPoint, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QGuiApplication, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QRubberBand, QVBoxLayout
 
+from altyazitr.config import DEFAULT_REGION
 from altyazitr.gui import icons
 from altyazitr.gui.dialogs import AlertLabel
 from altyazitr.gui.region_picker import paint_selection_frame
 from altyazitr.gui.tokens import ICON, SPACE, C
 
-PRESET_BOTTOM = (0.12, 0.74, 0.76, 0.22)
+PRESET_BOTTOM = DEFAULT_REGION  # "alt şerit" hazır seçimi = varsayılan altyazı şeridi
 
 
 def bgr_to_pixmap(bgr: np.ndarray) -> QPixmap:

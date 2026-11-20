@@ -388,16 +388,18 @@ class TranslatePage(QWidget):
         f = form()
         self.ol_url = bind_line(t, "ollama_url", restart, "http://127.0.0.1:11434")
         add_row(f, "Adres", self.ol_url)
+        # Yalnız listeden seçilir (tıklayınca açılır, yazı yazılmaz): önerilen modeller ve Ollama'da yüklü olanlar.
+        # Ayarda listede olmayan bir model varsa (eski sürümde elle yazılmış) listeye eklenip seçili gelir.
         self.ol_model = QComboBox()
-        self.ol_model.setEditable(True)
+        self.ol_model.setEditable(False)
         self.ol_model.setMinimumWidth(FIELD_W - 32 - SPACE["s"])
         self.ol_model.setAccessibleName("Ollama modeli")
         for name, desc in OLLAMA_PRESETS:
             self.ol_model.addItem(name, name)
             self.ol_model.setItemData(self.ol_model.count() - 1, desc, Qt.ItemDataRole.ToolTipRole)
-        self.ol_model.setCurrentText(t.ollama_model)
-        self.ol_model.setToolTip(f"Önerilen: {RECOMMENDED_OLLAMA_MODEL}. Listede olmayan bir modelin adını "
-                                 "da yazabilirsiniz.")
+        self._select_model(t.ollama_model)
+        self.ol_model.setToolTip(f"Önerilen: {RECOMMENDED_OLLAMA_MODEL}. Ollama'da yüklü modeller de listede "
+                                 "görünür.")
         self.ol_model.currentTextChanged.connect(self._ollama_model_changed)
         b_list = icon_button("refresh", "Yüklü modelleri yenile")
         b_list.clicked.connect(self._ollama_refresh)
@@ -620,6 +622,17 @@ class TranslatePage(QWidget):
             self.qm_line.set("İndirme başarısız", "error", tip=err)
 
     # --- ollama -------------------------------------------------------------------------
+    def _select_model(self, model: str) -> None:
+        """Modeli seçer; listede yoksa ekler (liste yazılamaz, bkz. ol_model)."""
+        model = (model or "").strip()
+        if not model:
+            return
+        i = self.ol_model.findData(model)
+        if i < 0:
+            self.ol_model.addItem(model, model)
+            i = self.ol_model.count() - 1
+        self.ol_model.setCurrentIndex(i)
+
     def _ollama_model_changed(self, text: str) -> None:
         self.ctx.s.translate.ollama_model = text.strip()
         self._update_pull_button()
@@ -675,7 +688,7 @@ class TranslatePage(QWidget):
         self.ol_pull.setVisible(not installed)
         self.ol_model.setToolTip(
             (f"{self.ol_model.currentText().strip()} yüklü. " if installed else "")
-            + f"Önerilen: {RECOMMENDED_OLLAMA_MODEL}. Listede olmayan bir modelin adını da yazabilirsiniz.")
+            + f"Önerilen: {RECOMMENDED_OLLAMA_MODEL}. Ollama'da yüklü modeller de listede görünür.")
 
     def _ollama_pull(self) -> None:
         """"Modeli indir": yerel Ollama'da kurulum servisine gider (yalnız model iner, ayar değişmez; ilerleme Ollama
@@ -868,12 +881,7 @@ class TranslatePage(QWidget):
             w.blockSignals(True)
         try:
             self.engine.setCurrentIndex(max(0, self.engine.findData(t.engine)))
-            model = t.ollama_model.strip()
-            if model and self.ol_model.findData(model) < 0:
-                self.ol_model.addItem(model, model)
-            if self.ol_model.findData(model) >= 0:
-                self.ol_model.setCurrentIndex(self.ol_model.findData(model))
-            self.ol_model.setCurrentText(model)
+            self._select_model(t.ollama_model)
             if self.ol_url.text() != t.ollama_url:
                 self.ol_url.setText(t.ollama_url)
         finally:

@@ -161,9 +161,106 @@ def test_ana_sayfada_onizlemeden_bolge_kaydedilir(qapp, monkeypatch):
     assert not home.source._hint
 
     c.mode, c.window_exe, c.window_title = "window", "chiaki.exe", "chiaki-ng"
-    monkeypatch.setattr("altyazitr.gui.home_page.winutil.find_window", lambda exe, title: None)
+    monkeypatch.setattr("altyazitr.gui.home_page.winutil.find_window", lambda exe, title, **_kw: None)
     home.refresh()
     assert not home.source._editable and "açık değil" in home.source._message
     home._region_committed((0.1, 0.8, 0.8, 0.15))
     assert c.region == [0.1, 0.8, 0.8, 0.15] and edited == [1, 1]
     assert not home.read_box.isVisibleTo(home)  # okunan bölge yalnız çeviri sürerken
+
+
+def test_ana_sayfa_genis_ve_dar_duzen(qapp, monkeypatch):
+    """Geniş: solda tam boy çeviriler (liste doldurur), sağda kaynak ve yan yana Ekranımda / OBS. Dar: tek kayan
+    sütun, kaynak en üstte. Geçişte kartlar taşınır, kaybolmaz."""
+    from tests.test_history import _home
+
+    home, _ctx, _toasts = _home(qapp, monkeypatch)
+    home.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
+    home.resize(1068, 800)
+    home.show()
+    qapp.processEvents()
+    assert home._wide and home._left.isVisibleTo(home) and not home._sa.isVisibleTo(home)
+    assert home.hist_card.parentWidget() is home._left and home.history.view._fill
+    assert home.ov_card.parentWidget() is home._docks and home.obs_card.parentWidget() is home._docks
+    assert home.source.width() > home._left.width()  # kaynak en büyük öğe
+
+    home.resize(780, 800)
+    qapp.processEvents()
+    assert not home._wide and home._sa.isVisibleTo(home) and not home._left.isVisibleTo(home)
+    order = [home._lay.indexOf(c) for c in (home.source_card, home.ov_card, home.obs_card, home.hist_card)]
+    assert order == [0, 1, 2, 3] and not home.history.view._fill
+    assert all(c.isVisibleTo(home) for c in (home.source_card, home.ov_card, home.obs_card, home.hist_card))
+    home.hide()
+
+
+def test_pencere_listesi_duzenli_ve_acilirken_yenilenir(qapp, monkeypatch):
+    """Pencere modunda yeni açılan pencere listeye kendiliğinden gelir (iki saniyede bir ve liste açılırken); seçim
+    korunur, liste değişmediyse yeniden kurulmaz; seçili pencere sonradan açılınca önizleme ona geçer."""
+    from altyazitr import winutil
+    from tests.test_history import _home
+
+    home, ctx, _toasts = _home(qapp, monkeypatch)
+    c = ctx.s.capture
+    c.mode, c.window_exe, c.window_title = "window", "chiaki.exe", "chiaki-ng"
+    open_now: list = [winutil.WindowInfo(11, "Not Defteri", "notepad.exe", 800, 600)]
+    monkeypatch.setattr("altyazitr.gui.home_page.winutil.list_windows", lambda: list(open_now))
+    monkeypatch.setattr("altyazitr.gui.home_page.winutil.find_window",
+                        lambda exe, title, **_kw: next((w for w in open_now if w.exe == exe), None))
+    home.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
+    home.show()
+    home.refresh_windows()
+    home.refresh()
+    combo = home.win_combo
+    texts = lambda: [combo.itemText(i) for i in range(combo.count())]  # noqa: E731
+    assert texts()[0].startswith("(açık değil)") and combo.currentIndex() == 0 and home._hwnd == 0
+
+    clears: list[int] = []
+    real_clear = combo.clear
+    monkeypatch.setattr(combo, "clear", lambda: (clears.append(1), real_clear()))
+    home._ticks = 0
+    home._watchdog()
+    home._watchdog()  # iki saniye: liste aynı, yeniden kurulmaz
+    assert clears == []
+
+    open_now.append(winutil.WindowInfo(22, "chiaki-ng", "chiaki.exe", 1920, 1080))  # seçili pencere açıldı
+    home._watchdog()
+    home._watchdog()
+    assert clears == [1] and not any(t.startswith("(açık değil)") for t in texts())
+    assert combo.itemData(combo.currentIndex()) in (("chiaki.exe", "chiaki-ng"), ["chiaki.exe", "chiaki-ng"])
+    assert home._hwnd == 22 and home.source._editable  # önizleme açılan pencereye geçti
+
+    open_now.append(winutil.WindowInfo(33, "OBS 31", "obs64.exe", 1280, 720))  # liste açılırken de tazelenir
+    combo.opening.emit()
+    assert any("OBS 31" in t for t in texts())
+    assert combo.itemData(combo.currentIndex()) in (("chiaki.exe", "chiaki-ng"), ["chiaki.exe", "chiaki-ng"])
+    home.hide()
+
+
+def test_varsayilan_altyazi_bolgesi(qapp):
+    """Yeni kullanıcıda (ekran modu, bölge yok) açılışta birincil ekrana varsayılan şerit atanır; Windows ölçeği
+    fiziksel piksele çevrilir. Bölgesi olana ve pencere moduna dokunulmaz; pencere modunun varsayılanı aynı şerit."""
+    from types import SimpleNamespace
+
+    from PySide6.QtCore import QRect
+
+    from altyazitr.app import apply_default_screen_region
+    from altyazitr.config import DEFAULT_REGION, Settings
+
+    def screen(w, h, dpr):
+        return SimpleNamespace(geometry=lambda: QRect(0, 0, w, h), devicePixelRatio=lambda: dpr)
+
+    s = Settings()
+    assert s.capture.mode == "screen" and not s.capture.is_ready()
+    assert s.capture.region == list(DEFAULT_REGION)
+    assert apply_default_screen_region(s, screen(1920, 1080, 1.0))
+    assert s.capture.rect == [338, 868, 1233, 212] and s.capture.is_ready()
+    assert not apply_default_screen_region(s, screen(1920, 1080, 1.0))  # bölgesi var: dokunulmaz
+    assert s.capture.rect == [338, 868, 1233, 212]
+
+    s2 = Settings()
+    assert apply_default_screen_region(s2, screen(1707, 960, 1.5))  # 2560×1440, %150 ölçek
+    assert s2.capture.rect == sv.frac_to_rect(DEFAULT_REGION, (0, 0, 2560, 1440))
+
+    s3 = Settings()
+    s3.capture.mode = "window"
+    assert not apply_default_screen_region(s3, screen(1920, 1080, 1.0)) and s3.capture.rect == []

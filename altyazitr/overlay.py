@@ -13,7 +13,9 @@
   görünsün" seçeneğiyle OBS Ekran Yakalama'da görünür hâle gelir.
 * "Oyun altyazısının üzerine" (screen_style.cover_original; bkz. set_cover): kutu her satırda oyunun altyazısının
   üstüne taşınır, onu opak örter ve çeviriyi içinde ortalar. Kullanıcının kaydettiği kutu yeri değişmez: kapak
-  kalkınca kutu oraya döner.
+  kalkınca kutu oraya döner. Üst üste yazılarda (konuşma ve görev yazısı) birden çok kapak vardır: aynı saydam pencere
+  hepsini kapsayacak kadar büyür, her kapak kendi yerine çizilir (aradaki alan saydam, fareyi geçirir, yakalamaya
+  girmeme kuralı tek pencerede aynen geçerli). Kalkan yazının kapağı solar, yeni yazınınki belirir.
 """
 
 from __future__ import annotations
@@ -135,10 +137,20 @@ class ScreenOverlay(QWidget):
         self._shift.setEndValue(1.0)
         self._shift.valueChanged.connect(self._on_shift)
         self._top_timer = QTimer(self, interval=2000, timeout=self._raise_topmost)
-        # "Oyun altyazısının üzerine" (bkz. set_cover): gösterilen satır ve yazı boyu; None ise kutu kendi yerinde.
-        # _cover_req: son istenen kapak (ayar modu bitince yeniden uygulanır)
+        # "Oyun altyazısının üzerine" (bkz. set_cover): None ise kutu kendi yerinde. Kapaktayken {"line", "size": en
+        # yeni kapağın satırı ve yazı boyu, "items": kapaklar [{"key", "line", "size", "rect"}], "leaving": solan
+        # kapaklar, "entering": beliren kapakların anahtarları, "origin": pencerenin sol üstü}.
+        # _cover_req: son istenen kapak(lar) (ayar modu bitince yeniden uygulanır)
         self._cover: dict | None = None
-        self._cover_req: dict | None = None
+        self._cover_req: dict | list | None = None
+        # Kapaklardan biri kalkınca / yenisi gelince (öbürleri dururken) solma ve belirme (0 → 1)
+        self._cover_mix = 1.0
+        self._cover_fade = QVariantAnimation(self)
+        self._cover_fade.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._cover_fade.setStartValue(0.0)
+        self._cover_fade.setEndValue(1.0)
+        self._cover_fade.valueChanged.connect(self._on_cover_fade)
+        self._cover_fade.finished.connect(self._cover_fade_done)
         self._restore_geometry()
 
     @property
@@ -226,38 +238,104 @@ class ScreenOverlay(QWidget):
     def clear(self) -> None:
         self._fade_to(0.0)
 
-    def set_cover(self, cover: dict | None) -> None:
+    def set_cover(self, cover: dict | list[dict] | None) -> None:
         """Oyun altyazısının üzerine yerleştirir ("Ekranımda" görünümünde açıkken; yerini SubtitleDisplay hesaplar):
         kutu oyunun altyazısının üstüne taşınır, onu opak örter, çeviri içinde ortalanır. cover: {"rect": [x, y, w, h]
         oyunun altyazısı + pay, "bounds": bulunduğu ekran (ikisi de mantıksal piksel), "rows": oyundaki satır sayısı,
-        "font" / "min": yazının hedef ve en küçük boyu (px), "line": {"text", "speaker", "spans"}}. None: kutu solar,
-        sonra kullanıcının kaydettiği yerine döner. Ayar modunda ("Konumu ayarla") kullanıcının kendi kutusu
-        düzenlenir; istenen kapak ayar modu bitince uygulanır."""
+        "font" / "min": yazının hedef ve en küçük boyu (px), "line": {"text", "speaker", "spans"}}. Üst üste yazılarda
+        bunların listesi (eskiden yeniye; her birinde yazının kimliği "slot"): pencere hepsini kapsar, her kapak kendi
+        yerine çizilir; aynı yazının yeni satırı yerinde değişir, kalkan yazının kapağı solar, yeni yazınınki belirir.
+        None (ya da boş liste): kutu solar, sonra kullanıcının kaydettiği yerine döner. Ayar modunda ("Konumu ayarla")
+        kullanıcının kendi kutusu düzenlenir; istenen kapak ayar modu bitince uygulanır."""
         self._cover_req = cover
         if self.editing:
             return
-        placed = self._place_cover(cover) if cover else None
-        if placed is None:
+        items = self._place_covers(cover)
+        if not items:
             if self._cover is not None:
                 self._fade_to(0.0)
             return
-        rect, size = placed
         entering = self._cover is None
         if entering:  # akıştan kapağa: kutudaki satırlar hemen bırakılır
             self._anim.stop()
             self._shift.stop()
             self._opacity, self._progress = 0.0, 1.0
             self.lines = []
-        line = cover["line"]
-        self._cover = {"line": dict(line), "size": size}
+            leaving, born = [], set()
+        else:
+            leaving, born = self._cover_changes(items)
+        newest = items[-1]
+        self._cover = {"line": newest["line"], "size": newest["size"], "items": items, "leaving": leaving,
+                       "entering": born}
+        line = newest["line"]
         self.text, self.speaker, self.original = str(line.get("text") or ""), line.get("speaker"), ""
-        if self.geometry() != rect:
-            self.setGeometry(rect)
+        self._cover_geometry()
+        if leaving or born:
+            self._cover_mix = 0.0
+            self._cover_fade.setDuration(max(1, int(self.look.fade_ms)))  # her geçişte okunur
+            self._cover_fade.start()
         self._update_visibility()
         if entering:
             self._apply_win32()  # ekran yakalamaya görünürlük kapakta değişebilir (bkz. _affinity)
         self._fade_to(1.0)
         self.update()
+
+    def _place_covers(self, cover: dict | list[dict] | None) -> list[dict]:
+        """İstenen kapakların yerleşimi, eskiden yeniye: {"key": yazının kimliği (yoksa sırası), "line", "size": yazı
+        boyu, "rect": pencere alanı (mantıksal piksel, bkz. _place_cover)}. Yerleştirilemeyen kapak atlanır."""
+        covers = [cover] if isinstance(cover, dict) else list(cover or [])
+        items = []
+        for i, c in enumerate(covers):
+            placed = self._place_cover(c) if isinstance(c, dict) else None
+            if placed is None:
+                continue
+            slot = c.get("slot")
+            key = ("s", slot) if isinstance(slot, int) and not isinstance(slot, bool) else ("i", i)
+            items.append({"key": key, "line": dict(c["line"]), "size": placed[1], "rect": placed[0]})
+        return items
+
+    def _cover_changes(self, items: list[dict]) -> tuple[list[dict], set]:
+        """Kapaktayken yeni kapak listesi geldi: (solacak eski kapaklar, belirecek yenilerin anahtarları). Süren bir
+        solma / belirme varsa o hemen biter."""
+        if self._cover_fade.state() == QVariantAnimation.State.Running:
+            self._cover_fade.stop()
+        self._cover_mix = 1.0
+        old = {it["key"]: it for it in self._cover["items"]}
+        keys = {it["key"] for it in items}
+        return [it for k, it in old.items() if k not in keys], keys - old.keys()
+
+    def _cover_geometry(self) -> None:
+        """Pencere bütün kapakları (solanlar dahil) kapsar; tek kapakta tam onun yeridir."""
+        c = self._cover
+        rects = [it["rect"] for it in c["items"] + c["leaving"]]
+        area = QRect(rects[0])
+        for r in rects[1:]:
+            area = area.united(r)
+        c["origin"] = area.topLeft()
+        if self.geometry() != area:
+            self.setGeometry(area)
+
+    def _on_cover_fade(self, v) -> None:
+        self._cover_mix = float(v)
+        self.update()
+
+    def _cover_fade_done(self) -> None:
+        """Solan kapaklar bırakılır; pencere kalanları kapsayacak kadar küçülür."""
+        self._cover_mix = 1.0
+        c = self._cover
+        if c is None:
+            return
+        shrink = bool(c["leaving"])
+        c["leaving"], c["entering"] = [], set()
+        if shrink:
+            self._cover_geometry()
+        self.update()
+
+    def _cover_layers(self) -> list[tuple[dict, float]]:
+        """Çizilecek kapaklar ve saydamlıkları: solanlar, sonra durumdakiler (belirenler solmayla birlikte)."""
+        c, mix = self._cover, self._cover_mix
+        out = [(it, 1.0 - mix) for it in c["leaving"]]
+        return out + [(it, mix if it["key"] in c["entering"] else 1.0) for it in c["items"]]
 
     def _place_cover(self, cover: dict) -> tuple[QRect, float] | None:
         """Kapak kutusunun pencere alanı (mantıksal piksel) ve yazı boyu. Kutu oyunun altyazısının dikdörtgenidir;
@@ -381,6 +459,8 @@ class ScreenOverlay(QWidget):
         self._shift.stop()
         self._progress = 1.0
         if self._cover is not None:
+            self._cover_fade.stop()
+            self._cover_mix = 1.0
             self._cover = None
             self._restore_geometry()
 
@@ -461,12 +541,25 @@ class ScreenOverlay(QWidget):
                               self._progress if showing else 1.0)
         elif self._cover is not None:
             if self._opacity > 0.001:
-                p.setOpacity(self._opacity)
-                paint_cover(p, W, H, self.look, self._cover["line"], self._cover["size"])
+                self._paint_covers(p)
         elif self._opacity > 0.001 and self.text and self.lines:
             p.setOpacity(self._opacity)
             self._paint_lines(p, W, H, self.lines, self._progress)
         p.end()
+
+    def _paint_covers(self, p: QPainter) -> None:
+        """Her kapak kendi yerine (pencerenin sol üstüne göre); tek kapak pencerenin tamamıdır."""
+        origin = self._cover["origin"]
+        for it, alpha in self._cover_layers():
+            a = self._opacity * alpha
+            if a <= 0.001:
+                continue
+            r = it["rect"]
+            p.save()
+            p.setOpacity(a)
+            p.translate(r.x() - origin.x(), r.y() - origin.y())
+            paint_cover(p, r.width(), r.height(), self.look, it["line"], it["size"])
+            p.restore()
 
     def _paint_lines(self, p: QPainter, W: int, H: int, lines: list[dict], progress: float) -> None:
         """Satırları kutuya çizer: en yeni altta, eskiler üstte ve soluk (tek paint_subtitle çağrısı)."""

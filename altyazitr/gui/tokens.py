@@ -37,6 +37,7 @@ class C:
     ORANGE = "#FF8A5B"      # gün batımı turuncusu — uyarı; gün batımı geçişinin ikinci durağı
     CYAN = "#3FD8EE"        # neon camgöbeği — klavye odağı, seçim, bağlantılar
     TURQUOISE = "#2BC4AE"   # tropik turkuaz — canlı/çalışıyor, başarı
+    LIVE = "#3DDC84"        # yeşil — kenar çubuğunda "Çalışıyor" noktası (çeviri sürüyor)
     DANGER = "#FF5A5F"      # durdur / hata
     # yarı saydam katmanlar (yalnızca QSS içinde; QColor bu biçimi okumaz → qcolor() kullanın)
     CYAN_SOFT = "rgba(63, 216, 238, 0.14)"

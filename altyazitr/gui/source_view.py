@@ -151,6 +151,8 @@ class SourceView(QWidget):
         self._region: Frac | None = None
         self._message = ""
         self._hint = ""
+        self._notice = ""       # uyarı (ör. "Pencere simge durumunda"): sol üstte, turuncu kenarlı
+        self._hover_hint = ""   # bölge varken fare üstündeyken altta görünen kısa kullanım ipucu
         self._editable = True
         self._drag: tuple[str, QPointF, Frac | None] | None = None
         self._hover = ""
@@ -199,6 +201,15 @@ class SourceView(QWidget):
         if text != self._hint:
             self._hint = text
             self.update()
+
+    def set_notice(self, text: str) -> None:
+        if text != self._notice:
+            self._notice = text
+            self.update()
+
+    def set_hover_hint(self, text: str) -> None:
+        self._hover_hint = text
+        self.update()
 
     def set_editable(self, on: bool) -> None:
         self._editable = bool(on)
@@ -336,11 +347,15 @@ class SourceView(QWidget):
             self.committed.emit(new)
             self.update()
 
+    def enterEvent(self, e) -> None:  # noqa: N802 - Qt
+        self.update()  # fare üstündeyken kullanım ipucu
+        super().enterEvent(e)
+
     def leaveEvent(self, e) -> None:  # noqa: N802 - Qt
         if self._hover and self._drag is None:
             self._hover = ""
             self.unsetCursor()
-            self.update()
+        self.update()
         super().leaveEvent(e)
 
     # --- çizim ---------------------------------------------------------------------------------
@@ -376,6 +391,12 @@ class SourceView(QWidget):
             self._paint_size(p, rr, ir)
         if self._hint and self._img is not None and self._drag is None:
             self._paint_pill(p, self._hint, QPointF(ir.center().x(), ir.top() + SPACE["l"]), center=True)
+        elif (self._hover_hint and self._img is not None and self._region is not None and self._drag is None
+              and self._editable and self.underMouse()):
+            self._paint_pill(p, self._hover_hint, QPointF(ir.center().x(), ir.top() + SPACE["s"]), center=True)
+        if self._notice:
+            self._paint_pill(p, self._notice, QPointF(ir.left() + SPACE["s"], ir.top() + SPACE["s"]),
+                             border=C.ORANGE)
         p.setClipping(False)
         p.setPen(QPen(QColor(C.CYAN if self.hasFocus() else C.LINE_STRONG), 1.0))
         p.setBrush(Qt.BrushStyle.NoBrush)
@@ -420,7 +441,7 @@ class SourceView(QWidget):
         p.setPen(QColor(C.CYAN))
         p.drawText(box, Qt.AlignmentFlag.AlignCenter, text)
 
-    def _paint_pill(self, p: QPainter, text: str, at: QPointF, center: bool = False) -> None:
+    def _paint_pill(self, p: QPainter, text: str, at: QPointF, center: bool = False, border: str = C.CYAN) -> None:
         p.setFont(self._font(F.BODY, 13))
         fm = p.fontMetrics()
         tw = fm.horizontalAdvance(text) + 2 * SPACE["m"]
@@ -430,7 +451,7 @@ class SourceView(QWidget):
         path = QPainterPath()
         path.addRoundedRect(box, th / 2, th / 2)
         p.fillPath(path, qcolor(C.BG, 0.88))
-        p.setPen(QPen(QColor(C.CYAN), 1))
+        p.setPen(QPen(QColor(border), 1))
         p.drawPath(path)
         p.setPen(QColor(C.TEXT))
         p.drawText(box, Qt.AlignmentFlag.AlignCenter, text)
@@ -507,6 +528,7 @@ class SourceGrabber(QObject):
     # --- iş parçacığı ----------------------------------------------------------------------------
     def _run(self) -> None:
         sct = None
+        last, last_w = None, 0
         try:
             while not self._quit.is_set():
                 t0 = time.perf_counter()
@@ -530,12 +552,19 @@ class SourceGrabber(QObject):
                 except Exception as e:  # tek kare kaçar; döngü sürer
                     log.debug("Önizleme karesi alınamadı", exc_info=True)
                     err = str(e) or type(e).__name__
-                if frame is not None and frame.size:
-                    h, w = frame.shape[:2]
-                    self.frame.emit(downscale_bgr(frame, self._max_w), QSize(w, h))
-                if err != self._last_err:
-                    self._last_err = err
-                    self.failed.emit(err)
+                # Pencere modunda son tam kare değişmediyse (pencere durgun: Windows yeni kare vermez, peek_full aynı
+                # diziyi döndürür) yeniden küçültülüp çizilmez. Genişlik değiştiyse yine gönderilir.
+                same = frame is not None and frame is last and self._max_w == last_w
+                try:
+                    if frame is not None and frame.size and not same:
+                        h, w = frame.shape[:2]
+                        self.frame.emit(downscale_bgr(frame, self._max_w), QSize(w, h))
+                        last, last_w = frame, self._max_w
+                    if err != self._last_err:
+                        self._last_err = err
+                        self.failed.emit(err)
+                except RuntimeError:  # uygulama kapanıyor: alıcı nesne silinmiş
+                    break
                 self._wake.wait(max(0.0, self._interval - (time.perf_counter() - t0)))
                 self._wake.clear()
         finally:

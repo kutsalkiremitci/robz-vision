@@ -570,19 +570,19 @@ def test_manual_model_download_goes_to_service_on_local_address(qapp, monkeypatc
     page, t, calls, fake = _page(qapp, monkeypatch, s, names=["llama3.2:3b"])
     assert _wait(qapp, lambda: page._ol_installed is not None)  # yüklü modeller arka planda okundu
     listed = len(fake.lists)
-    page.ol_model.setCurrentText("qwen3:8b")
-    assert t.ollama_model == "qwen3:8b" and calls["restart"] == 1 and _vis(page, page.ol_pull)  # yüklü değil
+    page.ol_model.setCurrentText("gemma4:26b")
+    assert t.ollama_model == "gemma4:26b" and calls["restart"] == 1 and _vis(page, page.ol_pull)  # yüklü değil
     ai = page.ai
     page.ol_pull.click()
     assert _enabled(page) == [False, False, False]  # plan hazırlanırken de tek indirme
     assert _wait(qapp, lambda: ai.started)
-    assert ai.plans == [("qwen3:8b", False)] and [p.apply for p in ai.started] == [False]
+    assert ai.plans == [("gemma4:26b", False)] and [p.apply for p in ai.started] == [False]
     assert len(fake.lists) == listed and fake.pulls == []  # Ollama'ya doğrudan gidilmez
     assert _vis(page, page.ol_progress) and not _vis(page, page.hint_box) and not _vis(page, page.ol_line)
     assert _enabled(page) == [False, False, False]
     ai.succeed()
-    assert (t.engine, t.ollama_model) == ("ollama", "qwen3:8b")  # ayar değişmez
-    assert page.ol_line.text.text() == "qwen3:8b indirildi" and page.ol_model.findData("qwen3:8b") >= 0
+    assert (t.engine, t.ollama_model) == ("ollama", "gemma4:26b")  # ayar değişmez
+    assert page.ol_line.text.text() == "Gemma 4 26B indirildi" and page.ol_model.findData("gemma4:26b") >= 0
     assert calls == {"save": 1, "restart": 1, "clear": 0} and not _vis(page, page.ol_progress)
     assert all(_enabled(page))
 
@@ -605,14 +605,14 @@ def test_manual_model_download_on_remote_server_uses_ollama_directly(qapp, monke
     s = Settings()
     s.translate.engine, s.translate.ollama_url = "ollama", REMOTE
     page, t, calls, fake = _page(qapp, monkeypatch, s, names=["llama3.2:3b"])
-    page.ol_model.setCurrentText("qwen3:8b")
+    page.ol_model.setCurrentText("gemma4:26b")
     page.ol_pull.click()
     assert _wait(qapp, lambda: page._pull is None)
-    assert fake.pulls == [(REMOTE, "qwen3:8b")] and page.ai.plans == [] and page.ai.started == []
+    assert fake.pulls == [(REMOTE, "gemma4:26b")] and page.ai.plans == [] and page.ai.started == []
     # yüklü modeller arka planda yeniden okunup listeye eklenir; inen model artık yüklü, "Modeli indir" gizlenir
-    assert _wait(qapp, lambda: page.ol_model.findData("qwen3:8b") >= 0)
-    assert page.ol_line.text.text() == "qwen3:8b indirildi" and not _vis(page, page.ol_pull)
-    assert t.engine == "ollama" and t.ollama_model == "qwen3:8b" and t.profile == "genel"
+    assert _wait(qapp, lambda: page.ol_model.findData("gemma4:26b") >= 0)
+    assert page.ol_line.text.text() == "gemma4:26b indirildi" and not _vis(page, page.ol_pull)
+    assert t.engine == "ollama" and t.ollama_model == "gemma4:26b" and t.profile == "genel"
     assert calls["restart"] == 2 and all(_enabled(page))
 
 
@@ -702,7 +702,7 @@ def test_pull_button_hidden_for_installed_model(qapp, monkeypatch):
     assert "yüklü" in page.ol_model.toolTip()
     page.ol_model.setCurrentText("gemma4:e4b")  # yüklü değil
     assert _vis(page, page.ol_pull)
-    page.ol_model.setCurrentText("llama3")  # Ollama'da "llama3:latest"
+    page.ol_model.setCurrentText("llama3:latest")  # yüklü modeller listede seçilebilir
     assert not _vis(page, page.ol_pull)
     assert page.ol_model.findData("llama3:latest") >= 0  # yüklü modeller seçime eklendi
 
@@ -730,3 +730,14 @@ def test_models_read_when_switching_to_ollama(qapp, monkeypatch):
     assert _wait(qapp, lambda: page._ol_installed is not None)
     assert not _vis(page, page.ol_pull)
 
+
+
+def test_model_box_is_selection_only(qapp, monkeypatch):
+    """Model kutusu yazılamaz, tıklayınca liste açılır. Ayarda listede olmayan (eski sürümde elle yazılmış) model
+    listeye eklenip seçili gelir; kimsenin ayarı kaybolmaz."""
+    s = Settings()
+    s.translate.engine, s.translate.ollama_model = "ollama", "qwen3:8b"
+    page, t, _calls, _fake = _page(qapp, monkeypatch, s)
+    assert not page.ol_model.isEditable() and page.ol_model.lineEdit() is None
+    assert page.ol_model.currentText() == "qwen3:8b" and t.ollama_model == "qwen3:8b"
+    assert page.ol_model.findData(RECOMMENDED_OLLAMA_MODEL) >= 0

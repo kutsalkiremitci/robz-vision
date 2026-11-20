@@ -69,6 +69,10 @@ CENTER_TOL = 0.025  # ortalı: ortalar arası en çok bölge genişliğinin bu k
 HEIGHT_TOL = 1.5  # boy uyumu: öğrenilen satır boyunun en çok bu katı (ya da 1 / bu kat)
 HISTORY = 16  # öğrenmede tutulan son farklı altyazı satırı
 TRUST_MIN = 3  # en az bu kadar satır aynı ortada buluşunca öğrenilen orta kullanılır
+# Üst üste yazılar (keep(stacked=True); "Oyun altyazısının üzerine" açıkken bölgedeki her öbek ayrı okunur): konuşmanın
+# üstündeki görev yazısı daha küçük ve öğrenilen altyazı satırından yukarıdadır. Boy uyumu bu kata kadar gevşer, satırın
+# öğrenilen altyazı satırında olması aranmaz; ortalılık ve biçim kuralları aynen geçerlidir.
+STACK_HEIGHT_TOL = 2.5
 
 
 @dataclass
@@ -303,18 +307,20 @@ class SubtitleFilter:
         return _Learned(float(statistics.median(s.cx for s in near)), float(statistics.median(s.h for s in near)),
                         float(statistics.median(s.bottom for s in near)))
 
-    def keep(self, img, lines: Sequence[OcrLine]) -> list[OcrLine]:
+    def keep(self, img, lines: Sequence[OcrLine], stacked: bool = False) -> list[OcrLine]:
         """Altyazı biçimindeki satırlar (sırası korunur). Görüntü yoksa (testlerde sahte kare) hepsi geçer; ölçüm
-        hata verirse de (en iyi çaba: süzgeç yüzünden altyazı kaybolmasın)."""
+        hata verirse de (en iyi çaba: süzgeç yüzünden altyazı kaybolmasın). stacked: bölgedeki ayrı yazılar (öbekler)
+        ayrı okunuyor; konuşmanın üstündeki daha küçük görev yazısı öğrenilen satır boyu ve yeri yüzünden atılmaz (bkz.
+        STACK_HEIGHT_TOL)."""
         if not isinstance(img, np.ndarray) or img.ndim != 3 or not lines:
             return list(lines)
         try:
-            return self._keep(img, lines)
+            return self._keep(img, lines, stacked)
         except Exception:
             log.warning("Altyazı biçimi ölçülemedi; bu karede bütün satırlar okunacak", exc_info=True)
             return list(lines)
 
-    def _keep(self, img: np.ndarray, lines: Sequence[OcrLine]) -> list[OcrLine]:
+    def _keep(self, img: np.ndarray, lines: Sequence[OcrLine], stacked: bool = False) -> list[OcrLine]:
         H, W = img.shape[:2]
         if self._shape != (H, W):
             self.reset()
@@ -322,7 +328,7 @@ class SubtitleFilter:
         styles = [line_style(img, ln) for ln in lines]
         near, union = _rows(lines, styles)
         learned = self.learned()
-        verdict = [_verdict(ln, st, (_Box.of(ln), a, b), W, learned)
+        verdict = [_verdict(ln, st, (_Box.of(ln), a, b), W, learned, stacked)
                    for ln, st, a, b in zip(lines, styles, near, union)]
         _attach(lines, styles, near, verdict, W)
         for ln, st, box, ok in zip(lines, styles, near, verdict):
@@ -335,19 +341,22 @@ class SubtitleFilter:
 
 
 def _verdict(line: OcrLine, st: LineStyle | None, boxes: tuple[_Box, _Box, _Box], W: int,
-             learned: _Learned | None) -> bool:
+             learned: _Learned | None, stacked: bool = False) -> bool:
     """Tek satırın kararı (bkz. modül açıklaması). boxes: satırın kendisi, komşu parçalarıyla öbeği, hizasındaki
     bütün parçalarla birleşimi. Ortalılık üçünden birinde sağlanırsa yeter: bölünmüş satırın parçası, eksik parçası
     okunamamış olsa da birleşimle ortalıdır. Şerit için birleşime bakılmaz (aynı hizadaki HUD ortadan geçmiş
-    sayılmasın)."""
+    sayılmasın). stacked: üst üste ayrı yazılar okunuyor (bkz. SubtitleFilter.keep)."""
     if st is None or st.tilted:
         return False
     own = boxes[0]
     center = W / 2 if learned is None else learned.cx
     centered = any(abs(b.cx - center) <= CENTER_TOL * W + 0.5 * b.h for b in boxes)
-    fits = learned is None or 1 / HEIGHT_TOL <= own.h / learned.h <= HEIGHT_TOL
-    # altyazının satırı: öğrenilen alt kenardan iki buçuk satır yukarıya kadar (iki satırlı altyazı)
-    on_row = learned is None or learned.bottom - 2.8 * learned.h <= (own.y0 + own.y1) / 2 <= learned.bottom + learned.h
+    tol = STACK_HEIGHT_TOL if stacked else HEIGHT_TOL
+    fits = learned is None or 1 / tol <= own.h / learned.h <= tol
+    # altyazının satırı: öğrenilen alt kenardan iki buçuk satır yukarıya kadar (iki satırlı altyazı); üst üste
+    # yazılarda her öbek kendi yerindedir
+    on_row = stacked or learned is None or (learned.bottom - 2.8 * learned.h <= (own.y0 + own.y1) / 2
+                                            <= learned.bottom + learned.h)
     # şerit: öğrenilen ortanın da bölgenin ortasının da çevresi (yanlış öğrenilmiş orta altyazıyı attırmasın). Yalnız
     # satırın kendi kutusuyla: yanındaki altyazıyla birleşen HUD ortadan geçmiş sayılmasın.
     band = BAND_COLD if learned is None else BAND

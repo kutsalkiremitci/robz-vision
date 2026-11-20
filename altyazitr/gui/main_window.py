@@ -288,8 +288,8 @@ class _StatusRow(QWidget):
         h.addWidget(self.tx, 1)
         self.setFixedHeight(28)
 
-    def set_state(self, on: bool, text: str, tip: str) -> None:
-        color = C.TURQUOISE if on else C.TEXT_3
+    def set_state(self, on: bool, text: str, tip: str, on_color: str = C.TURQUOISE) -> None:
+        color = on_color if on else C.TEXT_3
         self.ic.setPixmap(pixmap(self._icon_name, 16, color, dpr=max(2.0, _dpr(self))))
         self.tx.setText(text)
         self.tx.setStyleSheet(_qss_font(F.DISPLAY, 13, C.TEXT if on else C.TEXT_3))
@@ -496,7 +496,7 @@ class MainWindow(QMainWindow):
     def __init__(self, ctx):
         super().__init__()
         self.ctx = ctx
-        self.setWindowTitle(APP_NAME)
+        self.setWindowTitle(f"{APP_NAME} – {__version__}")
         self.setWindowIcon(app_icon())
         # Ana sayfanın geniş düzeni (canlı kaynak sağda her zaman görünür) 1080p ekranda varsayılan olsun: ekran
         # yeterince büyükse pencere 1280×840'a kadar büyür; eski varsayılanın (980×760) altına hiç inmez.
@@ -577,13 +577,13 @@ class MainWindow(QMainWindow):
         fv.setSpacing(SPACE["xs"])
         self._live = _StatusRow("dot")
         self._obs = _StatusRow("broadcast")
-        self._ver = QLabel(f"Sürüm {__version__}")
-        self._ver.setStyleSheet(_qss_font(F.DISPLAY, 12, C.TEXT_3))
-        self._ver.setToolTip(f"{APP_NAME} {__version__}")
+        self._ver_row = _StatusRow("tag")
+        self._ver_row.set_state(False, f"Sürüm {__version__}", f"{APP_NAME} {__version__}")
+        self._ver = self._ver_row.tx  # "Sürüm x" yazısı (testler ve hizalama bunu kullanır)
         fv.addWidget(self._live)
         fv.addWidget(self._obs)
         fv.addSpacing(SPACE["s"])
-        fv.addWidget(self._ver)
+        fv.addWidget(self._ver_row)
         sv.addWidget(self._footer)
 
         # geliştirici bağlantısı, en altta: Kick logosu + "Robz so good" (bkz. gui/developer.py). Yapay zekâ satırı
@@ -665,9 +665,8 @@ class MainWindow(QMainWindow):
         self._compact = compact
         self.side.setFixedWidth(SIDEBAR_COMPACT_W if compact else SIDEBAR_W)
         self._wordmark.setVisible(not compact)
-        self._ver.setVisible(not compact)
         self.nav.set_compact(compact)
-        for row in (self._live, self._obs, self._update_row, self._ai_row, self._kick_row):
+        for row in (self._live, self._obs, self._ver_row, self._update_row, self._ai_row, self._kick_row):
             row.set_compact(compact)
         # İki hizalama ekseni: ikonlar (genişte x = 30, menü ikonlarıyla aynı; darda kenar çubuğunun ortası)
         # ve yazılar (x = 52: marka adı, menü etiketleri, durum yazıları ve sürüm aynı sol kenarda).
@@ -682,7 +681,6 @@ class MainWindow(QMainWindow):
         self._brand.layout().setContentsMargins(logo_x, 0, SPACE["l"], 0)
         self._brand.layout().setSpacing(max(SPACE["xs"], text_x - logo_x - self._logo.width()))
         self._footer.layout().setContentsMargins(icon_x, 0, SPACE["l"], 0)
-        self._ver.setContentsMargins(ICON_COL + SPACE["m"], 0, 0, 0)
         # güncelleme, yapay zekâ ve Kick satırları kenarlardan SPACE["s"] içeride başlar (bkz. _update_box, _ai_box,
         # _kick_box): ikonları yine icon_x'te
         for row in (self._update_row, self._ai_row, self._kick_row):
@@ -690,7 +688,7 @@ class MainWindow(QMainWindow):
 
     def _set_live(self, running: bool) -> None:
         if running:
-            self._live.set_state(True, "Çalışıyor", "Çeviri çalışıyor")
+            self._live.set_state(True, "Çalışıyor", "Çeviri çalışıyor", on_color=C.LIVE)
         else:
             self._live.set_state(False, "Durduruldu", "Çeviri durduruldu")
 

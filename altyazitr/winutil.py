@@ -135,7 +135,7 @@ def list_windows() -> list[WindowInfo]:
     return out
 
 
-def find_window(exe: str = "", title: str = "") -> WindowInfo | None:
+def find_window(exe: str = "", title: str = "", windows: list[WindowInfo] | None = None) -> WindowInfo | None:
     """Kaydedilen pencereyi yeniden bulur.
 
     Sıra: exe + tam başlık → exe + benzer başlık (başlık oyunda değişebilir) → exe'nin *tek* penceresi →
@@ -143,7 +143,7 @@ def find_window(exe: str = "", title: str = "") -> WindowInfo | None:
     yanlış pencereyi okumamak için None döner (pencere açılana kadar beklenir)."""
     from rapidfuzz import fuzz
 
-    wins = list_windows()
+    wins = list_windows() if windows is None else windows  # windows: az önce alınmış liste (yeniden taranmaz)
     exe_l = exe.lower().strip()
     if exe_l:
         same_exe = [w for w in wins if w.exe.lower() == exe_l]

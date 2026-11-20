@@ -22,6 +22,15 @@ Vurgulu kelimeler: OCR'dan sonra satırdaki renkli kelimeler bulunur (okumanın 
 aralıklar). Çevirmene satır [[...]] işaretleriyle gider, çeviri işaretli döner ve önbelleğe işaretli yazılır.
 Arayüze giden olayda `text` her zaman düz metindir; vurgular varsa ayrı `spans` alanındadır (Türkçe metindeki
 aralıklar). LLM bağlamına işaretsiz metin girer. İki görünümde de vurgu kapalıysa vurgu hiç aranmaz.
+
+Üst üste yazılar ("Oyun altyazısının üzerine" iki görünümden birinde açıkken): bölgedeki ayrı yazılar (öbekler,
+textproc.subtitle_blocks: altta konuşma altyazısı, üstünde daha küçük görev yazısı) ayrı okunur. Her öbek bir yuvaya
+(_Slot) düşer; yuvalar kareler arasında yerlerine göre eşlenir ve her birinin kendi takipçisi (Tracker) vardır. Satır
+kimlikleri bütün yuvalarda tek sayaçtan artar (LineIds). Olaylarda ve 'gone' / 'same' işaretlerinde `slot` (yuvanın
+kimliği) vardır: bir yazı kaybolunca yalnız onun satırı biter. Her öbek ayrı çeviri işidir; LLM bağlamına yalnız
+karedeki asıl yazının (en büyük yazılı, eşitse en alttaki öbek) satırları girer, görev yazısı konuşmanın bağlamını
+bozmasın. Aynı anda en çok MAX_SLOTS yazı izlenir (fazlası varsa en alttakiler). Örtme iki görünümde de kapalıyken
+hat eskisi gibidir: tek takipçi, keep_lowest_block, işaretlerde slot None.
 """
 
 from __future__ import annotations
@@ -50,8 +59,9 @@ from altyazitr.config import Settings
 from altyazitr.detect import ChangeGate, GateParams, TextDetector, TextGate, TextGateParams, text_mask
 from altyazitr.english import english_score
 from altyazitr.ocr import OcrLine, OcrUnavailable, create_engine
-from altyazitr.textproc import (Spans, assemble, clean_marks, highlight_spans, is_valid, mark, match_initial_case,
-                                norm_key, subtitle_box, unmark, without_marks)
+from altyazitr.textproc import (MAX_SLOTS, Spans, assemble, clean_marks, highlight_spans, is_valid, mark,
+                                match_initial_case, norm_key, restore_marks, subtitle_blocks, subtitle_box, unmark,
+                                without_marks)
 from altyazitr.paths import DATA_DIR
 from altyazitr.subtitle_style import SubtitleFilter
 from altyazitr.translate import (QuickMtTranslator, TranslationCache, Translator, TranslatorError, build_glossary,
@@ -101,6 +111,12 @@ FAIL_LIMIT = 2
 # Hat çalışırken bu kadar süre çeviri istenmediyse asıl motorun modeli sıcak tutulur (Translator.keep_warm):
 # Ollama'nın bellekte tutma süresinden (30 dk) kısa olmalı.
 KEEP_WARM_S = 600.0
+# Üst üste yazılar (bkz. modül açıklaması). Öbek bir yuvaya, kutularının dikey ortaları bu kadar satır boyundan yakınsa
+# ve yatayda örtüşüyorlarsa eşlenir (uzayan ya da ikinci satırı gelen altyazı da aynı yuvada kalır).
+SLOT_NEAR = 1.5
+SLOT_FORGET_S = 5.0  # kaybolan yuvanın yeri bu kadar saniye hatırlanır (kısa süre kaybolup dönen yazı aynı yuvada)
+# Karedeki asıl yazı (LLM bağlamına giren): satır boyu en büyüğünün en az bu katı olan öbeklerin en alttakisi
+PRIMARY_RATIO = 0.85
 
 
 class FifoQueue:
@@ -143,6 +159,11 @@ class FifoQueue:
     def has(self, pred: Callable[[object], bool]) -> bool:
         with self._cv:
             return any(pred(v) for v in self._q)
+
+    def snapshot(self) -> list:
+        """Kuyruktaki öğeler, baştan sona (kopya)."""
+        with self._cv:
+            return list(self._q)
 
     def __len__(self) -> int:
         with self._cv:
@@ -189,30 +210,49 @@ class LatestSlot:
             self._cv.notify_all()
 
 
+class LineIds:
+    """Satır kimliklerinin sayacı. Üst üste yazılarda her yuvanın kendi takipçisi vardır; hepsi bu sayacı paylaşır:
+    kimlikler çakışmaz ve hep artar."""
+
+    def __init__(self, last: int = 0):
+        self.last = last
+
+    def next(self) -> int:
+        self.last += 1
+        return self.last
+
+
 class Tracker:
     """Aynı altyazının OCR titremelerini tekilleştirir, uzayan (daktilo) metni algılar ve
     aynı altyazının *daha iyi* bir okuması gelirse (kelime puanı yüksek) çeviriyi düzeltir.
 
     Her ayrı satıra artan bir kimlik verir (`line`): aynı satırın daha iyi okuması ya da uzaması
     kimliği korur (`replace` True), gerçekten yeni bir altyazı bir sonraki kimliği alır. Kimlikler
-    `line_base`ten devam eder; işlem hattı yeniden başlatılınca da hep artar."""
+    `line_base`ten devam eder; işlem hattı yeniden başlatılınca da hep artar. `ids` verilirse kimlikler o paylaşılan
+    sayaçtan alınır (üst üste yazıların yuvaları)."""
 
     UPGRADE_MARGIN = 0.12
     REAPPEAR_S = 1.5  # bundan kısa süre kaybolup dönen satır aynı satır sayılır
 
-    def __init__(self, line_base: int = 0):
+    def __init__(self, line_base: int = 0, ids: LineIds | None = None):
+        self.ids = ids if ids is not None else LineIds(line_base)
         self.key: str | None = None
         self.score = 0.0
         self.seq = 0
-        self.line = line_base
+        self.line = self.ids.last
         self.gone_t: float | None = None
+        self.marks: frozenset[str] = frozenset()  # satırın son kabul edilen okumasındaki vurgulu kelimeler
 
     def on_gone(self, t: float) -> None:
         if self.key is not None and self.gone_t is None:
             self.gone_t = t
 
-    def on_text(self, text: str, speaker: str | None, t: float, score: float = 1.0) -> dict | None:
+    def on_text(self, text: str, speaker: str | None, t: float, score: float = 1.0,
+                marks: frozenset[str] | tuple = ()) -> dict | None:
+        """marks: okumadaki vurgulu kelimeler. Aynı satırın okumasında yeni bir vurgulu kelime belirdiyse (oyun yazıyı
+        solarak getirdi, renk ilk okumada henüz yoktu) okuma daha iyi sayılır: satır vurgusuyla yeniden çevrilir."""
         k = norm_key(text)
+        marks = frozenset(marks)
         if not k:
             return None
         replace = False
@@ -226,19 +266,84 @@ class Tracker:
                 replace = True
             elif r >= thr and recent:
                 self.gone_t = None
-                if k == self.key or score < self.score + self.UPGRADE_MARGIN:
+                new_marks = bool(marks - self.marks)
+                if (k == self.key or score < self.score + self.UPGRADE_MARGIN) and not new_marks:
                     return None  # aynı satır (OCR titremesi)
                 replace = True  # aynı satırın daha temiz okuması
             elif r >= 70 and recent and score >= self.score + self.UPGRADE_MARGIN:
                 replace = True  # bozuk okunmuş satırın düzgün hali
         if not replace:
-            self.line += 1  # yeni satır
+            self.line = self.ids.next()  # yeni satır
         self.key = k
         self.score = score
+        self.marks = marks
         self.gone_t = None
         self.seq += 1
         return {"seq": self.seq, "line": self.line, "text": text, "speaker": speaker, "key": k,
                 "replace": replace, "t": t}
+
+
+def _marks(text: str, spans: Spans) -> frozenset[str]:
+    """Okumadaki vurgulu kelimeler (takipçi, sonradan beliren vurguyu yeni okuma sayar; bkz. Tracker.on_text)."""
+    return frozenset(norm_key(text[s:e]) for s, e in spans if norm_key(text[s:e]))
+
+
+@dataclass(frozen=True)
+class _Geo:
+    """Bir öbeğin görüntüdeki yeri (piksel): yatay sınırları, dikey ortası, satır boyu (ortanca)."""
+
+    x0: float
+    x1: float
+    cy: float
+    lh: float
+
+
+def _block_geo(rows: list[list[OcrLine]]) -> _Geo | None:
+    """Öbeğin yeri; motor kutu vermediyse None."""
+    rows = [[x for x in r if x.w > 0 and x.h > 0] for r in rows]
+    rows = [r for r in rows if r]
+    if not rows:
+        return None
+    parts = [x for r in rows for x in r]
+    y0, y1 = min(x.y for x in parts), max(x.y + x.h for x in parts)
+    return _Geo(min(x.x for x in parts), max(x.x + x.w for x in parts), (y0 + y1) / 2,
+                float(statistics.median(max(x.h for x in r) for r in rows)))
+
+
+def _slot_gap(a: _Geo | None, b: _Geo | None) -> float | None:
+    """Yuvanın son yeri (a) ile karedeki öbek (b) aynı yazı olabilir mi: dikey ortaları arasındaki uzaklık (piksel);
+    olamazsa None. Yeri bilinmeyen öbek yalnız yeri bilinmeyen yuvayla eşleşir."""
+    if a is None or b is None:
+        return 0.0 if a is None and b is None else None
+    dy = abs(a.cy - b.cy)
+    if dy > SLOT_NEAR * max(a.lh, b.lh) or min(a.x1, b.x1) <= max(a.x0, b.x0):
+        return None
+    return dy
+
+
+def _primary_block(geos: list[_Geo | None]) -> int:
+    """Karedeki asıl yazının (LLM bağlamına giren) sırası: satır boyu en büyüğe yakın öbeklerin en alttakisi (öbekler
+    üstten alta sıralı). Görev yazısı konuşmadan küçüktür; boylar eşitse konuşma alttadır."""
+    hs = [g.lh if g is not None else 0.0 for g in geos]
+    top = max(hs, default=0.0)
+    if top <= 0:
+        return len(geos) - 1
+    return max(i for i, h in enumerate(hs) if h >= PRIMARY_RATIO * top)
+
+
+@dataclass(eq=False)
+class _Slot:
+    """Üst üste yazılarda ayrı izlenen bir yazı: kimliği, kendi takipçisi, son yeri ve son görüldüğü an."""
+
+    id: int
+    tracker: Tracker
+    geo: _Geo | None = None
+    seen: float = 0.0
+
+    @property
+    def live(self) -> bool:
+        """Satırı oyunda hâlâ görünüyor (henüz 'gone' işareti gönderilmedi)."""
+        return self.tracker.key is not None and self.tracker.gone_t is None
 
 
 @dataclass(eq=False)
@@ -251,6 +356,7 @@ class _Out:
     quick: dict | None = None  # asıl çeviri vaktinde gelmezse gösterilecek hızlı çeviri (yoksa None)
     deadline: float = math.inf  # asıl çevirinin en geç bekleneceği an
     quick_due: bool = False  # hızlı çeviri henüz hesaplanıyor (asıl istek ondan önce başladı; bkz. set_quick)
+    slot: int | None = None  # işaretin yuvası (üst üste yazılar); tek yazıda None
 
     @property
     def waiting(self) -> bool:
@@ -272,11 +378,12 @@ class ShowQueue:
     def __init__(self) -> None:
         self._items: deque[_Out] = deque()
 
-    def push(self, kind: str, ev: dict | None = None, sub: dict | None = None) -> None:
-        """Hazır öğe: hemen gösterilebilecek altyazı (önbellek, hızlı çeviri, karma kapalı) ya da işaret."""
+    def push(self, kind: str, ev: dict | None = None, sub: dict | None = None, slot: int | None = None) -> None:
+        """Hazır öğe: hemen gösterilebilecek altyazı (önbellek, hızlı çeviri, karma kapalı) ya da işaret (slot: hangi
+        yazının işareti; tek yazıda None)."""
         if ev is not None:
             self._supersede(ev)
-        self._items.append(_Out(kind, ev, sub))
+        self._items.append(_Out(kind, ev, sub, slot=slot))
 
     def hold(self, ev: dict, quick: dict | None, deadline: float, quick_due: bool = False) -> None:
         """Asıl çeviriyi `deadline` anına kadar bekleyecek okuma; `quick` vaktinde gelmezse gösterilecek olan.
@@ -375,7 +482,9 @@ def _translate_line(tr: Translator, ev: dict, context=()) -> str:
     if not spans:
         return tr.translate(ev["text"], context)
     out = tr.translate_marked(mark(ev["text"], spans), context)
-    return match_initial_case(ev["text"], clean_marks(out, len(spans), exact=False))
+    out = match_initial_case(ev["text"], clean_marks(out, len(spans), exact=False))
+    # model işaretleri düşürdüyse çeviride aynen geçen vurgulu isim yine vurgulu ("Arnold" → "[[Arnold'a]]")
+    return restore_marks(ev["text"], spans, out)
 
 
 class TrContext:
@@ -492,8 +601,10 @@ class Pipeline(QObject):
     running_changed = Signal(bool)
     preview = Signal(QImage, float)
     subtitle = Signal(dict)
-    same = Signal()
-    gone = Signal()
+    # Oyundaki yazı hâlâ aynı / kayboldu. Değer yuvanın kimliğidir (üst üste yazılar: yalnız o yazının satırı); tek
+    # yazıda None. Değer almayan alıcılara (eski bağlantılar) değersiz iletilir.
+    same = Signal(object)
+    gone = Signal(object)
     # Önceki çalıştırma kapanırken basılan Başlat: son iş parçacığı bitince ana iş parçacığında başlatır
     _resume = Signal()
 
@@ -521,7 +632,13 @@ class Pipeline(QObject):
         # yalnız çeviri iş parçacığı yazar, uzak çeviri iş parçacığı okur:
         self._shown_line = 0  # çeviri aşamasından geçen (gösterilen ya da gösterilmeyi bekleyen) en yeni satır
         self._line_seq: dict[int, int] = {}  # satır kimliği → çeviri aşamasından geçen en yeni okumasının seq'i
+        self._slot_line: dict[int, int] = {}  # yuva → çeviri aşamasından geçen en yeni satırı (üst üste yazılar)
         self.tracker = Tracker()
+        # Üst üste yazılar (yalnız OCR iş parçacığı): yuvalar, son yuva kimliği, çoklu okuma açık mıydı, kare boyu
+        self._slots: list[_Slot] = []
+        self._slot_seq = 0
+        self._multi_was = False
+        self._slot_size: tuple | None = None
         self.cache = TranslationCache()
         self.cache.load(CACHE_FILE)
         self.capturer: WindowCapturer | RegionCapturer | None = None
@@ -544,7 +661,10 @@ class Pipeline(QObject):
                 self._run.set()
                 self._clear_queues()
                 self._line_seq.clear()
-                self.tracker = Tracker(self.tracker.line)  # satır kimlikleri yeniden başlatmada da artmaya devam eder
+                self._slot_line.clear()
+                # satır kimlikleri yeniden başlatmada da artmaya devam eder (yuvaların verdikleri dahil)
+                self.tracker = Tracker(max(self.tracker.line, self.tracker.ids.last))
+                self._slots, self._multi_was, self._slot_size = [], False, None
                 self._threads = [
                     threading.Thread(target=self._wrap, args=(self._capture_loop,), name="yakalama", daemon=True),
                     threading.Thread(target=self._wrap, args=(self._ocr_loop,), name="ocr", daemon=True),
@@ -681,7 +801,7 @@ class Pipeline(QObject):
         if o.text_detector:
             try:
                 return TextGate(TextDetector(), TextGateParams(stable_frames=o.stable_frames,
-                                                               lowest_only=o.keep_lowest_block))
+                                                               lowest_only=self._lowest_only()))
             except Exception:
                 log.warning("Yapay zekâ metin bulucu açılamadı; yalnız hızlı algılama kullanılacak", exc_info=True)
         return self._rule_gate()
@@ -691,6 +811,15 @@ class Pipeline(QObject):
         o = self.s.ocr
         return None if o.detect_mode == "interval" else ChangeGate(
             GateParams(stable_frames=o.stable_frames, bright=o.bright_threshold))
+
+    def _multi(self) -> bool:
+        """Üst üste yazılar ayrı okunur mu: "Oyun altyazısının üzerine" iki görünümden birinde açık."""
+        return bool(self.s.style.cover_original or self.s.screen_style.cover_original)
+
+    def _lowest_only(self) -> bool:
+        """Metin bulucu yalnız en alttaki yazı öbeğini mi izler: tek yazıda keep_lowest_block; üst üste yazılarda her
+        öbeğin değişimi okunur."""
+        return self.s.ocr.keep_lowest_block and not self._multi()
 
     def _capture_loop(self) -> None:
         c, o = self.s.capture, self.s.ocr
@@ -753,6 +882,8 @@ class Pipeline(QObject):
                     gate.p.stable_frames = o.stable_frames
                     if isinstance(gate, ChangeGate):
                         gate.p.bright = o.bright_threshold
+                    elif isinstance(gate, TextGate):  # örtme çalışırken açılıp kapanabilir
+                        gate.p.lowest_only = self._lowest_only()
                     try:
                         action = gate.update(roi, t0)
                     except Exception:  # metin bulucu çalışmadı: kurallı algılamayla sürer
@@ -849,34 +980,142 @@ class Pipeline(QObject):
             self._held = (sid, t, img, lines, ms) if lines is not None else None
             return []
         held, self._held = self._held, None
+        multi = self._multi()
+        switched = self._switch_mode(multi, t) if multi != self._multi_was else []
         if kind == "gone":
-            return self._gone_marker(t)
+            return switched + self._gone_marker(t)
         if kind == "confirm" and held is not None and held[0] == payload[1]:
             _sid, t, img, lines, ms = held  # erken okunan kare: satır o anda okunmuş sayılır
         else:
             img = payload[0] if kind == "confirm" else payload
             lines, ms = self._recognize(engine, img)
         if lines is None:
-            return []
+            return switched
         if o.subtitle_only:  # plaka, tabela, HUD gibi altyazı biçiminde olmayan satırlar atılır (bkz. subtitle_style)
             self._subtitles = self._subtitles or SubtitleFilter()
-            lines = self._subtitles.keep(img, lines)
+            lines = self._subtitles.keep(img, lines, stacked=True) if multi else self._subtitles.keep(img, lines)
+        return switched + (self._read_blocks(img, lines, t, ms) if multi else self._read_single(img, lines, t, ms))
+
+    def _read_single(self, img, lines: list[OcrLine], t: float, ms: float) -> list[tuple]:
+        """Tek yazı (örtme kapalı): satırlar tek altyazı metnine birleşir (keep_lowest_block ise en alttaki öbek)."""
+        o = self.s.ocr
         text, speaker, confs = assemble(lines, o.keep_lowest_block, o.detect_speaker)
         if not text.strip():
             return self._gone_marker(t)
         score = english_score(text)
         if not is_valid(text, confs, o.min_letters, score):
             return []
-        ev = self.tracker.on_text(text, speaker, t, score)
+        spans = self._highlights(img, lines, text)
+        ev = self.tracker.on_text(text, speaker, t, score, _marks(text, spans))
         if ev is None:
             return [("same", t, None)]
         ev["ocr_ms"] = ms
-        ev["spans"] = self._highlights(img, lines, text)
+        ev["spans"] = spans
         # altyazının görüntüdeki ve bölgenin ekrandaki yeri: çeviri oyunun altyazısının üstüne yazılabilsin (display)
         ev["box"] = subtitle_box(lines, getattr(img, "shape", (0, 0))[1::-1], o.keep_lowest_block)
         if ev["box"] is not None:
             ev["box"]["screen"] = roi_screen_rect(self.capturer)
         return [("sub", t, ev)]
+
+    # --- üst üste yazılar ---------------------------------------------------
+    def _read_blocks(self, img, lines: list[OcrLine], t: float, ms: float) -> list[tuple]:
+        """Örtme açıkken: karedeki her öbek (en çok MAX_SLOTS, en alttakiler) ayrı yazıdır. Öbekler yuvalara eşlenir;
+        her yuvanın takipçisi kendi satırını izler. Çıktı: önce bu karede görünmeyen yuvaların 'gone' işaretleri, sonra
+        asıl yazının, ardından alttan üste ötekilerin okumaları ('sub') ya da 'same' işaretleri. Konuşmacı adı, vurgu
+        ve kutu her öbeğin kendi satırlarıyla bulunur."""
+        o = self.s.ocr
+        size = getattr(img, "shape", (0, 0))[1::-1]
+        out: list[tuple] = []
+        if size != self._slot_size:  # başka bölge: yuvaların yerleri geçersiz
+            self._slot_size = size
+            out += self._end_slots(t)
+        blocks = subtitle_blocks(lines, tight=True)[-MAX_SLOTS:]
+        geos = [_block_geo(rows) for rows in blocks]
+        slots = self._match_slots(geos, t)
+        primary = _primary_block(geos)
+        screen = roi_screen_rect(self.capturer)
+        present: set[int] = set()
+        reads: list[tuple] = []
+        for i in sorted(range(len(blocks)), key=lambda i: (i != primary, -i)):
+            part = [x for row in blocks[i] for x in row]
+            slot = slots[i]
+            text, speaker, confs = assemble(part, False, o.detect_speaker)
+            if not text.strip():
+                continue  # yazı yok: yuvanın satırı biter
+            present.add(slot.id)
+            score = english_score(text)
+            if not is_valid(text, confs, o.min_letters, score):
+                continue
+            spans = self._highlights(img, part, text)
+            ev = slot.tracker.on_text(text, speaker, t, score, _marks(text, spans))
+            if ev is None:
+                reads.append(("same", t, slot.id))
+                continue
+            ev["slot"] = slot.id
+            ev["in_context"] = i == primary  # LLM bağlamına yalnız asıl yazı girer (bkz. _remember)
+            ev["ocr_ms"] = ms
+            ev["spans"] = spans
+            ev["box"] = subtitle_box(part, size, False)
+            if ev["box"] is not None:
+                ev["box"]["screen"] = screen
+            reads.append(("sub", t, ev))
+        for s in self._slots:
+            if s.id not in present and s.live:
+                s.tracker.on_gone(t)
+                out.append(("gone", t, s.id))
+        self._prune_slots(t)
+        return out + reads
+
+    def _match_slots(self, geos: list[_Geo | None], t: float) -> list[_Slot]:
+        """Karedeki öbeklerin yuvaları (aynı sırayla). Öbekler yuvalara en yakından başlayarak birer birer eşlenir (bkz.
+        _slot_gap); eşi olmayan öbeğe yeni yuva açılır. Yuvaların takipçileri satır kimliklerini aynı sayaçtan alır."""
+        pairs = sorted(((d, i, k) for i, g in enumerate(geos) for k, s in enumerate(self._slots)
+                        if (d := _slot_gap(s.geo, g)) is not None), key=lambda p: p[0])
+        chosen: dict[int, _Slot] = {}
+        used: set[int] = set()
+        for _d, i, k in pairs:
+            if i not in chosen and k not in used:
+                chosen[i] = self._slots[k]
+                used.add(k)
+        out = []
+        for i, g in enumerate(geos):
+            slot = chosen.get(i)
+            if slot is None:
+                self._slot_seq += 1
+                slot = _Slot(self._slot_seq, Tracker(ids=self.tracker.ids))
+                self._slots.append(slot)
+            slot.geo, slot.seen = g, t
+            out.append(slot)
+        return out
+
+    def _prune_slots(self, t: float) -> None:
+        """Satırı biteli uzun süre olmuş yuvaları unutur (sayı da sınırlı kalır)."""
+        keep = [s for s in self._slots if s.live or t - s.seen <= SLOT_FORGET_S]
+        if len(keep) > 2 * MAX_SLOTS:
+            old = sorted((s for s in keep if not s.live), key=lambda s: s.seen)
+            drop = {id(s) for s in old[:len(keep) - 2 * MAX_SLOTS]}
+            keep = [s for s in keep if id(s) not in drop]
+        self._slots = keep
+
+    def _end_slots(self, t: float) -> list[tuple]:
+        """Bütün yuvaları bitirir: oyunda görünen satırları için 'gone' işaretleri; yuvalar unutulur."""
+        out = [("gone", t, s.id) for s in self._slots if s.live]
+        self._slots = []
+        return out
+
+    def _switch_mode(self, multi: bool, t: float) -> list[tuple]:
+        """Örtme çalışırken açıldı ya da kapandı: bırakılan kipin oyunda görünen satırları biter ('gone'), takipçileri
+        unutur; yazı yeni kipte yeni satır olarak okunur."""
+        self._multi_was = multi
+        if not multi:
+            return self._end_slots(t)
+        out = []
+        if self.tracker.key is not None and self.tracker.gone_t is None:
+            self.tracker.on_gone(t)
+            out.append(("gone", t, None))
+        self.tracker.key = None
+        self._slot_size = None
+        return out
 
     @staticmethod
     def _recognize(engine, img) -> tuple[list[OcrLine] | None, float]:
@@ -901,14 +1140,26 @@ class Pipeline(QObject):
             return []
 
     def _gone_marker(self, t: float) -> list[tuple]:
+        """Bölgede yazı kalmadı: oyunda görünen satırların 'gone' işaretleri (tek yazıda tek işaret, slot None; üst üste
+        yazılarda her yuvanınki)."""
+        out = []
         if self.tracker.key is not None and self.tracker.gone_t is None:
             self.tracker.on_gone(t)
-            return [("gone", t, None)]
-        return []
+            out.append(("gone", t, None))
+        for s in self._slots:
+            if s.live:
+                s.tracker.on_gone(t)
+                out.append(("gone", t, s.id))
+        return out
 
     def _post_tr(self, item: tuple) -> None:
-        # art arda 'aynı' işaretleri tek işarete iner (sabit aralık kipinde kuyruğu doldurmasın)
-        self._tr_q.put(item, merge=_is_same if item[0] == "same" else None)
+        # art arda 'aynı' işaretleri tek işarete iner (sabit aralık kipinde kuyruğu doldurmasın); üst üste yazılarda
+        # yalnız aynı yuvanınkiler
+        if item[0] == "same":
+            slot = item[2]
+            self._tr_q.put(item, merge=lambda last: _is_same(last) and last[2] == slot)
+        else:
+            self._tr_q.put(item)
 
     # --- çeviri ----------------------------------------------------------
     def _prepare_translators(self) -> tuple[Translator | None, Translator | None]:
@@ -1102,8 +1353,8 @@ class Pipeline(QObject):
                     self._show.set_quick(*val)
                 elif kind == "remote":
                     self._remote_q.put(val)
-                else:  # 'gone' / 'same': bekleyen altyazıyı sollamaz
-                    self._show.push(kind)
+                else:  # 'gone' / 'same' (değer: yuva): bekleyen altyazıyı sollamaz
+                    self._show.push(kind, slot=val)
             self._flush()
 
     def _flush(self) -> None:
@@ -1114,9 +1365,9 @@ class Pipeline(QObject):
             if it.kind == "subtitle":
                 self._emit_sub(it.ev, it.sub)
             elif it.kind == "gone":
-                self.gone.emit()
+                self.gone.emit(it.slot)
             else:
-                self.same.emit()
+                self.same.emit(it.slot)
 
     def _emit_sub(self, ev: dict, sub: dict) -> None:
         sub["latency_ms"] = (self.clock() - ev["t"]) * 1000  # okunduğu andan ekrana çıktığı ana
@@ -1139,12 +1390,17 @@ class Pipeline(QObject):
         yapılır (bkz. _fast_stage); diğer modlarda asıl motor burada çalışır."""
         kind, _t, ev = item
         if kind != "sub":
-            return [(kind, None)]  # 'gone' / 'same': metinlerle aynı sırada arayüze
+            return [(kind, ev)]  # 'gone' / 'same' (değer: yuva ya da None): metinlerle aynı sırada arayüze
         line = ev["line"]
-        nxt = self._tr_q.peek()
-        if nxt is not None and nxt[0] == "sub" and nxt[2]["line"] == line:
+        if self._newer_queued(ev):
             return []  # aynı satırın daha yeni okuması sırada (daktilo / daha temiz okuma): onu çeviririz
         self._shown_line = max(self._shown_line, line)
+        slot = ev.get("slot")
+        if slot is not None:
+            self._slot_line[slot] = max(self._slot_line.get(slot, line), line)
+            if len(self._slot_line) > 4 * MAX_SLOTS:
+                for k in sorted(self._slot_line)[:len(self._slot_line) - 2 * MAX_SLOTS]:
+                    del self._slot_line[k]
         self._line_seq[line] = ev["seq"]
         if len(self._line_seq) > 64:
             for k in [k for k in self._line_seq if k < line - 32]:
@@ -1165,6 +1421,34 @@ class Pipeline(QObject):
             return []
         self._remember(cx, ev, out)
         return [("subtitle", (ev, self._event(ev, out, t1, False, cx.main.label)))]
+
+    def _newer_queued(self, ev: dict) -> bool:
+        """Aynı satırın daha yeni okuması çeviri kuyruğunda mı (o çevrilir, bu atlanır). Tek yazıda yalnız hemen
+        sıradaki öğeye bakılır. Üst üste yazılarda öbür yuvaların okumaları ve işaretleri araya girer: kuyruk, aynı
+        yuvanın 'gone' işaretine kadar taranır."""
+        line = ev["line"]
+        nxt = self._tr_q.peek()
+        if nxt is not None and nxt[0] == "sub" and nxt[2]["line"] == line:
+            return True
+        slot = ev.get("slot")
+        if slot is None or nxt is None:
+            return False
+        for kind, _t, val in self._tr_q.snapshot():
+            if kind == "sub" and val["line"] == line:
+                return True
+            if kind == "gone" and val == slot:
+                return False
+        return False
+
+    def _off_screen(self, ev: dict) -> bool:
+        """Satır ekrandan çıkıyor mu (yerine yenileri geldi; asıl çeviriye değmez): kendisinden sonra ekranda kalabilen
+        satır sayısı kadar yeni satır çeviri aşamasından geçti. Üst üste yazılarda ayrıca kendi yuvasında daha yeni bir
+        satır olmalı (öbür yazıların satırları onu ekrandan çıkarmaz)."""
+        line = ev["line"]
+        if line > self._shown_line - self._lines_on_screen():
+            return False
+        slot = ev.get("slot")
+        return slot is None or self._slot_line.get(slot, line) > line
 
     def _fast_stage(self, cx: TrContext, ev: dict, t1: float) -> list[tuple[str, object]]:
         """İki aşamalı çevirinin ilk aşaması: hızlı çeviri. Asıl motor hazırsa satır, okunduğu andan itibaren
@@ -1241,7 +1525,7 @@ class Pipeline(QObject):
             return []
         if self._remote_q.has(lambda j: j["ev"]["line"] == line):
             return []  # aynı satırın daha yeni hali sırada; onu çeviririz (bu okuma artık beklemiyor: yerini o aldı)
-        if quick and line <= self._shown_line - self._lines_on_screen():
+        if quick and self._off_screen(ev):
             self._remember(cx, ev, "")
             return [("fallback", ev)]  # satır ekrandan çıkıyor (yerine yenileri geldi): asıl çeviriye değmez
         if quick and len(self._remote_q) and self.clock() - ev["t"] + (cx.service_s or 0.0) > self._stale_s():
@@ -1320,10 +1604,11 @@ class Pipeline(QObject):
         """LLM bağlamına ekler; aynı satırın eski hali (daktilo / bozuk okuma) bağlamdan çıkar. `tr` yalnız asıl
         motorun çevirisidir (önbellekten gelen dahil); bağlama işaretsiz girer. Boşsa satırın güvenilir Türkçesi
         yoktur (asıl motor çeviremedi; gösterilen hızlı yedek çeviri sonraki satırları bozmasın): LLM'e yalnız
-        İngilizcesi gider."""
+        İngilizcesi gider. Üst üste yazılarda karedeki asıl yazı olmayan satır (görev yazısı; in_context False)
+        bağlama girmez: konuşmanın bağlamını bozmasın."""
         with cx.hist_lock:
             cx.last_t = ev["t"]
-            if cx.tc.context_lines <= 0:
+            if cx.tc.context_lines <= 0 or ev.get("in_context") is False:
                 return
             kept = [h for h in cx.hist if h[0] != ev["line"]]
             cx.hist.clear()
@@ -1355,4 +1640,8 @@ class Pipeline(QObject):
             out["spans"] = [[s, e] for s, e in spans]
         if ev.get("box"):
             out["box"] = ev["box"]
+        if ev.get("slot") is not None:  # üst üste yazılar: hangi yazının satırı (bkz. display)
+            out["slot"] = ev["slot"]
+            # karedeki asıl yazı mı (konuşma); görev yazısı False: örtmesi kapalı görünümün akışına girmez
+            out["primary"] = ev.get("in_context") is not False
         return out

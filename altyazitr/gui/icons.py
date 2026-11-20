@@ -399,6 +399,13 @@ def _minus(p):
     _poly(p, (5, 12), (19, 12))
 
 
+@_icon("tag")
+def _tag(p):
+    """Etiket (sürüm): sol üstü kare, sağ alta sivri; delikli."""
+    _rpoly(p, (3.5, 3.5), (11.5, 3.5), (20.5, 12.5), (12.5, 20.5), (3.5, 11.5), r=2.0, close=True)
+    _circle(p, 1.6, 8, 8)
+
+
 @_icon("dot")
 def _dot_icon(p):
     p.setBrush(p.pen().color())

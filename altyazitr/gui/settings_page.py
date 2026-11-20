@@ -288,6 +288,7 @@ class SettingsPage(QWidget):
         self.kick_link.setIcon(developer.kick_icon())
         self.kick_link.setAccessibleName(developer.FOLLOW_TEXT)
         self.youtube_link = link_button("YouTube", developer.YOUTUBE_URL, tip=developer.YOUTUBE_TIP)
+        self.youtube_link.setIcon(developer.youtube_icon())
         self.youtube_link.setAccessibleName(developer.YOUTUBE_TIP)
         add_row(f, "Geliştirici", layout=hbox(dev, self.kick_link, self.youtube_link, None, spacing=SPACE["m"]))
         ac.add(layout=f)

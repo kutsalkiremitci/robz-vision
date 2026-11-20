@@ -42,7 +42,14 @@ dikdörtgeni + pay (cover_area); yazı boyu oyunun satır yüksekliğinden (cove
 bağlıdır: oyun altyazıyı kaldırınca gizleme süresi sonunda, en geç üst sınırda kalkar; yeni satırın çevirisi gelince
 yeni yerine geçer. İki çıktıya aynı hesap gider: OBS'e yayın karesine oransal (set_cover), ekrandaki kutuya mantıksal
 piksel (ScreenOverlay.set_cover). Türkçenin kutuya sığdırılması (gerekirse küçültme, sonra satır kaydırıp yukarı
-büyütme) çizen tarafta aynı kuralla yapılır (render.cover_size, web/overlay.html)."""
+büyütme) çizen tarafta aynı kuralla yapılır (render.cover_size, web/overlay.html).
+
+Üst üste yazılar (örtme açıkken işlem hattı bölgedeki ayrı yazıları ayrı okur; olayda ve 'gone' / 'same' işaretinde
+`slot`): her yazının (yuvanın) oyunun şu an gösterdiği satırı kendi kapağıyla, kendi yerinde ve aynı anda gösterilir.
+Kapaklar akış yığınından bağımsızdır (yığın dolsa da kalır); yukarıdaki kurallar (gizleme süresi, üst sınır, oyun
+kaldırana dek hatırlanan yazılar) kapak başınadır: bir yazı kaybolunca yalnız onun kapağı kalkar. En çok MAX_SLOTS kapak
+(fazlası varsa oyunda süren ve alttakiler). Kapak birse çıktılara eskisi gibi tek kapak, birden çoksa liste gider.
+Yuvasız olaylar (tek yazı) eskisi gibi tek kapakla gösterilir."""
 
 from __future__ import annotations
 
@@ -60,6 +67,7 @@ from altyazitr.config import Settings
 from altyazitr.overlay import ScreenOverlay, screen_area
 from altyazitr.render import stack_limit
 from altyazitr.server import AsyncBridge, OverlayServer, clean_spans, style_vars
+from altyazitr.textproc import MAX_SLOTS
 
 log = logging.getLogger(__name__)
 
@@ -69,6 +77,7 @@ _EPS = 0.005  # zamanlayıcı birkaç ms erken uyanırsa da süresi dolan satır
 _TEST_ID = -1_000_000  # örnek satırların kimlikleri (işlem hattınınkilerle ve kendi kimliklerimizle karışmaz)
 _LEFT_MAX = 32  # ekrandan çıkan satırlardan bu kadarı hatırlanır (geç gelen çeviriler için)
 _STUCK_MAX = 8  # üst sınırla kalkan yazılardan bu kadarı hatırlanır (oyun yazıyı kaldırana dek)
+_SLOTS_MAX = 64  # üst üste yazılarda bu kadar yuvanın son satırı hatırlanır (bkz. _on_slot)
 
 # "Oyun altyazısının üzerine": ölçüler OCR'ın satır kutusu yüksekliğine (L) oranla. Ölçüm (GTA 6 altyazı kırpıntıları,
 # RapidOCR, 1x-3x büyütme): satır kutusu harflerin her yanından 0,1-0,3 L taşar; harfleri oyununkiyle aynı yükseklikte
@@ -130,6 +139,34 @@ def cover_area(box: dict | None) -> tuple[tuple[float, float, float, float], int
     return (x - px, y - py, w + 2 * px, h + 2 * py), rows, lh
 
 
+def _slot_of(ev: dict) -> int | None:
+    """Olayın yuvası (üst üste yazılar); yoksa None."""
+    slot = ev.get("slot")
+    if slot is None or isinstance(slot, bool):
+        return None
+    try:
+        return int(slot)
+    except (TypeError, ValueError):
+        return None
+
+
+def _box_bottom(ln: dict) -> float:
+    """Satırın oyundaki altyazısının alt kenarı (bölgeye oransal); bilinmiyorsa 1 (en alt)."""
+    try:
+        _x, y, _w, h = (float(v) for v in ln["box"]["rect"])
+        return y + h
+    except (KeyError, TypeError, ValueError):
+        return 1.0
+
+
+def _pack(covers: list[dict | None]) -> dict | list[dict] | None:
+    """Çıktıya giden kapak(lar): yoksa None, tek kapak eskisi gibi tek başına, birden çoksa liste."""
+    covers = [c for c in covers if c is not None]
+    if not covers:
+        return None
+    return covers[0] if len(covers) == 1 else covers
+
+
 def cover_fonts(match: float, top: float, floor: float) -> tuple[float, float]:
     """Kapak yazısının hedef ve en küçük boyu (aynı birimde): oyunun yazısıyla aynı boy (match) ama görünümün yazı
     boyunu (top) geçmez; Türkçe sığmazsa hedefin COVER_SHRINK katına kadar küçülür, okunur alt sınırın (floor) altına
@@ -160,8 +197,14 @@ class SubtitleDisplay(QObject):
         self._max_line: int | None = None  # gösterilen en yeni işlem hattı kimliği
         self._auto_id = 0  # olayda "line" yoksa kendi kimliklerimiz (negatif)
         self._left: OrderedDict[int, None] = OrderedDict()  # ekrandan çıkan satırların kimlikleri (son birkaçı)
-        # oyun hâlâ gösterirken üst sınırla kalkan yazıların anahtarları (_text_key); oyun yazıyı kaldırınca silinir
-        self._stuck: deque[str] = deque(maxlen=_STUCK_MAX)
+        # oyun hâlâ gösterirken üst sınırla kalkan yazılar: (yuva, _text_key); oyun o yazıyı kaldırınca silinir. Tek
+        # yazıda yuva None.
+        self._stuck: deque[tuple[int | None, str]] = deque(maxlen=_STUCK_MAX)
+        # Üst üste yazılar: yuva → oyunun o yazıda şu an gösterdiği satır (kapağı; akış yığınından ayrı bir kopya) ve
+        # yuvada görülen en yeni satır kimliği (eski satırlar ve kalkmış satır kapağa dönmez)
+        self._slots: dict[int, dict] = {}
+        self._slot_max: dict[int, int] = {}
+        self._slot_pruned = -1  # bu kimliğe kadarki yuvalar unutuldu: geç gelen okumaları kapağa dönmez
         self._pushed: tuple | None = None
         self._mask_key: tuple | None = None
         self._mask_frac: tuple[float, float, float, float] | None = None
@@ -185,13 +228,46 @@ class SubtitleDisplay(QObject):
         now = self.clock()
         original = str(ev.get("original") or "")
         lid, known = self._line_id(ev, text, original)
+        slot = _slot_of(ev) if known else None
+        covered = slot is not None and self._on_slot(slot, lid, ev, text, original, now)
+        # Üst üste yazılarda akışa (örtmesi kapalı görünümün kutusu) yalnız karedeki asıl yazı girer: öbür görünümde
+        # örtme açık diye bu görünümde konuşmanın arasına görev yazısı karışmasın (örtme kapalıyken olduğu gibi).
+        flow = slot is None or ev.get("primary") is not False
+        if (flow and self._on_flow(ev, text, original, lid, known, slot, now)) or covered:
+            self._refresh()
+
+    def _on_slot(self, slot: int, lid: int, ev: dict, text: str, original: str, now: float) -> bool:
+        """Üst üste yazılar: yuvanın kapak satırı. Yuvanın gösterilen satırının okuması onu günceller; yuvanın yeni
+        satırı kapağın yerine geçer. Yuvada daha yenisi görülmüş (ya da kalkmış) satır ve oyunun hiç kaldırmadığı,
+        üst sınırla kalkmış yazı kapağa dönmez. Değiştiyse True."""
+        cur = self._slots.get(slot)
+        if cur is not None and cur["line"] == lid:
+            self._update(cur, ev, text, original, now, live=True)
+            return True
+        last = self._slot_max.get(slot)
+        if (last is not None and lid <= last) or (last is None and slot <= self._slot_pruned):
+            return False
+        self._slot_max[slot] = lid
+        if len(self._slot_max) > _SLOTS_MAX:  # çoktan bitmiş yuvalar unutulur (yuva kimlikleri hep artar)
+            old = sorted(k for k in self._slot_max if k not in self._slots)[:_SLOTS_MAX // 2]
+            for k in old:
+                del self._slot_max[k]
+            self._slot_pruned = max([self._slot_pruned, *old])
+        if (slot, _text_key(original)) in self._stuck:
+            return False
+        self._slots[slot] = self._new_line(lid, ev, text, original, now)
+        return True
+
+    def _on_flow(self, ev: dict, text: str, original: str, lid: int, known: bool, slot: int | None,
+                 now: float) -> bool:
+        """Akış yığını (bkz. modül açıklaması); yığın değiştiyse True."""
         ln = next((x for x in self.lines if x["line"] == lid and x["until"] is None), None)
         late = ln is None and known and self._max_line is not None and lid < self._max_line
         if ln is None and (lid in self._left or (late and not self._late_fits(lid))):
-            return  # ekrandan çıkmış satır geri getirilmez; eski satır ancak son satırlardansa gösterilir
-        if ln is None and _text_key(original) in self._stuck:
+            return False  # ekrandan çıkmış satır geri getirilmez; eski satır ancak son satırlardansa gösterilir
+        if ln is None and (slot, _text_key(original)) in self._stuck:
             self._mark_left(lid)  # oyunun hiç kaldırmadığı yazı yeni kimlikle geldi: bu okuma hiç gösterilmez
-            return
+            return False
         if self._test_active:  # örnek satırlar gerçeklerle karışmasın
             self._test_active = False
             self.lines = []
@@ -209,23 +285,42 @@ class SubtitleDisplay(QObject):
             self._live = ln
             if known:
                 self._max_line = lid
-        self._refresh()
+        return True
 
-    def on_gone(self) -> None:
+    def _is_slot(self, ln: dict, slot: int | None) -> bool:
+        """İşaret (yuvası `slot`; tek yazıda None) bu satırın yazısı için mi."""
+        return slot is None or ln.get("slot") is None or ln["slot"] == slot
+
+    def on_gone(self, slot: int | None = None) -> None:
         """Oyundaki altyazı kayboldu: en yeni satır gizleme süresini saymaya başlar. Üst sınırla kalkan yazılar
-        da unutulur (ekranda satır olmasa da): oyun aynı yazıyı yeniden gösterirse çevirisi yine görünür."""
-        self._stuck.clear()
-        if self._test_active or self._live is None:
-            return
-        self._live["gone"] = self.clock()
-        self._refresh()
+        da unutulur (ekranda satır olmasa da): oyun aynı yazıyı yeniden gösterirse çevirisi yine görünür. Üst üste
+        yazılarda (slot) yalnız o yazının satırı ve kapağı."""
+        now = self.clock()
+        self._forget_stuck(slot)
+        cur = self._slots.get(slot) if slot is not None else None
+        if cur is not None:
+            cur["gone"] = now
+        live = self._live
+        flow = not self._test_active and live is not None and self._is_slot(live, slot)
+        if flow:
+            live["gone"] = now
+        if flow or cur is not None:
+            self._refresh()
 
-    def on_same(self) -> None:
-        """Oyundaki altyazı hâlâ aynı (ya da geri geldi): bekleyen gizleme iptal."""
-        if self._test_active or self._live is None or self._live["gone"] is None:
-            return
-        self._live["gone"] = None
-        self._refresh()
+    def on_same(self, slot: int | None = None) -> None:
+        """Oyundaki altyazı hâlâ aynı (ya da geri geldi): bekleyen gizleme iptal (üst üste yazılarda yalnız o
+        yazınınki)."""
+        changed = False
+        cur = self._slots.get(slot) if slot is not None else None
+        if cur is not None and cur["gone"] is not None:
+            cur["gone"] = None
+            changed = True
+        live = self._live
+        if not self._test_active and live is not None and live["gone"] is not None and self._is_slot(live, slot):
+            live["gone"] = None
+            changed = True
+        if changed:
+            self._refresh()
 
     # --- kullanıcı eylemleri ------------------------------------------------
     def clear(self) -> None:
@@ -233,6 +328,7 @@ class SubtitleDisplay(QObject):
         self._test_active = False
         for ln in list(self.lines):
             self._remove(ln)
+        self._slots.clear()  # kapaklar da kalkar; aynı satırların sonraki okumaları geri getirmez (bkz. _on_slot)
         self._refresh()
 
     def toggle_visible(self) -> bool:
@@ -290,15 +386,15 @@ class SubtitleDisplay(QObject):
     def _new_line(lid: int, ev: dict, text: str, original: str, now: float) -> dict:
         return {"line": lid, "text": text, "speaker": ev.get("speaker"), "original": original,
                 "spans": clean_spans(ev.get("spans"), len(text)), "born": now, "changed": now, "gone": None,
-                "until": None, "box": ev.get("box")}
+                "until": None, "box": ev.get("box"), "slot": _slot_of(ev)}
 
-    def _update(self, ln: dict, ev: dict, text: str, original: str, now: float) -> None:
+    def _update(self, ln: dict, ev: dict, text: str, original: str, now: float, live: bool | None = None) -> None:
         """Ekrandaki satırın güncellemesi: yeri ve süreleri korunur. Aynı okumanın daha iyi çevirisi (karma mod;
         oyun geçtikten sonra da gelebilir) yalnız yazıyı değiştirir. Oyundaki satırın yeni bir okuması (orijinal
         uzadı ya da düzeldi) oyunun onu hâlâ gösterdiğini bildirir: bekleyen gizleme iptal olur, okuma süresi
         yeni yazıdan sayılır (akıştan önceki gizleme kuralı). Okumanın altyazı kutusu da güncellenir (uzayan
-        altyazı büyür)."""
-        if original != ln["original"] and ln is self._live:
+        altyazı büyür). live: satır oyunun şu an gösterdiği satır mı (verilmezse akışın en yenisi mi)."""
+        if original != ln["original"] and (ln is self._live if live is None else live):
             if text != ln["text"]:
                 ln["changed"] = now
             ln["gone"] = None
@@ -341,11 +437,20 @@ class SubtitleDisplay(QObject):
         while len(self._left) > _LEFT_MAX:
             self._left.popitem(last=False)
 
-    def _remember_stuck(self, original: str) -> None:
+    def _remember_stuck(self, original: str, slot: int | None = None) -> None:
         """Üst sınırla kalkan yazıyı oyun kaldırana (on_gone) dek hatırlar: yeni kimlikle gelse de gösterilmez."""
-        key = _text_key(original)
-        if key and key not in self._stuck:
+        key = (slot, _text_key(original))
+        if key[1] and key not in self._stuck:
             self._stuck.append(key)
+
+    def _forget_stuck(self, slot: int | None) -> None:
+        """Oyun yazıyı kaldırdı: hatırlanan yazılar unutulur (üst üste yazılarda yalnız o yazınınki ve yuvasızlar)."""
+        if slot is None:
+            self._stuck.clear()
+            return
+        kept = [k for k in self._stuck if k[0] not in (None, slot)]
+        self._stuck.clear()
+        self._stuck.extend(kept)
 
     def _cap(self, ln: dict) -> float:
         """Satırın üst sınırı: oyun yazıyı göstermeye devam etse de en geç bu anda kalkar. İlk göründüğü andan
@@ -364,14 +469,15 @@ class SubtitleDisplay(QObject):
             end = max(ln["gone"] + self.s.ocr.hide_delay_ms / 1000.0, ln["changed"] + reading_time(ln["text"]))
         return min(end, self._cap(ln))
 
-    def _deadline(self, ln: dict) -> float:
-        """Satırın ekrandan kalkacağı an (sonsuz: oyun hâlâ gösteriyor ve üst sınır kapalı)."""
+    def _deadline(self, ln: dict, live: bool | None = None) -> float:
+        """Satırın ekrandan kalkacağı an (sonsuz: oyun hâlâ gösteriyor ve üst sınır kapalı). live: satır oyunun şu an
+        gösterdiği satır mı (verilmezse akışın en yenisi mi; yuvaların kapak satırları hep öyledir)."""
         if ln["until"] is not None:
             return ln["until"]
         keep = ln["changed"] + reading_time(ln["text"])
         if self.s.flow.mode != "single":
             keep = max(keep, ln["born"] + max(0.0, float(self.s.flow.min_show_s)))
-        if ln is self._live:
+        if ln is self._live if live is None else live:
             return max(keep, self._game_end(ln))
         return keep
 
@@ -384,16 +490,24 @@ class SubtitleDisplay(QObject):
             return True
         return self._live is not None and now < self._game_end(self._live)
 
-    def _cover_line(self, now: float) -> dict | None:
-        """"Üzerine yerleştir" kutusunda gösterilecek satır: oyunun şu an gösterdiği satır (en yeni), maskeyle aynı
-        kuralla (oyun kaldırınca gizleme süresi sonunda, en geç üst sınırda biter; bkz. _game_end); örnek gösterilirken
-        en yeni örnek satır."""
-        if not self.visible or not self.lines:
-            return None
+    def _cover_lines(self, now: float) -> list[dict]:
+        """"Üzerine yerleştir" kutularında gösterilecek satırlar, eskiden yeniye: oyunun şu an gösterdiği satır (en
+        yeni), maskeyle aynı kuralla (oyun kaldırınca gizleme süresi sonunda, en geç üst sınırda biter; bkz.
+        _game_end); örnek gösterilirken en yeni örnek satır. Üst üste yazılarda her yazının (yuvanın) satırı aynı
+        kuralla; en çok MAX_SLOTS (fazlası varsa oyunda sürenler, sonra alttakiler)."""
+        if not self.visible:
+            return []
         if self._test_active:
-            return self.lines[-1]
+            return self.lines[-1:]
+        shown = [c for c in self._slots.values() if now < self._game_end(c)]
+        if shown:
+            if len(shown) > MAX_SLOTS:
+                shown = sorted(shown, key=lambda c: (c["gone"] is not None, -_box_bottom(c), -c["line"]))[:MAX_SLOTS]
+            return sorted(shown, key=lambda c: c["line"])
         ln = self._live
-        return ln if ln is not None and now < self._game_end(ln) else None
+        if ln is None or ln.get("slot") is not None or not self.lines:
+            return []  # üst üste yazılarda akışın en yenisi kapak değildir (kapakları yuvalar tutar)
+        return [ln] if now < self._game_end(ln) else []
 
     def _refresh(self, force: bool = False) -> None:
         """Süresi dolan satırları çıkarır, iki çıktıyı günceller, zamanlayıcıyı bir sonraki süre dolumuna
@@ -404,15 +518,25 @@ class SubtitleDisplay(QObject):
             self._remove(self.lines[0])
         for ln in [x for x in self.lines if self._deadline(x) <= now + _EPS]:
             if ln is self._live and ln["gone"] is None:  # oyun hâlâ gösterirken üst sınırla kalktı
-                self._remember_stuck(ln["original"])
+                self._remember_stuck(ln["original"], ln.get("slot"))
             self._remove(ln)
+        for slot, c in list(self._slots.items()):  # üst üste yazıların kapak satırları: aynı kurallar, yazı başına
+            if self._deadline(c, live=True) <= now + _EPS:
+                if c["gone"] is None:
+                    self._remember_stuck(c["original"], slot)
+                del self._slots[slot]
         if self._test_active and not self.lines:
             self._test_active = False
         self._push(now, force)
         nxt = min((self._deadline(x) for x in self.lines), default=math.inf)
         covering = self.s.style.cover_original or self.s.screen_style.cover_original
-        if self._live is not None and (self._mask_on(now) or (covering and self._cover_line(now) is self._live)):
+        if self._live is not None and (self._mask_on(now) or (
+                covering and any(x is self._live for x in self._cover_lines(now)))):
             nxt = min(nxt, self._game_end(self._live))  # maske / kapak oyundaki altyazıyla kalkar
+        for c in self._slots.values():
+            nxt = min(nxt, self._deadline(c, live=True))
+            if covering and now < self._game_end(c):
+                nxt = min(nxt, self._game_end(c))  # kapak oyundaki yazısıyla kalkar
         if math.isinf(nxt):
             self._hide.stop()
         else:
@@ -468,8 +592,11 @@ class SubtitleDisplay(QObject):
         font, low = cover_fonts(COVER_FONT * lh * h if lh else top, top, floor)
         line = self._item(ln)
         line.pop("original")  # örtülen yazının kendisi: kapakta gösterilmez
-        return {"rect": [x + rect[0] * w, y + rect[1] * h, rect[2] * w, rect[3] * h], "rows": rows,
-                "font": font, "min": low, "line": line}
+        out = {"rect": [x + rect[0] * w, y + rect[1] * h, rect[2] * w, rect[3] * h], "rows": rows,
+               "font": font, "min": low, "line": line}
+        if ln.get("slot") is not None:  # üst üste yazılar: çizen taraf kapağı yazısıyla eşler (yeni satır yerinde)
+            out["slot"] = ln["slot"]
+        return out
 
     def _stream_cover(self, ln: dict) -> dict | None:
         """OBS'teki kapak: yayın karesine oransal (bkz. _region_frac); yazı boyları kare yüksekliğine oransal."""
@@ -503,15 +630,15 @@ class SubtitleDisplay(QObject):
     def _push(self, now: float | None = None, force: bool = False) -> None:
         """Görünen satırları (eskiden yeniye), maskeyi ve "üzerine yerleştir" kutularını iki çıktıya gönderir;
         değişiklik yoksa göndermez. Kapak açık görünüm akışı göstermez (ekranda örneğin yeri bilinmiyorsa normal
-        kutuda gösterilir); kapak yalnız değişince gönderilir."""
+        kutuda gösterilir); kapak yalnız değişince gönderilir (tek kapak tek başına, üst üste yazılarda liste)."""
         if now is None:
             now = self.clock()
         out = [self._item(x) for x in (self.lines if self.visible else [])]
         st, sc = self.s.style, self.s.screen_style
-        cover_ln = self._cover_line(now) if (st.cover_original or sc.cover_original) else None
-        stream_cover = self._stream_cover(cover_ln) if st.cover_original and cover_ln else None
-        screen_cover = (self._screen_cover(cover_ln)
-                        if sc.cover_original and cover_ln and self.s.overlay.enabled else None)
+        cover_lns = self._cover_lines(now) if (st.cover_original or sc.cover_original) else []
+        stream_cover = _pack([self._stream_cover(x) for x in cover_lns]) if st.cover_original else None
+        screen_cover = (_pack([self._screen_cover(x) for x in cover_lns])
+                        if sc.cover_original and self.s.overlay.enabled else None)
         screen_flow = not sc.cover_original or (self._test_active and screen_cover is None)
         stream_lines, screen_lines = ([] if st.cover_original else out), (out if screen_flow else [])
         mask = self._mask_rect() if self._mask_on(now) else None  # yayın görünümü
@@ -538,7 +665,7 @@ class SubtitleDisplay(QObject):
             self._screen_cover_sent = screen_cover
             self._set_screen_cover(screen_cover)
 
-    def _set_screen_cover(self, cover: dict | None) -> None:
+    def _set_screen_cover(self, cover: dict | list[dict] | None) -> None:
         put = getattr(self.overlay, "set_cover", None)  # testlerdeki sahte kutularda olmayabilir
         if put is not None:
             put(cover)

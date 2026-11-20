@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import logging
 
-from PySide6.QtCore import QEasingCurve, QRect, QRectF, QSize, Qt, QTimer, QVariantAnimation
+from PySide6.QtCore import QEasingCurve, QRect, QRectF, QSize, Qt, QTimer, QVariantAnimation, Signal
 from PySide6.QtGui import QColor, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPalette, QPixmap
 from PySide6.QtWidgets import (QComboBox, QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy,
-                               QVBoxLayout, QWidget)
+                               QSpacerItem, QVBoxLayout, QWidget)
 
 from altyazitr import winutil
 from altyazitr.gui import icons
@@ -35,10 +35,12 @@ SOURCE_TIP = ("Kaynağın canlı görüntüsü (OBS önizlemesi gibi). Bölgeyi 
               "geçerli olur, çeviri sürerken de.")
 SOURCE_HINT = "Altyazının çıktığı alanı fareyle çizin"
 SOURCE_NOTE = "Önizlemede çizin, taşıyın, köşelerinden boyutlandırın"
-WIDE_MIN = 980                 # sayfa bu genişlikten itibaren iki sütun: kaynak sağda, kaymayan sütunda
-RIGHT_MIN, RIGHT_MAX = 420, 820
-RIGHT_SHARE = 0.54             # geniş düzende kaynak sütununun sayfaya oranı
+WIDE_MIN = 900                 # sayfa bu genişlikten itibaren iki sütun: solda çeviriler, sağda büyük kaynak
+LEFT_MIN, LEFT_MAX = 290, 400  # geniş düzende "Son çeviriler" sütunu
+LEFT_SHARE = 0.32              # ... sayfaya oranı; kalan genişlik kaynağa gider
 PILL_H = 22  # durum rozeti yüksekliği (temadaki rozet köşe yarıçapının iki katı)
+WINDOW_LIST_TICKS = 2  # pencere modunda pencere listesi bu kadar saniyede bir yenilenir (bkz. HomePage._watchdog)
+HEAD_H = 32  # bölüm başlık satırının en küçük yüksekliği: yan yana bölümlerin başlıkları aynı hizada durur
 
 
 # --- küçük yardımcılar -------------------------------------------------------------------------
@@ -74,10 +76,9 @@ def _icon_button(icon_name: str, tip: str) -> QPushButton:
 
 
 def _section(title: str, *trailing: QWidget) -> Card:
-    """Sade bölüm (widgets.Card); verilen öğeler başlık satırının sağına yerleşir."""
+    """Sade bölüm (widgets.Card); verilen öğeler başlık satırının sağına yerleşir. Başlık satırı her bölümde aynı
+    yükseklikte (HEAD_H): yan yana duran bölümlerin başlıkları aynı hizadadır."""
     card = Card(title)
-    if not trailing:
-        return card
     lay = card.lay
     head = lay.itemAt(0).widget()  # Card'ın başlık etiketi
     h = QHBoxLayout()
@@ -88,8 +89,24 @@ def _section(title: str, *trailing: QWidget) -> Card:
     h.addStretch(1)
     for w in trailing:
         h.addWidget(w)
+    h.addSpacerItem(QSpacerItem(0, HEAD_H, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
     lay.insertLayout(0, h)
     return card
+
+
+def _as_key(data):
+    """Açılır listedeki öğe verisini karşılaştırılabilir yapar (Qt tuple'ı liste olarak geri verebilir)."""
+    return tuple(data) if isinstance(data, (list, tuple)) else data
+
+
+class _OpeningCombo(QComboBox):
+    """Açılır listesi açılmadan hemen önce `opening` yayan QComboBox (liste her açılışta tazelenir)."""
+
+    opening = Signal()
+
+    def showPopup(self) -> None:  # noqa: N802 - Qt
+        self.opening.emit()
+        super().showPopup()
 
 
 def _pill(lb: QLabel) -> QLabel:
@@ -236,9 +253,10 @@ class _Metrics(QWidget):
 
 # --- sayfa ---------------------------------------------------------------------------------------
 class HomePage(QWidget):
-    """Üstte sabit başlık ve canlı bant (Başlat her zaman görünür). Geniş pencerede sağda kaymayan kaynak sütunu
-    (canlı önizleme ve okunan bölge, OBS önizlemesi gibi), solda son çeviriler, Ekranımda ve OBS; dar pencerede
-    hepsi alt alta, kaynak en üstte."""
+    """OBS düzeni gibi: üstte ince komut çubuğu (Başlat, durum, süreler; her zaman görünür). Geniş pencerede sağda
+    büyük canlı kaynak (ekranın ya da pencerenin tamamı, bölge üstünde düzenlenir) ve altında yan yana Ekranımda ve
+    OBS panelleri; solda tam boy "Son çeviriler" akışı (oyun sırasında en çok bakılan yer). Dar pencerede hepsi alt
+    alta, kaynak en üstte."""
 
     def __init__(self, win):
         super().__init__()
@@ -254,7 +272,7 @@ class HomePage(QWidget):
         head.setObjectName("page")
         hl = QVBoxLayout(head)
         hl.setContentsMargins(m, m - 6, m, 0)
-        hl.setSpacing(SPACE["xl"])
+        hl.setSpacing(SPACE["l"])
         hl.addWidget(label("Ana sayfa", "pageTitle"))
         hl.addWidget(self._build_live())
         root.addWidget(head)
@@ -263,22 +281,42 @@ class HomePage(QWidget):
         body.setContentsMargins(0, 0, 0, 0)
         body.setSpacing(0)
         root.addLayout(body, 1)
+
+        self.source_card = self._build_region()
+        self.hist_card = self._build_history()
+        self.ov_card = self._build_overlay()
+        self.obs_card = self._build_obs()
+        for card in (self.ov_card, self.obs_card):  # yan yana boyları eşitlenince içerik üste yaslansın
+            card.lay.addStretch(1)
+
+        # dar düzen: tek kayan sütun
         self._sa, self._lay = page(None)
         self._lay.setContentsMargins(m, SPACE["xl"], m, m)
         body.addWidget(self._sa, 1)
-        self._side, self._side_lay = page(None)
-        self._side_lay.setContentsMargins(0, SPACE["xl"], m, m)
-        self._side.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._side.hide()
-        body.addWidget(self._side)
+        # geniş düzen: solda tam boy çeviriler (liste kendi içinde kayar), sağda kaynak + paneller (gerekirse kayar)
+        self._left = QWidget()
+        self._left.setObjectName("page")
+        self._left_lay = QVBoxLayout(self._left)
+        self._left_lay.setContentsMargins(m, SPACE["xl"], SPACE["l"], m)
+        self._left_lay.setSpacing(0)
+        self._left.hide()
+        body.addWidget(self._left)
+        self._right, self._right_lay = page(None)
+        self._right_lay.setContentsMargins(SPACE["l"], SPACE["xl"], m, SPACE["xl"])
+        self._right_lay.setSpacing(SPACE["l"])
+        self._right.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._right.hide()
+        body.addWidget(self._right, 1)
+        self._docks = QWidget()
+        self._docks_lay = QHBoxLayout(self._docks)
+        self._docks_lay.setContentsMargins(0, 0, 0, 0)
+        self._docks_lay.setSpacing(SPACE["xl"])
+        self._docks_lay.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._right_lay.addStretch(1)
 
-        self.source_card = self._build_region()
-        self._lay.addWidget(self.source_card)
-        self._lay.addWidget(self._build_history())
-        self._lay.addWidget(self._build_overlay())
-        self._lay.addWidget(self._build_obs())
+        for card in (self.source_card, self.ov_card, self.obs_card, self.hist_card):
+            self._lay.addWidget(card)
         self._lay.addStretch(1)
-        self._side_lay.addStretch(1)
         self._wide = False
 
         # --- canlı kaynak önizlemesi
@@ -315,13 +353,13 @@ class HomePage(QWidget):
         ctx = self.ctx
         self.live = band = LiveBand()
         v = QVBoxLayout(band)
-        v.setContentsMargins(SPACE["xl"], SPACE["l"], SPACE["xl"], SPACE["l"] + LiveBand.LINE_PX)
+        v.setContentsMargins(SPACE["l"], SPACE["m"], SPACE["l"], SPACE["m"] + LiveBand.LINE_PX)
         v.setSpacing(0)
 
         self.btn = QPushButton("Başlat")
         self.btn.setObjectName("primary")
         self.btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn.setMinimumSize(152, 44)
+        self.btn.setMinimumSize(140, 40)
         self.btn.setIconSize(QSize(ICON["m"], ICON["m"]))
         self.btn.clicked.connect(ctx.toggle_running)
 
@@ -349,11 +387,16 @@ class HomePage(QWidget):
         self.vis = _button("Gizle", "eye-off", "ghost")
         self.vis.clicked.connect(ctx.display.toggle_visible)
 
+        # son satırın süreleri (OCR, çeviri) çubukta: oyun sırasında da görünür
+        self.metrics = _Metrics()
+        self.metrics.hide()
+
         h = QHBoxLayout()
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(SPACE["l"])
         h.addWidget(self.btn)
         h.addWidget(colw, 1)
+        h.addWidget(self.metrics)
         h.addWidget(test)
         h.addWidget(self.vis)
         v.addLayout(h)
@@ -368,10 +411,14 @@ class HomePage(QWidget):
                                              "arkasında kalsa da okunur; simge durumuna küçültmeyin.")
         self.mode.setValue(s.capture.mode)
         self.mode.changed.connect(self._mode_changed)
-        rc = _section("Çevrilecek bölge", self.mode)
+        self.b_region = _tip(_button("Tam ekranda seç", "crop", "ghost"),
+                             "Bölgeyi gerçek boyutunda, ekranın üstünde çizin (ince ayar için)")
+        self.b_region.clicked.connect(self.win.select_region)
+        rc = _section("Çevrilecek bölge", self.b_region, self.mode)
 
         self.win_row = QWidget()
-        self.win_combo = QComboBox()
+        self.win_combo = _OpeningCombo()
+        self.win_combo.opening.connect(self.refresh_windows)  # liste her açılışta güncel
         self.win_combo.setMinimumWidth(160)
         self.win_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.win_combo.setToolTip("Altyazının okunacağı pencere")
@@ -395,20 +442,9 @@ class HomePage(QWidget):
         # canlı kaynak: ekranın ya da pencerenin tamamı, üstünde okunan bölge (önizlemede düzenlenir)
         self.source = SourceView()
         self.source.setToolTip(SOURCE_TIP)
+        self.source.set_hover_hint(SOURCE_NOTE)
         self.source.committed.connect(self._region_committed)
         rc.add(self.source)
-
-        self.b_region = QPushButton("Tam ekranda seç")
-        self.b_region.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.b_region.setIconSize(QSize(ICON["s"], ICON["s"]))
-        _set_icon(self.b_region, "crop", C.TEXT_2)
-        self.b_region.setToolTip("Bölgeyi gerçek boyutunda, ekranın üstünde çizin (ince ayar için)")
-        self.b_region.clicked.connect(self.win.select_region)
-        self.src_note = _ElidedLabel(SOURCE_NOTE)
-        self.src_note.setObjectName("muted")
-        self.src_note.setMinimumWidth(10)
-        self.src_note.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        rc.add(layout=_hbox(self.b_region, SPACE["s"], (self.src_note, 1)))
 
         # okunan bölge (yalnız çeviri sürerken): işlem hattının gördüğü kare, metin sanılan yerler yeşil
         self.preview = QLabel()
@@ -431,10 +467,8 @@ class HomePage(QWidget):
         return rc
 
     def _build_history(self) -> Card:
-        """Son çeviriler: en yenisi üstte, başlığın yanında en son satırın süreleri."""
-        self.metrics = _Metrics()
-        self.metrics.hide()
-        sec = _section("Son çeviriler", self.metrics)
+        """Son çeviriler: en yenisi üstte. Geniş düzende sol sütunu boydan boya doldurur (bkz. _relayout)."""
+        sec = _section("Son çeviriler")
         sec.lay.itemAt(0).layout().itemAt(0).widget().setToolTip(PRIVACY_TIP)  # başlık
         self.history = HistoryPanel(toast=getattr(self.win, "toast", None))
         sec.add(self.history)
@@ -491,26 +525,41 @@ class HomePage(QWidget):
     def resizeEvent(self, e) -> None:  # noqa: N802
         super().resizeEvent(e)
         self._relayout()
+        # önizleme karesi yeni genişliğe göre küçültülsün (ilk açılışta düzen oturunca da keskin)
+        self.grabber.set_max_width(round(self.source.width() * self.source.devicePixelRatioF()))
 
     def _relayout(self) -> None:
-        """Geniş pencerede kaynak sağdaki kaymayan sütuna geçer (her zaman görünür); darda en üste döner."""
+        """Geniş pencerede: solda tam boy çeviriler, sağda büyük kaynak ve altında yan yana Ekranımda / OBS. Darda tek
+        kayan sütun: kaynak, Ekranımda, OBS, çeviriler. Kartlar taşınır, yeniden kurulmaz (durumları korunur)."""
         w = self.width()
         wide = w >= WIDE_MIN
         if wide != self._wide:
             self._wide = wide
+            cards = (self.source_card, self.ov_card, self.obs_card, self.hist_card)
+            for card in cards:
+                for lay in (self._lay, self._left_lay, self._right_lay, self._docks_lay):
+                    lay.removeWidget(card)
+            self._right_lay.removeWidget(self._docks)
             if wide:
-                self._lay.removeWidget(self.source_card)
-                self._side_lay.insertWidget(0, self.source_card)
-                self._side.show()
+                self._left_lay.addWidget(self.hist_card, 1)
+                self._right_lay.insertWidget(0, self.source_card)
+                self._docks_lay.addWidget(self.ov_card, 1)
+                self._docks_lay.addWidget(self.obs_card, 1)
+                self._right_lay.insertWidget(1, self._docks)
+                self._docks.show()
             else:
-                self._side_lay.removeWidget(self.source_card)
-                self._lay.insertWidget(0, self.source_card)
-                self._side.hide()
-            self.source_card.show()
+                for i, card in enumerate(cards):
+                    self._lay.insertWidget(i, card)
+            self.history.set_fill(wide)
+            self._sa.setVisible(not wide)
+            self._left.setVisible(wide)
+            self._right.setVisible(wide)
+            for card in cards:
+                card.show()
         if wide:
-            right = max(RIGHT_MIN, min(RIGHT_MAX, int(w * RIGHT_SHARE)))
-            if self._side.width() != right:
-                self._side.setFixedWidth(right)
+            left = max(LEFT_MIN, min(LEFT_MAX, int(w * LEFT_SHARE)))
+            if self._left.width() != left:
+                self._left.setFixedWidth(left)
 
     # --- genel ----------------------------------------------------------------------
     def refresh(self) -> None:
@@ -538,24 +587,39 @@ class HomePage(QWidget):
             self.ctx.request_restart()
         self.refresh()
 
-    def refresh_windows(self) -> None:
+    def refresh_windows(self, windows: list | None = None) -> None:
+        """Pencere listesini açık pencerelerle eşitler: liste açılırken, ↻ ile ve pencere modunda düzenli olarak
+        (bkz. _watchdog). Liste değişmediyse dokunulmaz; değiştiyse seçim korunarak yeniden kurulur. Kullanıcı
+        listeden seçim yaparken (açılır liste açıkken) altından değiştirilmez."""
+        if self.win_combo.view().isVisible():
+            return
         c = self.ctx.s.capture
-        self.win_combo.blockSignals(True)
-        self.win_combo.clear()
+        items: list[tuple[str, tuple | None]] = []
         sel = -1
-        for w in sorted(winutil.list_windows(), key=lambda w: w.title.lower()):
-            self.win_combo.addItem(w.label, (w.exe, w.title))
+        if windows is None:
+            windows = winutil.list_windows()
+        for w in sorted(windows, key=lambda w: w.title.lower()):
+            items.append((w.label, (w.exe, w.title)))
             if sel < 0 and w.exe.lower() == c.window_exe.lower() and (not c.window_title or w.title == c.window_title):
-                sel = self.win_combo.count() - 1
+                sel = len(items) - 1
         if sel < 0:
             if c.window_exe or c.window_title:
-                self.win_combo.insertItem(0, f"(açık değil) {c.window_title or c.window_exe}",
-                                          (c.window_exe, c.window_title))
+                items.insert(0, (f"(açık değil) {c.window_title or c.window_exe}", (c.window_exe, c.window_title)))
             else:
-                self.win_combo.insertItem(0, "Pencere seçin…", None)
+                items.insert(0, ("Pencere seçin…", None))
             sel = 0
-        self.win_combo.setCurrentIndex(sel)
-        self.win_combo.blockSignals(False)
+        combo = self.win_combo
+        current = [(combo.itemText(i), _as_key(combo.itemData(i))) for i in range(combo.count())]
+        combo.blockSignals(True)
+        try:
+            if current != [(text, _as_key(data)) for text, data in items]:
+                combo.clear()
+                for text, data in items:
+                    combo.addItem(text, data)
+            if combo.currentIndex() != sel:
+                combo.setCurrentIndex(sel)
+        finally:
+            combo.blockSignals(False)
 
     def _window_chosen(self, i: int) -> None:
         data = self.win_combo.itemData(i)
@@ -652,13 +716,20 @@ class HomePage(QWidget):
         self.grabber.start()
 
     def _watchdog(self) -> None:
-        """Saniyede bir: simge durumu / görünürlük değiştiyse yakalayıcı durur ya da sürer; pencere modunda pencere
-        sonradan açıldıysa bulunur."""
+        """Saniyede bir: simge durumu / görünürlük değiştiyse yakalayıcı durur ya da sürer. Pencere modunda iki
+        saniyede bir pencere listesi yenilenir (yeni açılan, kapanan, başlığı değişen pencereler; ~1 ms) ve seçili
+        pencere sonradan açıldıysa ya da kapandıysa önizleme ona geçer."""
         self._ticks += 1
-        if self.ctx.s.capture.mode == "window" and not self._hwnd and self._ticks % 3 == 0:
-            self._sync_source()
-        else:
-            self._sync_grabber()
+        c = self.ctx.s.capture
+        if c.mode == "window" and self._ticks % WINDOW_LIST_TICKS == 0 and self._active():
+            wins = winutil.list_windows()  # bir kez taranır: liste de seçili pencere de bundan
+            self.refresh_windows(wins)
+            win = (winutil.find_window(c.window_exe, c.window_title, windows=wins)
+                   if (c.window_exe or c.window_title) else None)
+            if (win.hwnd if win is not None else 0) != self._hwnd:
+                self._sync_source()
+                return
+        self._sync_grabber()
 
     def _on_frame(self, img, size) -> None:
         if not self.isVisible():
@@ -667,8 +738,7 @@ class HomePage(QWidget):
         self.source.set_message("")
 
     def _on_grab_failed(self, err: str) -> None:
-        self.src_note.setText(err or SOURCE_NOTE)
-        self.src_note.setToolTip(err or "")
+        self.source.set_notice(err)
 
     def _region_committed(self, frac) -> None:
         """Önizlemede bölge değişti: hemen kaydedilir ve geçerli olur (çeviri sürüyorsa da)."""
