@@ -206,15 +206,24 @@ def _talk_filter() -> SubtitleFilter:
 def test_konusmanin_ustundeki_kucuk_gorev_yazisi_atilmaz(comp, y, scale):
     """Örtme açıkken bölge altyazı şerididir: altta konuşma, biraz yukarıda ondan küçük, beyaz, kenarlı, ortalı görev
     yazısı aynı karede. Süzgeç konuşmayı öğrenmiş olsa da görev yazısını "yanlış yer / boy" sayıp atmaz; tek başına
-    kaldığında da. Örtme açık da kapalı da (biçimi belirgin ortalı satırda yer ve boy aranmaz)."""
+    kaldığında da. Örtme kapalıyken de biçimi belirgin ortalı satırda yer ve boy aranmaz; sıkıştırma ince yazının
+    kenarını eşiğin altına indirirse (OpenCV sürümüne göre JPEG'de sınırda) örtme kapalı akış eskisi gibi yalnız
+    konuşmayı okuyabilir."""
     f = _talk_filter()
     thick = 1 if scale < 0.7 else 2  # küçük yazının çizgisi de incedir
     img = _zemin(seed=8)
     sub = _yaz(img, [(TALK, WHITE)], cx=W / 2, y=165)
     task = _yaz(img, [("Chase ", WHITE), ("Arnold", BLUE), (".", WHITE)], cx=W / 2, y=y, scale=scale, thick=thick)
     img = _yayin(img, comp)
-    for stacked in (False, True):
-        assert _texts(f.keep(img, [task, sub], stacked=stacked)) == [task.text, sub.text]
+    strong = line_style(img, task).strong
+    if comp == "temiz":
+        assert strong
+    assert _texts(f.keep(img, [task, sub], stacked=True)) == [task.text, sub.text]
+    kept = _texts(f.keep(img, [task, sub], stacked=False))
+    if strong:
+        assert kept == [task.text, sub.text]
+    else:
+        assert kept[-1:] == [sub.text]
     img2 = _zemin(seed=11)
     alone = _yaz(img2, [("Chase Arnold.", WHITE)], cx=W / 2, y=y, scale=scale, thick=thick)
     assert _texts(f.keep(_yayin(img2, comp), [alone], stacked=True)) == [alone.text]
