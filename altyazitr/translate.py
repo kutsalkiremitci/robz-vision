@@ -392,6 +392,16 @@ _quickmt_models: dict[str, tuple[object, object, object, str]] = {}
 _quickmt_lock = threading.Lock()
 
 
+def _load_spm(path: str | os.PathLike):
+    """SentencePiece modelini dosyanın baytlarından yükler. SentencePiece Windows'ta ASCII dışı harfli yolu (ör.
+    C:\\Users\\ömer\\…) açamıyor, dosya varken "NOT_FOUND … No such file or directory" veriyor. Dosyayı Python okuyunca
+    yol sorunu kalmaz. CTranslate2 ve onnxruntime bu yolları açabiliyor."""
+    import sentencepiece as spm
+
+    with open(path, "rb") as fp:
+        return spm.SentencePieceProcessor(model_proto=fp.read())
+
+
 class QuickMtTranslator(Translator):
     key = "quickmt"
     label = "Yerel hızlı çeviri — quickmt (ücretsiz, en hafif, bağlamsız)"
@@ -416,7 +426,6 @@ class QuickMtTranslator(Translator):
             status("Çeviri modeli ilk kez indiriliyor (~400 MB, bir kereye mahsus)…")
             download_quickmt(status)
         import ctranslate2
-        import sentencepiece as spm
 
         status("Çeviri modeli yükleniyor…")
         d = str(QUICKMT_DIR)
@@ -436,8 +445,8 @@ class QuickMtTranslator(Translator):
             tr = ctranslate2.Translator(d, device="cpu", compute_type="int8", intra_threads=threads)
             self.active_device = "cpu"
         self._tr = tr
-        self._src = spm.SentencePieceProcessor(model_file=os.path.join(d, "src.spm.model"))
-        self._tgt = spm.SentencePieceProcessor(model_file=os.path.join(d, "tgt.spm.model"))
+        self._src = _load_spm(os.path.join(d, "src.spm.model"))
+        self._tgt = _load_spm(os.path.join(d, "tgt.spm.model"))
         with _quickmt_lock:
             _quickmt_models[self.device] = (self._tr, self._src, self._tgt, self.active_device)
         log.info("quickmt yüklendi (%s)", self.active_device)

@@ -390,7 +390,7 @@ def _quickmt(table: dict[str, str], glossary: Glossary | None = None) -> tuple[Q
     return q, fake
 
 
-def test_quickmt_model_survives_restarts(monkeypatch):
+def test_quickmt_model_survives_restarts(monkeypatch, tmp_path):
     """İşlem hattı her yeniden başlatmada yeni bir QuickMtTranslator kurar; model diskten bir kez yüklenir,
     sonrakiler bellektekini kullanır (yeniden başlatmada ~1 sn altyazısız kalınmasın). close() modeli atmaz."""
     from altyazitr import translate as tr_mod
@@ -403,13 +403,21 @@ def test_quickmt_model_survives_restarts(monkeypatch):
             loads.append(device)
             return _FakeCt2({})
 
+    protos: list[bytes] = []
+
     class FakeSpm:
         @staticmethod
-        def SentencePieceProcessor(model_file=""):  # noqa: N802 - sentencepiece adı
+        def SentencePieceProcessor(*, model_proto):  # noqa: N802 - sentencepiece adı
+            protos.append(model_proto)
             return _FakeCt2({})
 
+    d = tmp_path / "ömer" / "quickmt-en-tr"  # Türkçe harfli kullanıcı klasörü: model baytlardan yüklenir
+    d.mkdir(parents=True)
+    (d / "src.spm.model").write_bytes(b"src")
+    (d / "tgt.spm.model").write_bytes(b"tgt")
     monkeypatch.setitem(__import__("sys").modules, "ctranslate2", FakeCtranslate2)
     monkeypatch.setitem(__import__("sys").modules, "sentencepiece", FakeSpm)
+    monkeypatch.setattr(tr_mod, "QUICKMT_DIR", d)
     monkeypatch.setattr(tr_mod, "quickmt_downloaded", lambda: True)
     monkeypatch.setattr(tr_mod, "_quickmt_models", {})
     first = QuickMtTranslator(Glossary())
@@ -418,6 +426,26 @@ def test_quickmt_model_survives_restarts(monkeypatch):
     again = QuickMtTranslator(Glossary())
     again.prepare(lambda _m: None)
     assert loads == ["cpu"] and again._tr is not None
+    assert protos == [b"src", b"tgt"]
+
+
+def test_sentencepiece_modeli_turkce_harfli_yoldan_yuklenir(tmp_path):
+    """Gerçek SentencePiece: C:\\Users\\ömer gibi ASCII dışı harfli klasördeki model yüklenir ve çalışır (kütüphane
+    böyle bir yolu kendisi açamıyor; kullanıcıda "Çeviri motoru hazırlanamadı: NOT_FOUND" hatası)."""
+    import io
+
+    spm = pytest.importorskip("sentencepiece")
+    buf = io.BytesIO()
+    text = ["We need to get out of here.", "Get in the car, we are leaving now.", "Nobody is following us."] * 20
+    spm.SentencePieceTrainer.train(sentence_iterator=iter(text), model_writer=buf, vocab_size=40,
+                                   hard_vocab_limit=False, minloglevel=2)
+    d = tmp_path / "ömer şğı" / "quickmt-en-tr"
+    d.mkdir(parents=True)
+    (d / "src.spm.model").write_bytes(buf.getvalue())
+    from altyazitr.translate import _load_spm
+
+    sp = _load_spm(str(d / "src.spm.model"))
+    assert sp.decode(sp.encode("Get in the car.")) == "Get in the car."
 
 
 def test_quickmt_vurguyu_tek_toplu_cagriyla_tasir():
