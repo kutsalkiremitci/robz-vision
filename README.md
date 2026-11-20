@@ -157,10 +157,11 @@ Oyun görseli © Rockstar Games / Take-Two Interactive.</sub></p>
   köşedeki göstergeler ve tuş ipuçları gibi oyun içi yazılar çevrilmez; yalnız altyazı biçimindeki yazı (beyaz ya
   da açık gri, koyu kenarlı ya da gölgeli, ortalı) okunur. Altyazısı renkli, kenarsız ya da sola dayalı bir
   oyunda kapatın.
-- **Oyun altyazısının üzerine** (*Görünüm → Yerleşim*, *Ekranımda* ve *Yayınımda* ayrı, varsayılan kapalı).
+- **Oyun altyazısının üzerine** (*Görünüm → Yerleşim*, *Ekranımda* ve *Yayınımda* ayrı, yeni kurulumda açık).
   Türkçe çeviri oyunun İngilizce altyazısının tam yerine yazılır; koyu, tamamen kapalı bir kutu İngilizceyi
-  örter. Kutu her satırda altyazının yerine ve genişliğine oturur, Türkçe oyunun yazısıyla aynı boydadır; uzun
-  çeviride yazı biraz küçülür, gerekirse kutu yukarı doğru büyür. Oyun aynı anda birden çok yazı gösterirse
+  örter. Kutu her satırda altyazının yerine ve genişliğine oturur. **Akıllı yazı boyu** açıkken (varsayılan)
+  Türkçe oyunun yazısıyla aynı boydadır, uzun çeviride biraz küçülür; kapatırsanız yazı *Boyut*'taki sabit
+  boyda kalır. İki durumda da gerekirse satır kayar, kutu yukarı doğru büyür ve İngilizce açıkta kalmaz. Oyun aynı anda birden çok yazı gösterirse
   (altta konuşma, üstünde küçük görev yazısı) her biri ayrı çevrilir ve kendi kutusuyla örtülür; en çok 3 kutu.
 - **İki ayrı çıktı.** Kendi ekranınızda taşıyıp boyutlandırabileceğiniz bir altyazı kutusu, izleyicileriniz
   için de bir OBS Tarayıcı Kaynağı. İkisinin konumu birbirinden bağımsızdır.

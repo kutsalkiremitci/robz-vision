@@ -279,16 +279,21 @@ görünümüyle gösterir.
   zekâ ve Gemini taşır; hızlı yerel çeviride en iyi çabayla bulunur, DeepL'de vurgu yoktur.
 - **Kenar ve gölge:** açık renkli sahnelerde kenarı kalınlaştırmak okumayı kolaylaştırır.
 - **Arka plan:** *Yok*, *Yarı saydam* ya da *Opak* kutu.
-- **Yerleşim → Oyun altyazısının üzerine** (iki tarafta ayrı, varsayılan kapalı): çeviri, oyunun İngilizce
-  altyazısının tam yerine yazılır. Koyu, tamamen kapalı bir kutu İngilizce yazıyı örter; kutu altyazının
-  genişliğindedir, Türkçe içinde ortalanır ve oyunun yazısıyla aynı boydadır. Türkçe sığmazsa yazı biraz küçülür,
-  gerekirse ikinci satıra geçer ve kutu yukarı doğru büyür. Oyun altyazıyı kaldırınca kutu da kalkar. Açıkken o
+- **Yerleşim → Oyun altyazısının üzerine** (iki tarafta ayrı, yeni kurulumda açık; önceki sürümden
+  güncelleyenlerde seçiminiz korunur): çeviri, oyunun İngilizce altyazısının tam yerine yazılır. Koyu, tamamen
+  kapalı bir kutu İngilizce yazıyı örter; kutu altyazının genişliğindedir ve Türkçe içinde ortalanır.
+  Oyun altyazıyı kaldırınca kutu da kalkar. Açıkken o
   tarafın konum ayarları kullanılmaz (*Ekranımda* kutunun kaydettiğiniz yeri korunur, kapatınca oraya döner;
   *Yayınımda* OBS maskesi gerekmez, oyun görüntüsü OBS tuvalini tam kaplamalıdır). Kutunun rengi *Kutu rengi*'nden.
   Oyun bölgede aynı anda birden çok ayrı yazı gösterirse (ör. altta konuşma, üstünde daha küçük görev yazısı)
   her biri ayrı okunur ve çevrilir, her birinin üstüne kendi yerinde ve kendi boyunda ayrı bir kutu konur; en çok
   3 kutu. Biri kaybolunca yalnız onun kutusu kalkar. Yapay zekânın gördüğü önceki satırlara yalnız asıl yazı
   (en büyük yazılı olan, genellikle konuşma) girer. Örtme iki tarafta da kapalıyken okuma eskisi gibidir.
+  - **Akıllı yazı boyu** (açıkken görünür, varsayılan açık): Türkçe oyunun yazısıyla aynı boydadır; sığmazsa
+    yazı biraz küçülür, gerekirse ikinci satıra geçer ve kutu yukarı doğru büyür.
+  - Akıllı yazı boyunu kapatırsanız yazı *Boyut* ayarındaki sabit boyda kalır (*Ekranımda* *Ölçek* de
+    uygulanır), küçülmez. Kutu yine İngilizceyi örter: Türkçe sığmazsa alt satıra geçer ve kutu yukarı büyür,
+    tek bir kelime sığmazsa kutu iki yana genişler.
 - **Ölçek** (yalnız *Ekranımda*): kutudaki yazıyı kenarı ve arka planıyla birlikte büyütür ya da küçültür.
   Kutunun yerini Ana sayfadaki **Konumu ayarla** belirler.
 - **Konum ve genişlik** (yalnız *Yayınımda*): OBS'teki altyazının alt kenara uzaklığı ve en fazla genişliği.
