@@ -613,9 +613,9 @@ modeli o bilgisayarda indirin ve adresini *Çeviri* sayfasının *Ollama* bölü
 
 ### Güncellemeler
 
-Robz Vision açıkken yeni bir sürüm çıkıp çıkmadığına kendisi bakar: açılıştan kısa süre sonra ve sonra saatte
-bir GitHub'a kısa bir istek gönderir. Yalnız son sürümün numarası okunur, kişisel bilgi gönderilmez. Yeni sürüm
-varsa kenar çubuğunda **Güncelleme var** satırı belirir ve bir kez kısa bir bildirim çıkar. Çeviri çalışırken
+Robz Vision açıkken yeni bir sürüm çıkıp çıkmadığına kendisi bakar: açılıştan birkaç saniye sonra ve sonra
+saatte bir GitHub'a kısa bir istek gönderir. Yalnız son sürümün numarası okunur, kişisel bilgi gönderilmez. Yeni
+sürüm varsa kenar çubuğunda **Sürümü güncelle** satırı belirir ve bir kez kısa bir bildirim çıkar. Çeviri çalışırken
 bildirim beklenir; yayınınıza tepsi balonu düşmez. Satıra ya da bildirime tıklayınca neler yeni olduğunu
 görürsünüz:
 
@@ -636,7 +636,9 @@ güncelleme onu geri getirmez.
 klasörün yerine çıkarın, ayarlarınız yine korunur. Robz Vision'ı tüm kullanıcılar için kurduysanız da yeni
 sürümü indirip kendiniz kurun.
 
-Denetimi *Ayarlar → Uygulama → Güncellemeler*'den kapatabilir, **Şimdi denetle** ile elle bakabilirsiniz
+Beklemeden bakmak için kenar çubuğunda sürüm numarasının altındaki **Güncellemeleri denetle**'ye basın: yeni
+sürüm varsa güncelleme penceresi açılır, yoksa "Robz Vision güncel" bildirimi çıkar. Denetimi
+*Ayarlar → Uygulama → Güncellemeler*'den kapatabilir, oradaki **Şimdi denetle** ile de elle bakabilirsiniz
 (atladığınız sürüm de gösterilir). Uygulama içinden güncelleme 1.3.0'dan sonraki sürümle geldi; 1.3.0 ve
 öncesini bir kez elle güncellemeniz gerekir.
 

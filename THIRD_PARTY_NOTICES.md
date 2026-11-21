@@ -54,11 +54,14 @@ Kick, Google, Ollama veya DeepL ile bağlantılı değildir. Adı geçen markala
 
 **Kick markası:** Kick adı ve logosu (`altyazitr/data/kick.svg`, yeşil "K" işareti) Kick'e aittir. Uygulamada,
 README'de ve web sitesinde yalnız geliştiricinin Kick kanalına (https://kick.com/robzsogood) bağlantı vermek için,
-Kick'in marka yönergelerine uygun olarak, oranı ve rengi değiştirilmeden kullanılır. README'deki "Robz so good'u
-Kick'te takip et" düğmesinde (`docs/gorseller/kick_takip.png`) ve tanıtım görselinde logo, koyu bir zemin üzerinde
-yine değiştirilmeden durur; düğmenin zemini Kick yeşilidir. Logo, Robz Vision'ın MIT lisansının kapsamında
+Kick'in marka yönergelerine uygun olarak, oranı ve rengi değiştirilmeden kullanılır. README'deki Kick düğmesinde
+(shields.io rozeti; logo Simple Icons'tan) ve tanıtım görselinde logo, koyu bir zemin üzerinde Kick yeşiliyle,
+değiştirilmeden durur. Logo, Robz Vision'ın MIT lisansının kapsamında
 değildir. Robz Vision'ın geliştiricisi Kick'te yayın yapar; uygulama Kick'in bir ürünü değildir ve Kick tarafından
 desteklenmez.
+
+**Discord markası:** Discord adı ve logosu Discord Inc.'e aittir. README'deki Discord düğmesinde (shields.io
+rozeti; logo Simple Icons'tan) yalnız Robz so good'un Discord sunucusuna bağlantı vermek için kullanılır.
 
 **Oyun görselleri:** README'deki, kullanım kılavuzundaki ve web sitesindeki örnek görsellerin
 (`docs/gorseller/gta6_*`, `site/img/gta6_*`, `site/img/og.jpg`) zemini Grand Theft Auto VI'nın resmî tanıtım

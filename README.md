@@ -5,6 +5,28 @@
 <p align="center"><sub>Oyun görseli © Rockstar Games / Take-Two Interactive (GTA VI resmî tanıtım görseli). Altyazılar ve Türkçe
 kutu Robz Vision'ın çizimidir. Robz Vision bağımsız bir hayran projesidir; Rockstar Games ile bir bağlantısı yoktur.</sub></p>
 
+<p align="center">
+  <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="https://img.shields.io/github/v/release/kutsalkiremitci/robz-vision?style=flat-square&amp;label=s%C3%BCr%C3%BCm&amp;labelColor=0C0B1D&amp;color=FF4D94" alt="Son sürüm"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-vision/releases"><img src="https://img.shields.io/github/downloads/kutsalkiremitci/robz-vision/total?style=flat-square&amp;label=toplam%20indirme&amp;labelColor=0C0B1D&amp;color=FF8A5B" alt="Toplam indirme"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-vision/stargazers"><img src="https://img.shields.io/github/stars/kutsalkiremitci/robz-vision?style=flat-square&amp;logo=github&amp;label=y%C4%B1ld%C4%B1z&amp;labelColor=0C0B1D&amp;color=3FD8EE" alt="GitHub yıldızları"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/kutsalkiremitci/robz-vision?style=flat-square&amp;label=lisans&amp;labelColor=0C0B1D&amp;color=2BC4AE" alt="Lisans: MIT"></a>
+  <br>
+  <img src="https://img.shields.io/badge/GTA%20VI-T%C3%BCrk%C3%A7e%20altyaz%C4%B1-FF4D94?style=flat-square&amp;labelColor=0C0B1D" alt="GTA VI: Türkçe altyazı">
+  <img src="https://img.shields.io/badge/PS%20Remote%20Play-PC-3FD8EE?style=flat-square&amp;labelColor=0C0B1D" alt="PS Remote Play ve PC">
+  <img src="https://img.shields.io/badge/Kick%20%2B%20OBS-yay%C4%B1nda%20da-53FC18?style=flat-square&amp;labelColor=0C0B1D" alt="Kick ve OBS: yayında da görünür">
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-3FD8EE?style=flat-square&amp;labelColor=0C0B1D" alt="Windows 10 ve 11">
+  <img src="https://img.shields.io/badge/aray%C3%BCz-T%C3%BCrk%C3%A7e-2BC4AE?style=flat-square&amp;labelColor=0C0B1D" alt="Arayüz: Türkçe">
+  <img src="https://img.shields.io/badge/%C3%BCcretsiz-a%C3%A7%C4%B1k%20kaynak-2BC4AE?style=flat-square&amp;labelColor=0C0B1D" alt="Ücretsiz ve açık kaynak">
+</p>
+
+<p align="center">
+  <a href="#3-adımda-başla"><img src="https://img.shields.io/badge/3%20ADIMDA%20BA%C5%9ELA-26234A?style=for-the-badge" alt="3 adımda başla"></a>
+  <a href="#adım-adım-kurulum-rehberi"><img src="https://img.shields.io/badge/PS5%20VE%20TV%20REHBER%C4%B0-26234A?style=for-the-badge" alt="PS5 ve TV rehberi"></a>
+  <a href="#sss-ve-sorun-giderme"><img src="https://img.shields.io/badge/SIK%20SORULANLAR-26234A?style=for-the-badge" alt="Sık sorulanlar"></a>
+  <a href="docs/KULLANIM.md"><img src="https://img.shields.io/badge/KULLANIM%20KILAVUZU-26234A?style=for-the-badge" alt="Kullanım kılavuzu"></a>
+  <a href="https://kutsalkiremitci.github.io/robz-vision/"><img src="https://img.shields.io/badge/WEB%20S%C4%B0TES%C4%B0-3B3866?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOS41Ii8%2BPHBhdGggZD0iTTIuNSAxMmgxOSIvPjxwYXRoIGQ9Ik0xMiAyLjVjMi42IDIuNiA0IDYgNCA5LjVzLTEuNCA2LjktNCA5LjVjLTIuNi0yLjYtNC02LTQtOS41czEuNC02LjkgNC05LjV6Ii8%2BPC9zdmc%2B" alt="Web sitesi"></a>
+</p>
+
 <h3 align="center">Oyundaki İngilizce altyazıyı ekrandan okur, anında Türkçeye çevirir.</h3>
 
 <p align="center">
@@ -13,28 +35,15 @@ kutu Robz Vision'ın çizimidir. Robz Vision bağımsız bir hayran projesidir; 
 </p>
 
 <p align="center">
-  <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="docs/gorseller/indir.png" width="186" alt="Hemen indir"></a>
-  &nbsp;
-  <a href="https://kick.com/robzsogood"><img src="docs/gorseller/kick_takip.png" width="347" alt="Robz so good'u Kick'te takip et"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="https://img.shields.io/badge/%C3%9CCRETS%C4%B0Z%20%C4%B0ND%C4%B0R-WINDOWS%2010%20%C2%B7%2011-FF4D94?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgM3YxMiIvPjxwYXRoIGQ9Im02LjUgOS41IDUuNSA1LjUgNS41LTUuNSIvPjxwYXRoIGQ9Ik00IDIwLjVoMTYiLz48L3N2Zz4%3D&amp;labelColor=C2185B" alt="Ücretsiz indir: Windows 10 ve 11"></a>
+  <a href="https://discord.gg/UyyEn7SHm4"><img src="https://img.shields.io/badge/DISCORD-%C3%9CCRETS%C4%B0Z%20KURULUM%20DESTE%C4%9E%C4%B0-5865F2?style=for-the-badge&amp;logo=discord&amp;logoColor=white&amp;labelColor=4752C4" alt="Discord: ücretsiz kurulum desteği"></a>
+  <a href="https://kick.com/robzsogood"><img src="https://img.shields.io/badge/KICK-ROBZ%20SO%20GOOD%20TAK%C4%B0P%20ET-53FC18?style=for-the-badge&amp;logo=kick&amp;logoColor=53FC18&amp;labelColor=0B0E0F" alt="Kick: Robz so good'u takip et"></a>
 </p>
 <p align="center"><sub><img src="altyazitr/data/kick.svg" height="12" alt=""> Robz Vision'ı Kick yayıncısı <b>Robz so good</b>
 geliştiriyor. Yeni sürümler ve güncellemeler önce yayında duyurulur; <a href="https://kick.com/robzsogood">kanalı takip ederek</a>
 projeye destek olabilirsiniz.</sub></p>
 
-<p align="center">
-  <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="https://img.shields.io/github/v/release/kutsalkiremitci/robz-vision?style=flat-square&label=s%C3%BCr%C3%BCm&labelColor=0C0B1D&color=FF4D94" alt="Son sürüm"></a>
-  <a href="https://github.com/kutsalkiremitci/robz-vision/releases"><img src="https://img.shields.io/github/downloads/kutsalkiremitci/robz-vision/total?style=flat-square&label=indirme&labelColor=0C0B1D&color=FF8A5B" alt="Toplam indirme"></a>
-  <img src="https://img.shields.io/badge/Windows-10%20%2F%2011-3FD8EE?style=flat-square&labelColor=0C0B1D" alt="Windows 10 / 11">
-  <img src="https://img.shields.io/badge/aray%C3%BCz-T%C3%BCrk%C3%A7e-2BC4AE?style=flat-square&labelColor=0C0B1D" alt="Arayüz: Türkçe">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-MIT-2BC4AE?style=flat-square&labelColor=0C0B1D" alt="Lisans: MIT"></a>
-  <a href="https://kick.com/robzsogood"><img src="https://img.shields.io/badge/Kick-Robz%20so%20good-53FC18?style=flat-square&logo=kick&logoColor=53FC18&labelColor=0C0B1D" alt="Kick: Robz so good"></a>
-  <a href="https://kutsalkiremitci.github.io/robz-vision/"><img src="https://img.shields.io/badge/web%20sitesi-robz--vision-FF8A5B?style=flat-square&labelColor=0C0B1D" alt="Web sitesi"></a>
-</p>
-
-<p align="center"><sub>Windows 10 / 11, 64 bit (ARM'li Windows 11 dahil) · kurulum dosyası ya da taşınabilir zip/7z · yönetici izni istemez<br>
-<a href="#nasıl-görünür">Nasıl görünür</a> · <a href="#neler-yapar">Neler yapar</a> · <a href="#3-adımda-başla">3 adımda başla</a> ·
-<a href="#adım-adım-kurulum-rehberi">PS5 ve TV rehberi</a> · <a href="#kurulum">Kurulum</a> · <a href="#sss-ve-sorun-giderme">SSS</a> · <a href="docs/KULLANIM.md">Kullanım kılavuzu</a> ·
-<a href="https://kutsalkiremitci.github.io/robz-vision/">Web sitesi</a></sub></p>
+<p align="center"><sub>Windows 10 / 11, 64 bit (ARM'li Windows 11 dahil) · kurulum dosyası ya da taşınabilir zip/7z · yönetici izni istemez</sub></p>
 
 ## Nasıl görünür
 
@@ -920,11 +929,13 @@ uygulamayı beğendiyseniz kanalı takip ederek projeye destek olabilirsiniz. Uy
 kenar çubuğunun en altında ve *Ayarlar → Uygulama → Geliştirici*'de.
 
 <p>
-  <a href="https://kick.com/robzsogood"><img src="docs/gorseller/kick_takip.png" width="347" alt="Robz so good'u Kick'te takip et"></a>
+  <a href="https://kick.com/robzsogood"><img src="https://img.shields.io/badge/KICK-ROBZ%20SO%20GOOD%20TAK%C4%B0P%20ET-53FC18?style=for-the-badge&amp;logo=kick&amp;logoColor=53FC18&amp;labelColor=0B0E0F" alt="Kick: Robz so good'u takip et"></a>
+  <a href="https://discord.gg/UyyEn7SHm4"><img src="https://img.shields.io/badge/DISCORD-%C3%9CCRETS%C4%B0Z%20KURULUM%20DESTE%C4%9E%C4%B0-5865F2?style=for-the-badge&amp;logo=discord&amp;logoColor=white&amp;labelColor=4752C4" alt="Discord: ücretsiz kurulum desteği"></a>
 </p>
 
 - <a href="https://kick.com/robzsogood"><img src="altyazitr/data/kick.svg" height="14" alt=""> Kick: kick.com/robzsogood</a>
 - YouTube: [youtube.com/@robzsogood](https://www.youtube.com/@robzsogood)
+- Discord: [ücretsiz kurulum desteği](https://discord.gg/UyyEn7SHm4)
 
 ## Lisans
 
