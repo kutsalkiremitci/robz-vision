@@ -6,6 +6,23 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.6.0] - 2026-11-21
+
+### Eklendi
+
+- **Kenar çubuğunda "Güncellemeleri denetle".** Sürüm numarasının hemen altında durur. Tıklanınca beklemeden
+  denetlenir (bu sırada "Denetleniyor…" yazar). Yeni sürüm varsa güncelleme penceresi açılır, yoksa "Robz Vision
+  güncel" bildirimi çıkar; denetlenemezse nedeni yazar. Atlanmış sürüm de yine gösterilir.
+
+### Değişti
+
+- Yeni sürüm varken kenar çubuğundaki satır "Güncelleme var" yerine **"Sürümü güncelle"** yazar.
+- Uygulama açılınca yeni sürüm denetimi 10 saniye yerine **3 saniye** sonra yapılır.
+- Pencere açılışta biraz daha büyük: ekran yetiyorsa **1440×900** (önce 1280×840). Küçük ekranda yine ekranın
+  kullanılabilir alanının %92'sini geçmez.
+- README: indirme, Kick, Discord, sürüm, yıldız ve lisans bağlantıları rozet düğmelere dönüştü; Discord'da ücretsiz
+  kurulum desteği bağlantısı eklendi.
+
 ## [1.5.0] - 2026-11-20
 
 ### Eklendi
@@ -399,7 +416,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.5.0...HEAD
+[Yayımlanmadı]: ../../compare/v1.6.0...HEAD
+[1.6.0]: ../../releases/tag/v1.6.0
 [1.5.0]: ../../releases/tag/v1.5.0
 [1.4.1]: ../../releases/tag/v1.4.1
 [1.4.0]: ../../releases/tag/v1.4.0
