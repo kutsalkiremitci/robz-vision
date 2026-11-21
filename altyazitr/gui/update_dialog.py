@@ -28,7 +28,7 @@ from altyazitr.gui.translate_page import with_icon
 
 TOAST_TEXT = "Robz Vision {v} yayınlandı: güncellemek için tıklayın"
 TOAST_MS = 10000
-ROW_TEXT = "Güncelleme var"
+ROW_TEXT = "Sürümü güncelle"
 CONFIRM_TITLE = "Güncelleme için Robz Vision kapanıp yeniden açılacak"
 CONFIRM_TEXT = "Çeviri durur. Yeni sürüm açılınca Başlat'a basarak sürdürebilirsiniz."
 NO_NOTES = "Bu sürüm için not yazılmamış."

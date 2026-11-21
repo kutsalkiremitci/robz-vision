@@ -220,7 +220,7 @@ def test_sidebar_row_appears_only_with_a_new_version(qapp, gh, tmp_path):
     _announce(svc, gh)
     _pump(qapp)
     row = win._update_row
-    assert win._update_box.isVisibleTo(win) and row.tx.text() == "Güncelleme var"
+    assert win._update_box.isVisibleTo(win) and row.tx.text() == "Sürümü güncelle"
     assert "1.3.1" in row.toolTip() and row.accessibleDescription() == "Güncelleme penceresini açar"
     assert _toasts(win) == [TOAST] and win.balloons == []
     win._apply_compact(True)  # dar kenar çubuğu: yalnız ikon, ikon diğer durum ikonlarıyla aynı eksende
@@ -488,3 +488,83 @@ def test_when_text():
     now = time.mktime((2026, 11, 19, 15, 0, 0, 0, 0, -1))
     assert when_text(now - 3600, now) == "14:00"
     assert when_text(now - 2 * 86400, now) == "17.11.2026 15:00"
+
+
+# --- kenar çubuğu → Güncellemeleri denetle ----------------------------------------------------------------------------
+def test_check_row_reports_current_version(qapp, gh, tmp_path):
+    """Güncelleme satırı yokken sürümün altında "Güncellemeleri denetle" durur; tıklanınca denetim sürerken
+    "Denetleniyor…" yazar ve tıklanmaz, güncelse kısa "güncel" bildirimi çıkar."""
+    import altyazitr.gui.main_window as mw
+
+    gh.publish("1.3.0", SETUP)  # depodaki son sürüm kullanılanla aynı
+    gh.api_delay = 0.4
+    svc = _service(gh, tmp_path)
+    win = _window(qapp, svc)
+    row = win._check_row
+    assert win._check_box.isVisibleTo(win) and row.tx.text() == mw.CHECK_TEXT and row.isEnabled()
+    assert row.toolTip() == mw.CHECK_TIP and not win._update_box.isVisibleTo(win)
+    side = win.side  # sürümün hemen altında, ikonu durum ikonlarıyla aynı eksende
+    assert row.mapTo(side, row.rect().topLeft()).y() > win._ver.mapTo(side, win._ver.rect().bottomLeft()).y()
+    assert row.ic.mapTo(side, row.ic.rect().center()).x() == win._obs.ic.mapTo(side, win._obs.ic.rect().center()).x()
+
+    row.click()
+    assert _wait(qapp, lambda: row.tx.text() == mw.CHECKING_TEXT and not row.isEnabled())
+    assert _wait(qapp, lambda: not svc.checking)
+    _pump(qapp)
+    assert row.tx.text() == mw.CHECK_TEXT and row.isEnabled() and svc.status == "current"
+    assert _toasts(win) == [mw.CHECK_CURRENT.format(v="1.3.0")] and win._update_dlg is None
+
+    win._apply_compact(True)  # dar kenar çubuğu: yalnız ikon, yazı ipucunda
+    assert not row.tx.isVisibleTo(win) and row.toolTip().startswith(mw.CHECK_TEXT)
+
+
+def test_check_row_opens_dialog_for_new_version(qapp, gh, tmp_path):
+    """Yeni sürüm varsa güncelleme penceresi açılır; denetle satırı gizlenir, yerini "Sürümü güncelle" alır. Atlanmış
+    sürüm de elle denetimde yine gösterilir."""
+    gh.publish("1.3.1", SETUP)
+    settings = Settings()
+    settings.update.skipped_version = "1.3.1"
+    svc = _service(gh, tmp_path, settings=settings)
+    win = _window(qapp, svc)
+    win._check_row.click()
+    assert _wait(qapp, lambda: win._update_dlg is not None)
+    assert not win._check_box.isVisibleTo(win) and win._update_box.isVisibleTo(win)
+    assert win._update_row.tx.text() == "Sürümü güncelle" and settings.update.skipped_version == ""
+    assert not [t for t in _toasts(win) if "güncel (" in t]  # "güncel" bildirimi çıkmaz
+
+
+@pytest.mark.parametrize("status, text", [(500, "CHECK_FAILED"), (429, "CHECK_LIMITED")])
+def test_check_row_reports_failure(qapp, gh, tmp_path, status, text):
+    import altyazitr.gui.main_window as mw
+
+    gh.publish("1.3.1", SETUP)
+    gh.api_status = status
+    gh.api_headers = {"Retry-After": "60"} if status == 429 else {}
+    svc = _service(gh, tmp_path)
+    win = _window(qapp, svc)
+    win._check_row.click()
+    assert _wait(qapp, lambda: not svc.checking and _toasts(win))
+    assert _toasts(win) == [getattr(mw, text)] and win._check_box.isVisibleTo(win) and win._update_dlg is None
+
+
+def test_automatic_check_reports_nothing(qapp, gh, tmp_path):
+    """Kendiliğinden denetim güncelse bildirim çıkarmaz (yalnız elle denetim sonucu bildirir)."""
+    gh.publish("1.3.0", SETUP)
+    svc = _service(gh, tmp_path)
+    win = _window(qapp, svc)
+    svc.check_now(manual=False)
+    assert _wait(qapp, lambda: not svc.checking)
+    _pump(qapp)
+    assert svc.status == "current" and _toasts(win) == []
+
+
+def test_default_window_size():
+    from PySide6.QtCore import QRect
+
+    from altyazitr.gui.main_window import WINDOW_DEFAULT, default_window_size
+
+    assert WINDOW_DEFAULT == (1440, 900)
+    assert default_window_size(QRect(0, 0, 1920, 1032)) == (1440, 900)  # 1080p (görev çubuğu hariç)
+    assert default_window_size(QRect(0, 0, 2560, 1400)) == (1440, 900)
+    assert default_window_size(QRect(0, 0, 1366, 728)) == (1256, 760)  # küçük ekran: %92, en az 980×760
+    assert default_window_size(None) == (980, 760)

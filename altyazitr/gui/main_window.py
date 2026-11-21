@@ -10,8 +10,11 @@ de bu kanaldan verilir.
 Kenar çubuğunun en altında geliştiricinin Kick bağlantısı durur (Kick logosu + "Robz so good"; gui/developer.py):
 tıklanınca ya da odaktayken Enter ile kanal tarayıcıda açılır. Bildirim ya da açılır pencere göstermez.
 
-Güncelleme (`ctx.updater`, altyazitr.update_service.UpdateService): yeni sürüm varken kenar çubuğunda "Güncelleme var"
-satırı durur (indirme sürerken yüzdesi); tıklanınca güncelleme penceresi (gui/update_dialog.py). Yeni sürüm bu oturumda
+Güncelleme (`ctx.updater`, altyazitr.update_service.UpdateService): yeni sürüm varken kenar çubuğunda "Sürümü güncelle"
+satırı durur (indirme sürerken yüzdesi); tıklanınca güncelleme penceresi (gui/update_dialog.py). O satır yokken sürümün
+altında "Güncellemeleri denetle" durur: tıklanınca hemen denetlenir; yeni sürüm varsa güncelleme penceresi açılır,
+yoksa "güncel" bildirimi çıkar (denetlenemezse nedeni). Uygulama açılınca da kısa süre sonra kendiliğinden
+denetlenir (update_service.FIRST_CHECK_MS; Ayarlar'dan kapatılabilir). Yeni sürüm bu oturumda
 ilk kez bulununca pencere içinde bir kez tıklanabilir kısa bildirim çıkar; çeviri çalışırken, pencere gizliyken ya da
 tur açıkken beklenir (çeviri durunca, pencere açılınca). Tepsi balonu çıkmaz (yayına düşer).
 """
@@ -87,6 +90,15 @@ COMPACT_BELOW = 900      # pencere bundan darsa kenar çubuğu daralır
 NAV_ITEM_H = 40
 ICON_COL = 20            # ikon sütunu: marka, menü ve durum ikonları aynı eksende hizalanır
 AI_ROW_H = 32            # yapay zekâ durum satırı (tıklanabilir)
+WINDOW_DEFAULT = (1440, 900)  # açılış boyu (ekranın kullanılabilir alanının %92'sini geçmez)
+
+# Kenar çubuğu → Güncellemeleri denetle (bkz. _CheckRow, MainWindow._check_updates)
+CHECK_TEXT = "Güncellemeleri denetle"
+CHECKING_TEXT = "Denetleniyor…"
+CHECK_TIP = "Yeni sürüm var mı hemen bakar; varsa güncelleme penceresi açılır"
+CHECK_CURRENT = "Robz Vision güncel (Sürüm {v})"
+CHECK_FAILED = "Güncellemeler denetlenemedi: internet bağlantınızı denetleyin"
+CHECK_LIMITED = "GitHub şu an yanıt vermiyor; biraz sonra yeniden deneyin"
 
 # Yapay zekâ kurulumunun bildirimleri (başarı metinleri servisle ortak: ai_setup.TEXT_READY / TEXT_READY_LATER)
 AI_FAILED = "Yapay zekâ kurulamadı; ayrıntı Çeviri sayfasında"
@@ -104,6 +116,16 @@ def _font(family: str, px: int) -> QFont:
     f = QFont(family)
     f.setPixelSize(px)
     return f
+
+
+def default_window_size(avail: Any) -> tuple[int, int]:
+    """Açılış boyu: WINDOW_DEFAULT, ekranın kullanılabilir alanının (avail: QRect; bilinmiyorsa None) %92'sini geçmez,
+    eski varsayılanın (980×760) altına inmez."""
+    w, h = 980, 760
+    if avail is not None:
+        w = max(w, min(WINDOW_DEFAULT[0], int(avail.width() * 0.92)))
+        h = max(h, min(WINDOW_DEFAULT[1], int(avail.height() * 0.92)))
+    return w, h
 
 
 def _dpr(w: QWidget) -> float:
@@ -442,7 +464,7 @@ class _AiRow(_RowButton):
 
 
 class _UpdateRow(_AiRow):
-    """Kenar çubuğundaki güncelleme satırı ("Güncelleme var", "Güncelleme %34"); tıklanınca güncelleme penceresi."""
+    """Kenar çubuğundaki güncelleme satırı ("Sürümü güncelle", "Güncelleme %34"); tıklanınca güncelleme penceresi."""
 
     LOOK = {  # durum → (ikon, ikon rengi, yazı rengi); bkz. update_dialog.sidebar_status
         "available": ("download", C.CYAN, C.TEXT),
@@ -454,6 +476,39 @@ class _UpdateRow(_AiRow):
         super().__init__(parent)
         self.setObjectName("updateStatus")
         self.setAccessibleDescription("Güncelleme penceresini açar")
+
+
+class _CheckRow(_RowButton):
+    """Sürümün altındaki "Güncellemeleri denetle" satırı (yalnız güncelleme satırı yokken görünür); tıklanınca hemen
+    denetlenir (bkz. MainWindow._check_updates). Denetim sürerken "Denetleniyor…" yazar ve tıklanmaz. Yazı sessizdir
+    (TEXT_2, üzerine gelince TEXT), Kick satırı gibi."""
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self.setObjectName("updateCheck")
+        self.setAccessibleDescription(CHECK_TIP)
+        self._checking: bool | None = None
+        self.set_checking(False)
+
+    def set_checking(self, checking: bool) -> None:
+        if checking == self._checking:
+            return
+        self._checking = checking
+        self.setEnabled(not checking)
+        self.ic.setPixmap(pixmap("refresh", 16, C.CYAN if checking else C.TEXT_3, dpr=max(2.0, _dpr(self))))
+        self.tx.setText(CHECKING_TEXT if checking else CHECK_TEXT)
+        self.setAccessibleName(self.tx.text())
+        self._hover_changed(False)
+        self._sync_tip()
+
+    def _sync_tip(self) -> None:
+        if self._checking:
+            self.setToolTip(CHECKING_TEXT)
+        else:
+            self.setToolTip(f"{CHECK_TEXT}\n{CHECK_TIP}" if self._compact else CHECK_TIP)
+
+    def _hover_changed(self, hover: bool) -> None:
+        self.tx.setStyleSheet(_qss_font(F.DISPLAY, 13, C.TEXT if hover and not self._checking else C.TEXT_2))
 
 
 class _KickRow(_RowButton):
@@ -499,14 +554,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{APP_NAME} – {__version__}")
         self.setWindowIcon(app_icon())
         # Ana sayfanın geniş düzeni (canlı kaynak sağda her zaman görünür) 1080p ekranda varsayılan olsun: ekran
-        # yeterince büyükse pencere 1280×840'a kadar büyür; eski varsayılanın (980×760) altına hiç inmez.
+        # yeterince büyükse pencere WINDOW_DEFAULT'a kadar büyür (kullanılabilir alanın %92'si); eski varsayılanın
+        # (980×760) altına hiç inmez.
         scr = QGuiApplication.primaryScreen()
-        avail = scr.availableGeometry() if scr is not None else None
-        w, h = 980, 760
-        if avail is not None:
-            w = max(w, min(1280, int(avail.width() * 0.92)))
-            h = max(h, min(840, int(avail.height() * 0.92)))
-        self.resize(w, h)
+        self.resize(*default_window_size(scr.availableGeometry() if scr is not None else None))
         self.setMinimumSize(780, 560)
         self._tray_notified = False
         self._quitting = False
@@ -585,6 +636,18 @@ class MainWindow(QMainWindow):
         fv.addSpacing(SPACE["s"])
         fv.addWidget(self._ver_row)
         sv.addWidget(self._footer)
+
+        # "Güncellemeleri denetle": sürümün hemen altında, güncelleme satırı yokken (bkz. _sync_update_row). Kick satırı
+        # gibi kenarlardan 8 px içeride, ikonu durum ikonlarıyla aynı eksende (bkz. _apply_compact).
+        self._check_row = _CheckRow()
+        self._check_row.clicked.connect(self._check_updates)
+        self._check_box = QWidget()
+        cb = QHBoxLayout(self._check_box)
+        cb.setContentsMargins(SPACE["s"], 0, SPACE["s"], 0)
+        cb.addWidget(self._check_row)
+        self._check_box.setVisible(self._upd is not None)
+        sv.addWidget(self._check_box)
+        self._check_asked = False  # kullanıcı denetle'ye bastı: sonuç bildirilecek
 
         # geliştirici bağlantısı, en altta: Kick logosu + "Robz so good" (bkz. gui/developer.py). Yapay zekâ satırı
         # gibi kenarlardan 8 px içeride, logosu durum ikonlarıyla aynı eksende (bkz. _apply_compact).
@@ -666,7 +729,8 @@ class MainWindow(QMainWindow):
         self.side.setFixedWidth(SIDEBAR_COMPACT_W if compact else SIDEBAR_W)
         self._wordmark.setVisible(not compact)
         self.nav.set_compact(compact)
-        for row in (self._live, self._obs, self._ver_row, self._update_row, self._ai_row, self._kick_row):
+        for row in (self._live, self._obs, self._ver_row, self._update_row, self._ai_row, self._check_row,
+                    self._kick_row):
             row.set_compact(compact)
         # İki hizalama ekseni: ikonlar (genişte x = 30, menü ikonlarıyla aynı; darda kenar çubuğunun ortası)
         # ve yazılar (x = 52: marka adı, menü etiketleri, durum yazıları ve sürüm aynı sol kenarda).
@@ -683,7 +747,7 @@ class MainWindow(QMainWindow):
         self._footer.layout().setContentsMargins(icon_x, 0, SPACE["l"], 0)
         # güncelleme, yapay zekâ ve Kick satırları kenarlardan SPACE["s"] içeride başlar (bkz. _update_box, _ai_box,
         # _kick_box): ikonları yine icon_x'te
-        for row in (self._update_row, self._ai_row, self._kick_row):
+        for row in (self._update_row, self._ai_row, self._check_row, self._kick_row):
             row.layout().setContentsMargins(icon_x - SPACE["s"], 0, SPACE["s"], 0)
 
     def _set_live(self, running: bool) -> None:
@@ -713,6 +777,34 @@ class MainWindow(QMainWindow):
         if status is not None:
             self._update_row.set_status(*status)
         self._update_box.setVisible(status is not None)
+        upd = self._upd
+        self._check_box.setVisible(upd is not None and status is None)
+        checking = bool(getattr(upd, "checking", False))
+        self._check_row.set_checking(checking)
+        if self._check_asked and upd is not None and not checking:
+            self._check_asked = False
+            self._report_check(upd)
+
+    def _check_updates(self) -> None:
+        """Kenar çubuğu → Güncellemeleri denetle: hemen denetlenir (atlanmış sürüm de gösterilir). Yeni sürüm varsa
+        güncelleme penceresi açılır (_on_update_found, manual); yoksa sonuç kısa bildirimle (_report_check)."""
+        upd = self._upd
+        if upd is None or upd.checking:
+            return
+        self._check_asked = True
+        upd.check_now(manual=True)
+
+    def _report_check(self, upd: Any) -> None:
+        """Elle denetimin sonucu: güncelse ya da denetlenemediyse kısa bildirim (yeni sürümde pencere zaten açılır)."""
+        if getattr(upd, "available", None) is not None:
+            return
+        status = str(getattr(upd, "status", "") or "")
+        if status == "current":
+            self.toast(CHECK_CURRENT.format(v=getattr(upd, "version", __version__)), "success", NOTICE_MS)
+        elif status == "limited":
+            self.toast(CHECK_LIMITED, "warn", NOTICE_MS)
+        elif status == "error":
+            self.toast(CHECK_FAILED, "warn", NOTICE_MS)
 
     # --- güncelleme ----------------------------------------------------------------------------------------------
     def _on_update_found(self, release: Any, manual: bool) -> None:

@@ -1,7 +1,7 @@
 r"""Güncelleme servisi (Qt): zamanlama, arka plan işleri ve arayüzün okuduğu durum. Ağ, dosya ve kurulum işleri
 altyazitr.updater'dadır; burada iş parçacıkları başlatılır ve sonuçları arayüz iş parçacığında uygulanır.
 
-Zamanlama tek bir QTimer'dır: açılıştan FIRST_CHECK_MS (10 sn) sonra ilk denetim, sonra uygulama açık kaldıkça saatte
+Zamanlama tek bir QTimer'dır: açılıştan FIRST_CHECK_MS (3 sn) sonra ilk denetim, sonra uygulama açık kaldıkça saatte
 bir (CHECK_EVERY_MS). Oran sınırında (403/429) bir sonraki deneme sunucunun söylediği kadar ertelenir (en çok 24 saat).
 Bilgisayar uykudan dönünce ya da internet yeni gelince bekleyen denetim zamanlayıcının sırasında yapılır. Denetim
 kapalıyken (settings.update.auto_check) zamanlayıcı durur; "Şimdi denetle" (check_now(manual=True)) yine çalışır.
@@ -36,7 +36,7 @@ from altyazitr.updater import GITHUB, CheckResult, Release, Source, UpdateChecke
 
 log = logging.getLogger(__name__)
 
-FIRST_CHECK_MS = 10_000  # açılıştan sonra ilk denetim (açılış ağırlaşmasın)
+FIRST_CHECK_MS = 3_000  # açılıştan sonra ilk denetim (pencere çizilsin, sonra; denetim iş parçacığında)
 CHECK_EVERY_MS = 3_600_000  # sonra saatte bir
 CLEANUP_DELAY_MS = 30_000  # önceki güncellemenin kurulum dosyası bu kadar sonra silinir (kurulum çoktan bitmiştir)
 

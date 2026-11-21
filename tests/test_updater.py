@@ -383,7 +383,7 @@ def _service(gh, tmp_path, kind="user", settings=None, launcher=None, version="1
 def test_service_timer_is_hourly_and_backs_off(qapp, gh, tmp_path):
     from altyazitr import update_service as us
 
-    assert us.FIRST_CHECK_MS == 10_000 and us.CHECK_EVERY_MS == 3_600_000
+    assert us.FIRST_CHECK_MS == 3_000 and us.CHECK_EVERY_MS == 3_600_000
     _release_json(gh)
     svc = _service(gh, tmp_path)
     assert not svc._timer.isActive()  # oluşturulunca istek yok (AppContext; main() başlatır)
