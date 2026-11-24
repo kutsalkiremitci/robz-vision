@@ -141,7 +141,9 @@ class FlowCfg:
 @dataclass
 class OverlayCfg:
     enabled: bool = True  # çeviriyi kendi ekranımda göster
-    visible_in_stream: bool = False  # True: OBS Ekran Yakalama'da da görünür (tarayıcı kaynağına gerek kalmaz)
+    # True: OBS Ekran Yakalama'da da görünür (tarayıcı kaynağına gerek kalmaz). Yeni kurulumda açık gelir (bkz.
+    # new_settings); buradaki varsayılan kapalıdır ki anahtarı olmayan eski ayar dosyasında seçim değişmesin.
+    visible_in_stream: bool = False
     box: list[int] = field(default_factory=list)  # [x, y, w, h] Qt (mantıksal) koordinat; boşsa varsayılan
     scale: float = 1.0
 
@@ -251,8 +253,12 @@ def new_style() -> StyleCfg:
 
 
 def new_settings() -> Settings:
-    """Ayar dosyası yokken (yeni kurulum) kullanılan ayarlar: iki görünümde de yerleşim oyun altyazısının üzerine."""
-    return Settings(style=new_style(), screen_style=new_style())
+    """Ayar dosyası yokken (yeni kurulum) kullanılan ayarlar: iki görünümde de yerleşim oyun altyazısının üzerine,
+    ekrandaki kutu yayında da görünür (OBS Ekran Yakalama). Kutu okunan ekran bölgesini örterken yine yakalamaya
+    girmez (overlay.ScreenOverlay._affinity): Robz Vision kendi Türkçe yazısını okumaz."""
+    s = Settings(style=new_style(), screen_style=new_style())
+    s.overlay.visible_in_stream = True
+    return s
 
 
 def load_settings() -> Settings:

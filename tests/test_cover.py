@@ -792,12 +792,14 @@ def test_yeni_kurulumda_yerlesim_acik_eski_ayar_dosyasi_korunur(tmp_path, monkey
     s = cfg.load_settings()
     assert s.style.cover_original and s.screen_style.cover_original
     assert s.style.cover_fit and s.screen_style.cover_fit
+    assert s.overlay.visible_in_stream is True and s.overlay.enabled is True  # yayında da görünür
 
     path = tmp_path / "ayarlar.json"
     monkeypatch.setattr(cfg, "SETTINGS_FILE", path)
     path.write_text(json.dumps({"style": {"font_size": 50}}), encoding="utf-8")  # yerleşimden önceki sürüm
     s = cfg.load_settings()
     assert not s.style.cover_original and not s.screen_style.cover_original and s.style.font_size == 50
+    assert s.overlay.visible_in_stream is False  # eski dosyada seçim değişmez
     assert s.style.cover_fit and s.screen_style.cover_fit  # akıllı yazı boyu eskiden de hep açıktı
     path.write_text(json.dumps({"style": {"cover_original": False}, "screen_style": {"cover_original": True}}),
                     encoding="utf-8")

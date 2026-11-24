@@ -216,8 +216,10 @@ Konum ipuçları:
   ekranda seçin: önizlemenin üstündeki listeden ekranı seçip çizin ya da **Tam ekranda seç**'i kullanın (bütün
   ekranlarda açılır).
 
-**Yayında da görünsün** seçeneği kutuyu ekran yakalamaya açar. Yalnızca OBS'te *Ekran Yakalama* ile yayın
-yapıyor ve tarayıcı kaynağı kullanmak istemiyorsanız açın. Bu seçenek açıkken kutu okunan bölgenin üstüne
+**Yayında da görünsün** seçeneği kutuyu ekran yakalamaya açar (yeni kurulumda açık gelir): OBS'te *Ekran
+Yakalama* ile yayın yapıyorsanız kutu tarayıcı kaynağı olmadan da yayına girer. Kutunun yayına girmesini
+istemiyorsanız kapatın. *Oyun altyazısının üzerine* açıkken ekran bölgesini okurken kutu yine yakalamaya
+girmez; Robz Vision kendi Türkçe yazısını okumaz. Bu seçenek açıkken normal kutu okunan bölgenin üstüne
 gelirse Robz Vision *Kutu okunan bölgenin üstünde* uyarısı verir; kutuyu bölgenin dışına taşıyın.
 
 ## 5. OBS'e ekleyin
