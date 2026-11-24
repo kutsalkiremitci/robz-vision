@@ -6,6 +6,14 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.6.1] - 2026-11-24
+
+### Değişti
+
+- **"Yayında da görünsün" yeni kurulumda açık gelir** (Ana sayfa → *Ekranımda*): ekrandaki Türkçe kutu OBS
+  *Ekran Yakalama*'da da görünür. Güncelleyen kullanıcıların seçimi korunur. *Oyun altyazısının üzerine* açıkken
+  ekran bölgesi okunurken kutu yine yakalamaya girmez (Robz Vision kendi yazısını okumaz).
+
 ## [1.6.0] - 2026-11-21
 
 ### Eklendi
@@ -416,7 +424,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.6.0...HEAD
+[Yayımlanmadı]: ../../compare/v1.6.1...HEAD
+[1.6.1]: ../../releases/tag/v1.6.1
 [1.6.0]: ../../releases/tag/v1.6.0
 [1.5.0]: ../../releases/tag/v1.5.0
 [1.4.1]: ../../releases/tag/v1.4.1
