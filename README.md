@@ -6,25 +6,25 @@
 kutu Robz Vision'ın çizimidir. Robz Vision bağımsız bir hayran projesidir; Rockstar Games ile bir bağlantısı yoktur.</sub></p>
 
 <p align="center">
-  <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="https://img.shields.io/github/v/release/kutsalkiremitci/robz-vision?style=flat-square&amp;label=s%C3%BCr%C3%BCm&amp;labelColor=0C0B1D&amp;color=FF4D94" alt="Son sürüm"></a>
-  <a href="https://github.com/kutsalkiremitci/robz-vision/releases"><img src="https://img.shields.io/github/downloads/kutsalkiremitci/robz-vision/total?style=flat-square&amp;label=toplam%20indirme&amp;labelColor=0C0B1D&amp;color=FF8A5B" alt="Toplam indirme"></a>
-  <a href="https://github.com/kutsalkiremitci/robz-vision/stargazers"><img src="https://img.shields.io/github/stars/kutsalkiremitci/robz-vision?style=flat-square&amp;logo=github&amp;label=y%C4%B1ld%C4%B1z&amp;labelColor=0C0B1D&amp;color=3FD8EE" alt="GitHub yıldızları"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/kutsalkiremitci/robz-vision?style=flat-square&amp;label=lisans&amp;labelColor=0C0B1D&amp;color=2BC4AE" alt="Lisans: MIT"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-vision/releases/latest"><img src="https://img.shields.io/github/v/release/kutsalkiremitci/robz-vision?style=flat-square&amp;label=s%C3%BCr%C3%BCm&amp;labelColor=050507&amp;color=FF4D94" alt="Son sürüm"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-vision/releases"><img src="https://img.shields.io/github/downloads/kutsalkiremitci/robz-vision/total?style=flat-square&amp;label=toplam%20indirme&amp;labelColor=050507&amp;color=FF8A5B" alt="Toplam indirme"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-vision/stargazers"><img src="https://img.shields.io/github/stars/kutsalkiremitci/robz-vision?style=flat-square&amp;logo=github&amp;label=y%C4%B1ld%C4%B1z&amp;labelColor=050507&amp;color=3FD8EE" alt="GitHub yıldızları"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/kutsalkiremitci/robz-vision?style=flat-square&amp;label=lisans&amp;labelColor=050507&amp;color=2BC4AE" alt="Lisans: MIT"></a>
   <br>
-  <img src="https://img.shields.io/badge/GTA%20VI-T%C3%BCrk%C3%A7e%20altyaz%C4%B1-FF4D94?style=flat-square&amp;labelColor=0C0B1D" alt="GTA VI: Türkçe altyazı">
-  <img src="https://img.shields.io/badge/PS%20Remote%20Play-PC-3FD8EE?style=flat-square&amp;labelColor=0C0B1D" alt="PS Remote Play ve PC">
-  <img src="https://img.shields.io/badge/Kick%20%2B%20OBS-yay%C4%B1nda%20da-53FC18?style=flat-square&amp;labelColor=0C0B1D" alt="Kick ve OBS: yayında da görünür">
-  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-3FD8EE?style=flat-square&amp;labelColor=0C0B1D" alt="Windows 10 ve 11">
-  <img src="https://img.shields.io/badge/aray%C3%BCz-T%C3%BCrk%C3%A7e-2BC4AE?style=flat-square&amp;labelColor=0C0B1D" alt="Arayüz: Türkçe">
-  <img src="https://img.shields.io/badge/%C3%BCcretsiz-a%C3%A7%C4%B1k%20kaynak-2BC4AE?style=flat-square&amp;labelColor=0C0B1D" alt="Ücretsiz ve açık kaynak">
+  <img src="https://img.shields.io/badge/GTA%20VI-T%C3%BCrk%C3%A7e%20altyaz%C4%B1-FF4D94?style=flat-square&amp;labelColor=050507" alt="GTA VI: Türkçe altyazı">
+  <img src="https://img.shields.io/badge/PS%20Remote%20Play-PC-3FD8EE?style=flat-square&amp;labelColor=050507" alt="PS Remote Play ve PC">
+  <img src="https://img.shields.io/badge/Kick%20%2B%20OBS-yay%C4%B1nda%20da-53FC18?style=flat-square&amp;labelColor=050507" alt="Kick ve OBS: yayında da görünür">
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-3FD8EE?style=flat-square&amp;labelColor=050507" alt="Windows 10 ve 11">
+  <img src="https://img.shields.io/badge/aray%C3%BCz-T%C3%BCrk%C3%A7e-2BC4AE?style=flat-square&amp;labelColor=050507" alt="Arayüz: Türkçe">
+  <img src="https://img.shields.io/badge/%C3%BCcretsiz-a%C3%A7%C4%B1k%20kaynak-2BC4AE?style=flat-square&amp;labelColor=050507" alt="Ücretsiz ve açık kaynak">
 </p>
 
 <p align="center">
-  <a href="#3-adımda-başla"><img src="https://img.shields.io/badge/3%20ADIMDA%20BA%C5%9ELA-26234A?style=for-the-badge" alt="3 adımda başla"></a>
-  <a href="#adım-adım-kurulum-rehberi"><img src="https://img.shields.io/badge/PS5%20VE%20TV%20REHBER%C4%B0-26234A?style=for-the-badge" alt="PS5 ve TV rehberi"></a>
-  <a href="#sss-ve-sorun-giderme"><img src="https://img.shields.io/badge/SIK%20SORULANLAR-26234A?style=for-the-badge" alt="Sık sorulanlar"></a>
-  <a href="docs/KULLANIM.md"><img src="https://img.shields.io/badge/KULLANIM%20KILAVUZU-26234A?style=for-the-badge" alt="Kullanım kılavuzu"></a>
-  <a href="https://kutsalkiremitci.github.io/robz-vision/"><img src="https://img.shields.io/badge/WEB%20S%C4%B0TES%C4%B0-3B3866?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOS41Ii8%2BPHBhdGggZD0iTTIuNSAxMmgxOSIvPjxwYXRoIGQ9Ik0xMiAyLjVjMi42IDIuNiA0IDYgNCA5LjVzLTEuNCA2LjktNCA5LjVjLTIuNi0yLjYtNC02LTQtOS41czEuNC02LjkgNC05LjV6Ii8%2BPC9zdmc%2B" alt="Web sitesi"></a>
+  <a href="#3-adımda-başla"><img src="https://img.shields.io/badge/3%20ADIMDA%20BA%C5%9ELA-18181E?style=for-the-badge" alt="3 adımda başla"></a>
+  <a href="#adım-adım-kurulum-rehberi"><img src="https://img.shields.io/badge/PS5%20VE%20TV%20REHBER%C4%B0-18181E?style=for-the-badge" alt="PS5 ve TV rehberi"></a>
+  <a href="#sss-ve-sorun-giderme"><img src="https://img.shields.io/badge/SIK%20SORULANLAR-18181E?style=for-the-badge" alt="Sık sorulanlar"></a>
+  <a href="docs/KULLANIM.md"><img src="https://img.shields.io/badge/KULLANIM%20KILAVUZU-18181E?style=for-the-badge" alt="Kullanım kılavuzu"></a>
+  <a href="https://kutsalkiremitci.github.io/robz-vision/"><img src="https://img.shields.io/badge/WEB%20S%C4%B0TES%C4%B0-24242C?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOS41Ii8%2BPHBhdGggZD0iTTIuNSAxMmgxOSIvPjxwYXRoIGQ9Ik0xMiAyLjVjMi42IDIuNiA0IDYgNCA5LjVzLTEuNCA2LjktNCA5LjVjLTIuNi0yLjYtNC02LTQtOS41czEuNC02LjkgNC05LjV6Ii8%2BPC9zdmc%2B" alt="Web sitesi"></a>
 </p>
 
 <h3 align="center">Oyundaki İngilizce altyazıyı ekrandan okur, anında Türkçeye çevirir.</h3>
@@ -82,9 +82,23 @@ Oyun görseli © Rockstar Games / Take-Two Interactive.</sub></p>
 <br>
 <table>
   <tr>
+    <td width="50%" valign="top">
+      <img src="docs/gorseller/basla.png" alt="Başla sayfası: üstte Robz Vision adı, Çeviriyi başlat ve Test et düğmeleri, sağda Hazır durumu; altında Kurulum adımları çizgisi: Oyunu göster ve Altyazıyı işaretle pembe onaylı, Çeviriyi seç pembe halkalı sıradaki adım, Görünümü ayarla ve isteğe bağlı Yayına ekle; altında Adım 3 / 4 Çeviriyi seç kutusu ve Devam et düğmesi; en altta Yardım karoları"><br>
+      <sub><b>Başla:</b> büyük <i>Çeviriyi başlat</i>, canlı durum ve kurulum adımları; biten adım pembe onaylı,
+      kutu sıradaki adımı anlatır.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/gorseller/sihirbaz.png" alt="Kurulum sihirbazı Canlı sayfasında: sayfa karartılmış, yalnız canlı önizleme ve altyazı çerçevesi camgöbeği halkayla vurgulu; üstündeki balonda Adım 2 / 4 Altyazıyı işaretle, Altyazının yerini işaretleyin açıklaması ve Daha sonra, Geri, İleri düğmeleri"><br>
+      <sub><b>Kurulum sihirbazı:</b> adımın sayfası açılır, ilgili yer vurgulanır, balon ne yapılacağını
+      anlatır.</sub>
+    </td>
+  </tr>
+</table>
+<table>
+  <tr>
     <td width="33%" valign="top">
-      <img src="docs/gorseller/ana_pencere.png" alt="Robz Vision ana sayfası: üstte Başlat düğmesi, durum ve son satırın OCR ve çeviri süreleri; solda Son çeviriler listesi; sağda Çevrilecek bölge, başlığında Tam ekranda seç düğmesi ve Ekran / Uygulama penceresi seçimi, altında ekranın canlı önizlemesi ve üstünde camgöbeği çerçeveyle işaretli altyazı şeridi; altta yan yana Ekranımda ve OBS; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı"><br>
-      <sub><b>Ana sayfa:</b> üstte Başlat; solda son çeviriler, sağda bölgesi çerçeveli canlı önizleme (bölge doğrudan üstünde çizilir), altında Ekranımda ve OBS.</sub>
+      <img src="docs/gorseller/ana_pencere.png" alt="Robz Vision'ın Canlı sayfası: üstte Başlat düğmesi, durum ve son satırın OCR ve çeviri süreleri; solda Son çeviriler listesi; sağda Çevrilecek bölge, başlığında Tam ekranda seç düğmesi ve Ekran / Uygulama penceresi seçimi, altında ekranın canlı önizlemesi ve üstünde camgöbeği çerçeveyle işaretli altyazı şeridi; altta yan yana Ekranımda ve OBS; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı"><br>
+      <sub><b>Canlı:</b> üstte Başlat; solda son çeviriler, sağda bölgesi çerçeveli canlı önizleme (bölge doğrudan üstünde çizilir), altında Ekranımda ve OBS.</sub>
     </td>
     <td width="33%" valign="top">
       <img src="docs/gorseller/gorunum.png" alt="Görünüm sayfası: Ekranımda ve Yayınımda seçici, pembe vurgulu örnek altyazıyla canlı önizleme, beş hazır stil ve yazı ayarları"><br>
@@ -128,7 +142,7 @@ Oyun görseli © Rockstar Games / Take-Two Interactive.</sub></p>
       Altyazı ~0,1 sn'de okunur. Altyazı değişmedikçe OCR çalışmaz; yapay zekâ gecikirse önce hızlı çeviri
       görünür, yapay zekânınki gelince yerine geçer.</td>
     <td valign="top"><b>Satır kaçmaz</b><br>
-      Hızlı konuşmada son çeviriler alt alta kalır. Kaçırdığınız satırı Ana sayfadaki <i>Son çeviriler</i>
+      Hızlı konuşmada son çeviriler alt alta kalır. Kaçırdığınız satırı Canlı sayfasındaki <i>Son çeviriler</i>
       listesinden yeniden okuyup kopyalayabilirsiniz.</td>
   </tr>
   <tr>
@@ -174,11 +188,11 @@ Oyun görseli © Rockstar Games / Take-Two Interactive.</sub></p>
   (altta konuşma, üstünde küçük görev yazısı) her biri ayrı çevrilir ve kendi kutusuyla örtülür; en çok 3 kutu.
 - **İki ayrı çıktı.** Kendi ekranınızda taşıyıp boyutlandırabileceğiniz bir altyazı kutusu, izleyicileriniz
   için de bir OBS Tarayıcı Kaynağı. İkisinin konumu birbirinden bağımsızdır.
-- **Bölge ya da pencere.** Altyazının çıktığı alanı Ana sayfadaki canlı önizlemede fareyle çizersiniz; ilk
+- **Bölge ya da pencere.** Altyazının çıktığı alanı Canlı sayfasındaki canlı önizlemede fareyle çizersiniz; ilk
   açılışta ekranın alt-orta altyazı şeridi seçili gelir. İsterseniz belirli bir uygulama penceresinden
   okursunuz; pencere başka pencerelerin arkasında kalsa da çalışır.
 - **Satır kaçmaz, takılı kalmaz.** Hızlı konuşmada son çeviriler ekranda ve OBS'te alt alta kalır. Oyunda
-  sabit duran bir yazı (tuş ipucu, menü) çeviriyi ekranda tutmaz. Ana sayfadaki *Son çeviriler* listesinden
+  sabit duran bir yazı (tuş ipucu, menü) çeviriyi ekranda tutmaz. Canlı sayfasındaki *Son çeviriler* listesinden
   kaçırdığınız satırı yeniden okuyup kopyalayabilirsiniz.
 - **Gereksiz iş yapmaz.** Altyazı değişmedikçe OCR çalışmaz. Titreyen okumaları ayıklar, daha temiz bir okuma
   gelirse çeviriyi düzeltir. Konuşmacı adları (`LUCIA: …`) çevrilmez, ayrı renkte gösterilir.
@@ -208,12 +222,13 @@ yokken ~0,3 çekirdek. Ayrıntılar [CHANGELOG](CHANGELOG.md)'de. Süreler donan
 1. **İndirin ve kurun.** [Releases](https://github.com/kutsalkiremitci/robz-vision/releases/latest) sayfasından
    `RobzVision-Setup-<sürüm>-x64.exe`'yi indirip sihirbazda **İleri**'ye basın. İlk açılışta *Yapay zekâ ile*'yi
    seçin (ekran kartınız uygunsa önceden seçili gelir); ücretsiz hızlı çeviri modeli inince program açılır.
-2. **Bölgeyi seçin.** Oyunun görüntüsü ekrandayken Ana sayfadaki canlı önizlemede altyazının çıktığı alanı
-   fareyle çizin. İlk açılışta ekranın alt-orta altyazı şeridi seçili gelir; altyazı oradaysa dokunmanız
-   gerekmez. İnce ayar için **Tam ekranda seç**: bölgeyi oyunun üstünde, gerçek boyutunda çizersiniz.
-3. **Başlatın.** **Başlat**'a basın; altyazı ekrana geldiğinde Türkçesi de gelir. Kutunun yerini
-   *Ekranımda → Konumu ayarla* ile bir kez seçin. Yayıncıysanız Ana sayfadaki adresi OBS'e **Tarayıcı** kaynağı
-   olarak ekleyin.
+2. **Kurulum adımlarını izleyin.** Program *Başla* sayfasıyla açılır. **Kuruluma başla**'ya basın: sihirbaz
+   her adımda ilgili yeri ekranda vurgular ve ne yapılacağını anlatır (oyunun görüntüsü, altyazının yeri,
+   çeviri, görünüm). İlk açılışta ekranın alt-orta altyazı şeridi seçili gelir; altyazı oradaysa bölgeye
+   dokunmanız gerekmez. İnce ayar için **Tam ekranda seç**: bölgeyi oyunun üstünde, gerçek boyutunda çizersiniz.
+3. **Başlatın.** **Çeviriyi başlat**'a basın; altyazı ekrana geldiğinde Türkçesi de gelir. Kutunun yerini
+   *Canlı → Ekranımda → Konumu ayarla* ile bir kez seçin. Yayıncıysanız Canlı sayfasındaki adresi OBS'e
+   **Tarayıcı** kaynağı olarak ekleyin.
 
 <p align="center">
   <img src="docs/gorseller/gta6_bolge_secimi.png" width="760" alt="Tam ekranda seç: bölge seçici GTA VI sahnesinin üstünde, İngilizce altyazı satırının çevresine çizilmiş camgöbeği çerçeve, köşede 1200 × 160 ölçüsü, altında Onayla, Yeniden seç ve İptal düğmeleri"><br>
@@ -229,22 +244,27 @@ değiştirilebilir). Adım adım anlatım, ekran görüntüleri ve senaryolara g
 <br>
 
 <p align="center">
-  <img src="docs/gorseller/ana_pencere.png" width="860" alt="Robz Vision ana sayfası: üstte Başlat düğmesi, durum ve son satırın OCR ve çeviri süreleri; solda Son çeviriler listesi; sağda Çevrilecek bölge, başlığında Tam ekranda seç düğmesi ve Ekran / Uygulama penceresi seçimi, altında ekranın canlı önizlemesi ve üstünde camgöbeği çerçeveyle işaretli altyazı şeridi; altta yan yana Ekranımda ve OBS; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı">
+  <img src="docs/gorseller/basla.png" width="860" alt="Başla sayfası: üstte Robz Vision adı, Çeviriyi başlat ve Test et düğmeleri, sağda Hazır durumu; altında Kurulum adımları çizgisi: Oyunu göster ve Altyazıyı işaretle pembe onaylı, Çeviriyi seç pembe halkalı sıradaki adım, Görünümü ayarla ve isteğe bağlı Yayına ekle; altında Adım 3 / 4 Çeviriyi seç kutusu ve Devam et düğmesi; en altta Yardım karoları">
+</p>
+
+<p align="center">
+  <img src="docs/gorseller/ana_pencere.png" width="860" alt="Robz Vision'ın Canlı sayfası: üstte Başlat düğmesi, durum ve son satırın OCR ve çeviri süreleri; solda Son çeviriler listesi; sağda Çevrilecek bölge, başlığında Tam ekranda seç düğmesi ve Ekran / Uygulama penceresi seçimi, altında ekranın canlı önizlemesi ve üstünde camgöbeği çerçeveyle işaretli altyazı şeridi; altta yan yana Ekranımda ve OBS; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı">
 </p>
 
 1. **İlk açılış.** Program çevirinin nasıl yapılacağını sorar: *Yapay zekâ ile* ya da *Yalnız hızlı çeviri*
-   ([ayrıntılar](#yerel-yapay-zekâ-çevirisi-önerilen)). Ana pencere açılınca kısa bir tur arayüzün bölümlerini
-   gösterir. Atlarsanız *Ayarlar → Tanıtım turunu başlat* ile yeniden açabilirsiniz.
-2. **Bölgeyi seçin.** Ana sayfanın sağındaki canlı önizleme ekranınızın tamamını gösterir; okunan bölge
+   ([ayrıntılar](#yerel-yapay-zekâ-çevirisi-önerilen)). Ana pencere *Başla* sayfasıyla açılır: **Kuruluma
+   başla** sihirbazı aşağıdaki adımları sırayla ekranda gösterir. Arayüzü tanıtan kısa tur Başla'daki
+   *Yardım*'da ve *Ayarlar → Tanıtım turunu başlat*'ta.
+2. **Bölgeyi seçin.** Canlı sayfasının sağındaki canlı önizleme ekranınızın tamamını gösterir; okunan bölge
    camgöbeği çerçevelidir. İlk açılışta birincil ekranın alt-orta altyazı şeridi seçili gelir. Altyazı başka
    yerdeyse önizlemede altyazının çıktığı alanı fareyle çizin; çerçeveyi ortasından tutup taşıyın,
    köşelerinden boyutlandırın. Değişiklik hemen geçerli olur. Bölgeyi oyunun üstünde gerçek boyutunda çizmek
    için önizlemenin başlığındaki **Tam ekranda seç**'e basın.
-3. **Başlat.** Altyazı ekrana geldiğinde Türkçesi de gelir.
-4. **Ekranımda → Konumu ayarla.** Türkçe kutuyu istediğiniz yere sürükleyin, kenarlarından boyutlandırın,
+3. **Çeviriyi başlat.** Altyazı ekrana geldiğinde Türkçesi de gelir.
+4. **Canlı → Ekranımda → Konumu ayarla.** Türkçe kutuyu istediğiniz yere sürükleyin, kenarlarından boyutlandırın,
    bitirmek için çift tıklayın.
    <img src="docs/gorseller/gta6_konum_ayari.png" alt="Konum ayarı: GTA VI'nın neon ışıklı bir sahnesinin üstünde kesik çizgili çerçeve, içinde alt alta üç örnek Türkçe satır ve “Sürükleyerek taşıyın” ipucu">
-5. **OBS (isteğe bağlı).** Ana sayfadaki adresi kopyalayın, OBS'te **Tarayıcı** kaynağı olarak ekleyin:
+5. **OBS (isteğe bağlı).** Canlı sayfasındaki adresi kopyalayın, OBS'te **Tarayıcı** kaynağı olarak ekleyin:
    *Yerel dosya* işaretsiz, genişlik ve yükseklik tuvalle aynı (ör. 1920 × 1080), kaynak oyun görüntüsünün
    üstünde.
 6. **Daha iyi çeviri (önerilen).** Yalnız hızlı çeviriyle başladıysanız *Çeviri* sayfasında
@@ -336,7 +356,7 @@ Oyun bilgisayarda çalışıyor ve ekranda İngilizce altyazı var. Ek kablo ya 
 
 1. **Oyunu hazırlayın.** Oyunun ayarlarında İngilizce altyazıyı açın. Oyunu *Pencereli tam ekran*
    (kenarlıksız) modunda çalıştırın; bazı oyunlar özel tam ekran modunda Türkçe kutuyu üstte göstermez.
-2. **Bölgeyi seçin.** Robz Vision'ın Ana sayfasında *Çevrilecek bölge* başlığının yanında **Ekran** seçili
+2. **Bölgeyi seçin.** Robz Vision'ın Canlı sayfasında *Çevrilecek bölge* başlığının yanında **Ekran** seçili
    olsun. Canlı önizlemede oyunun ekranı görünür; altyazının çıktığı alanı fareyle çizin (ilk açılışta alt-orta
    şerit seçili gelir). İnce ayar için **Tam ekranda seç**.
 3. **Başlatın.** **Başlat**'a basın. Oyunda altyazı belirince Türkçesi kutuda görünür.
@@ -398,7 +418,7 @@ uygulaması da çalışır.
 
 9. **PS5'e bağlanın.** chiaki-ng'de PS5'e tıklayın; PS5'in görüntüsü bir pencerede açılır. Pencereyi büyütün
    ya da tam ekran yapın. Oyunda İngilizce altyazıyı açın.
-10. **Robz Vision'da pencereyi seçin.** Ana sayfada *Çevrilecek bölge* başlığının yanında **Uygulama
+10. **Robz Vision'da pencereyi seçin.** Canlı sayfasında *Çevrilecek bölge* başlığının yanında **Uygulama
     penceresi**'ni seçin, listeden chiaki-ng'in oyun penceresini seçin. Önizlemede o pencerenin görüntüsü
     belirir; altyazının çıktığı alanı pencerenin üstünde fareyle çizin. Pencere başka pencerelerin arkasında
     kalsa da okunur, ama simge durumuna küçültülmemeli. chiaki-ng tam ekransa **Ekran** da olur.
@@ -446,7 +466,7 @@ Türkçe kutuyu *Ekranımda → Konumu ayarla* ile TV ekranına sürükleyin.
 
 **Kablo yerine kablosuz.** TV'niz kablosuz ekran yansıtmayı (Miracast) destekliyorsa bilgisayarda *Win+K*'ye
 basıp listeden TV'yi seçin (LG'de *Screen Share*). Gecikme artar; hikâye oyunlarında genelde sorun olmaz.
-Türkçe kutu TV'de görünmezse Ana sayfada **Yayında da görünsün**'ü açın; kutu okunan bölgenin üstüne gelirse
+Türkçe kutu TV'de görünmezse Canlı sayfasında **Yayında da görünsün**'ü açın; kutu okunan bölgenin üstüne gelirse
 Robz Vision uyarır, kutuyu biraz kaydırın.
 
 </details>
@@ -497,7 +517,7 @@ bakacaksanız ekrandaki kutuyu kapatabilirsiniz (**Ekranımda → Kapalı**).
 İzleyicilerinizin de Türkçe görmesi için Robz Vision'ın adresini OBS'e ekleyin. İzleyiciler hiçbir şey
 kurmaz.
 
-1. **Adresi kopyalayın.** Robz Vision'ın Ana sayfasındaki **OBS** bölümünde bir adres yazar (varsayılan
+1. **Adresi kopyalayın.** Robz Vision'ın Canlı sayfasındaki **OBS** bölümünde bir adres yazar (varsayılan
    `http://127.0.0.1:8765/`); kopyalayın.
 2. **OBS'e ekleyin.** OBS'te *Kaynaklar* altındaki **+**'ya basıp **Tarayıcı**'yı seçin. *Yerel dosya*
    işaretsiz kalsın, *URL*'ye adresi yapıştırın, genişlik ve yüksekliği tuvalle aynı yapın (ör. 1920 × 1080).
@@ -538,7 +558,7 @@ Robz Vision **bilgisayar ekranındaki** altyazıyı okur.
 |---|---|---|
 | **Bilgisayarda oynayan** | PC'deki İngilizce altyazılı oyun. Altyazının çıktığı alanı bir kez seçer, Başlat'a basar. OBS gerekmez. | Oyun ekranına. Türkçe kutu oyunun üstünde, istediği yerde durur. |
 | **Konsolda oynayan** (PS5, Xbox) | Konsolu chiaki-ng, PS Remote Play ya da Xbox uygulamasıyla bilgisayardan oynatır ya da capture kartının görüntüsünü bir pencerede açar. GTA VI gibi konsol oyunları için yol bu: [Yolunuzu seçin](#2-yolunuzu-seçin). | Bilgisayar ekranındaki oyuna; bilgisayar TV'ye bağlıysa TV'ye. |
-| **Yayıncı** (Kick, Twitch, YouTube) | Ana sayfadaki adresi OBS'e Tarayıcı Kaynağı olarak ekler. İsterse İngilizce altyazının üstünü kapatır. | Kendi ekranındaki kutuya; izleyiciler OBS'teki altyazıyı görür. Ekrandaki kutu varsayılan olarak yayına girmez. |
+| **Yayıncı** (Kick, Twitch, YouTube) | Canlı sayfasındaki adresi OBS'e Tarayıcı Kaynağı olarak ekler. İsterse İngilizce altyazının üstünü kapatır. | Kendi ekranındaki kutuya; izleyiciler OBS'teki altyazıyı görür. Ekrandaki kutu varsayılan olarak yayına girmez. |
 | **İzleyici** | Hiçbir şey kurmaz. Altyazının görünümünü yayıncı Görünüm sayfasından ayarlar. | Yayına. |
 
 > [!IMPORTANT]
@@ -729,9 +749,9 @@ Robz Vision oyuna kod eklemez, belleğini ya da dosyalarını okumaz; yalnızca 
 ## Gizlilik
 
 - Varsayılan ayarlarla ekran görüntüsü, OCR ve çeviri bilgisayarınızda kalır. Görüntüler diske kaydedilmez,
-  uygulama kullanım verisi toplamaz. Ana sayfadaki canlı önizleme de yalnız ekranda gösterilir; kaydedilmez,
+  uygulama kullanım verisi toplamaz. Canlı sayfasındaki canlı önizleme de yalnız ekranda gösterilir; kaydedilmez,
   gönderilmez.
-- Ana sayfadaki *Son çeviriler* listesi yalnız bellekte tutulur, diske yazılmaz; uygulama kapanınca silinir.
+- Canlı sayfasındaki *Son çeviriler* listesi yalnız bellekte tutulur, diske yazılmaz; uygulama kapanınca silinir.
 - Robz Vision yeni sürüm olup olmadığını açılıştan kısa süre sonra ve sonra saatte bir GitHub'a sorar
   (`api.github.com`, tek kısa istek; istekte yalnız uygulamanın adı ve sürümü bulunur, kişisel bilgi ya da kullanım
   verisi gönderilmez). *Ayarlar → Uygulama → Güncellemeler*'den kapatabilirsiniz. Yeni sürüm yalnız siz
@@ -815,7 +835,7 @@ pencereleri üstte göstermez. *Ekranımda*'nın *Açık* olduğunu da kontrol e
 <details>
 <summary><b>OBS'te altyazı yok</b></summary>
 
-Ana sayfada OBS durumu *Bağlı* olmalı; yalnızca OBS'teki kaynak sayılır. *Bağlı değil* yazıyorsa ve OBS
+Canlı sayfasında OBS durumu *Bağlı* olmalı; yalnızca OBS'teki kaynak sayılır. *Bağlı değil* yazıyorsa ve OBS
 açıksa, OBS'te kaynağı seçip önizlemenin altındaki **Yenile**'ye basın: OBS, Robz Vision'dan önce açıldıysa
 sayfayı yükleyemez ve kendiliğinden yeniden denemez. Tarayıcı kaynağında *Yerel dosya* işaretsiz, genişlik
 ve yükseklik tuvalle aynı (ör. 1920 × 1080) olmalı ve kaynak oyun görüntüsünün üstünde durmalı. Görünüm

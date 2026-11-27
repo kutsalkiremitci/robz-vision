@@ -153,16 +153,16 @@ W, H = 1600, 900
 KENAR = 80                   # kenarlarda en az bu kadar boşluk
 
 # Renkler (arayüz token'larından; cihaz renkleri yalnız bu çizimlerde)
-ZEMIN = C.BG                 # #0C0B1D
-GOVDE = C.RAISED             # #1C1A38 cihaz gövdesi
-GOVDE_2 = C.HOVER            # #262448 cihaz ayrıntısı, ayak, ön panel
-CIZGI = C.LINE_STRONG        # #3B3762 cihaz kenarı
-KART = C.PANEL               # #13122A kart zemini (yol seçimi)
-YAZI = C.TEXT                # #F5F3FB
-YAZI_2 = C.TEXT_2            # #AEAAC6
-SOLUK = C.TEXT_3             # #8A86A6 oklar, küçük ayrıntılar
-EKRAN = "#1F1B42"            # ekran yüzeyi: koyu, hafif mor tonlu düz renk
-TR_KUTU = "#0A0912"          # Robz Vision'ın Türkçe kutusu
+ZEMIN = C.BG                 # #050507
+GOVDE = C.RAISED             # #111115 cihaz gövdesi
+GOVDE_2 = C.HOVER            # #18181E cihaz ayrıntısı, ayak, ön panel
+CIZGI = C.LINE_STRONG        # #24242C cihaz kenarı
+KART = C.PANEL               # #0A0A0D kart zemini (yol seçimi)
+YAZI = C.TEXT                # #EEEEF2
+YAZI_2 = C.TEXT_2            # #A2A2AD
+SOLUK = C.TEXT_3             # #82828D oklar, küçük ayrıntılar
+EKRAN = "#1B1B23"            # ekran yüzeyi: gövdeden biraz açık, nötr koyu
+TR_KUTU = "#08080A"          # Robz Vision'ın Türkçe kutusu
 ACIK = "#E4E2EE"             # PS5 kanatları ve DualSense gövdesi
 ACIK_KENAR = "#A9A4C4"
 SIYAH = "#14121E"            # PS5 çekirdeği, DualSense ortası
@@ -688,11 +688,11 @@ def etiket(t: Tuval, cx: float, y: float, metin: str, px: float = ETIKET_PX, log
 
 
 def rozet(t: Tuval, x: float, y: float, metin: str, px: float = 40) -> QRectF:
-    """Küçük "Yol 1" rozeti: koyu dolgu, camgöbeği yazı."""
+    """Küçük "Yol 1" rozeti: koyu dolgu, pembe yazı (uygulamadaki adım rozetleri gibi)."""
     yuk = px * 1.5
     r = QRectF(x, y, yazi_genisligi(metin, "etiket", px) + px * 0.9, yuk)
     kutu(t.p, r, yuk * 0.3, GOVDE_2)
-    t.yaz(r.center().x(), y + (yuk - px * 1.25) / 2, metin, "etiket", px, C.CYAN, hiza="orta", kayit=None)
+    t.yaz(r.center().x(), y + (yuk - px * 1.25) / 2, metin, "etiket", px, C.PINK, hiza="orta", kayit=None)
     t.kaydet_alan(r, f"rozet: {metin}")
     return r
 

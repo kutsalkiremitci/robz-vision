@@ -71,6 +71,7 @@ def main() -> int:
     s = Settings()
     s.first_run = False
     s.tour_seen = True  # tanıtım turu ekran görüntülerine karışmasın
+    s.guide_done = ["source", "region"]  # Başla: iki adım tamam, sıradaki adımın kutusu görünsün
     s.server.port = _free_port()
     from altyazitr.config import DEFAULT_REGION
     from altyazitr.gui.source_view import frac_to_rect

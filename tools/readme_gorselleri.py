@@ -11,7 +11,9 @@ Kullanım:  python tools/readme_gorselleri.py [banner] [demo] [arayuz] [gta6] [-
   demo.gif           sahte oyun sahnesi: İngilizce altyazı → Türkçe çeviri kutusu (döngü)
   demo_once.png       aynı sahnenin çevirisiz hâli
   demo_sonra.png      aynı sahnenin çevirili hâli
-  ana_pencere.png     Ana sayfa              (tools/arayuz_goruntusu.py çıktısından)
+  basla.png           Başla sayfası: kurulum adımları (iki adım tamam)  (tools/arayuz_goruntusu.py çıktısından)
+  sihirbaz.png        kurulum sihirbazı: Canlı'da vurgulanan önizleme ve "Adım 2 / 4" balonu
+  ana_pencere.png     Canlı sayfası
   gorunum.png         Görünüm sayfası
   ceviri.png          Çeviri sayfası
   bolge_secimi.png    bölge seçici (sahte oyun sahnesinin üstünde)
@@ -78,6 +80,8 @@ DEMO_W, DEMO_H = 960, 540
 
 # tools/arayuz_goruntusu.py çıktısı → docs/gorseller adı (+ isteğe bağlı kırpma, oransal x0, y0, x1, y1)
 ARAYUZ = [
+    ("ana_pencere_start.png", "basla.png", None),
+    ("sihirbaz_3.png", "sihirbaz.png", None),
     ("ana_pencere.png", "ana_pencere.png", None),
     ("ana_pencere_style.png", "gorunum.png", None),
     ("ana_pencere_translate.png", "ceviri.png", None),
@@ -836,7 +840,7 @@ def _arayuz_alt_sureci(out_dir: str) -> None:
 
     G.QPixmap = SahnePixmap
 
-    sys.argv = [str(TOOLS / "arayuz_goruntusu.py"), out_dir]
+    sys.argv = [str(TOOLS / "arayuz_goruntusu.py"), out_dir, "--sihirbaz"]
     runpy.run_path(str(TOOLS / "arayuz_goruntusu.py"), run_name="__main__")
 
 

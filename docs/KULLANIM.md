@@ -63,9 +63,18 @@ Altyazı ne kadar okunaklıysa (büyük, kenarlı ya da arka planlı) sonuç o k
 
 ### İlk açılış
 
-Program ilk açıldığında çevirinin nasıl yapılacağını sorar. Ana pencere açılınca kısa bir tanıtım turu
-arayüzün bölümlerini gösterir. Turu atlarsanız *Ayarlar → Tanıtım turunu başlat* ile istediğiniz zaman
-yeniden açabilirsiniz.
+Program ilk açıldığında çevirinin nasıl yapılacağını sorar. Ana pencere *Başla* sayfasıyla açılır.
+**Kurulum adımları** numaralı bir çizgide durur: 1 Oyunu göster, 2 Altyazıyı işaretle, 3 Çeviriyi seç, 4 Görünümü
+ayarla, 5 Yayına ekle (isteğe bağlı). Biten adım pembe ve onaylıdır; altındaki kutu sıradaki adımı anlatır.
+**Kuruluma başla**'ya (ya da çizgideki bir adıma) basınca sihirbaz açılır: adımın sayfası açılır, ilgili yer
+ekranda vurgulanır ve yanındaki balon ne yapılacağını anlatır. Vurgulanan yeri kullanabilirsiniz (ekranı ya da
+pencereyi seçmek, bölgeyi çizmek). **Sonraki adım** adımı tamamlar; **Daha sonra** (Esc) sihirbazı kapatır, Başla
+kaldığınız yerden devam eder. Arayüzü tanıtan kısa tur Başla'daki *Yardım*'da ve *Ayarlar → Tanıtım turunu
+başlat*'ta.
+
+![Başla sayfası: üstte Robz Vision adı, Çeviriyi başlat ve Test et düğmeleri, sağda Hazır durumu; altında Kurulum adımları çizgisi: Oyunu göster ve Altyazıyı işaretle pembe onaylı, Çeviriyi seç pembe halkalı sıradaki adım, Görünümü ayarla ve isteğe bağlı Yayına ekle; altında Adım 3 / 4 Çeviriyi seç kutusu ve Devam et düğmesi; en altta Yardım karoları](gorseller/basla.png)
+
+![Kurulum sihirbazı Canlı sayfasında: sayfa karartılmış, yalnız canlı önizleme ve altyazı çerçevesi camgöbeği halkayla vurgulu; üstündeki balonda Adım 2 / 4 Altyazıyı işaretle, Altyazının yerini işaretleyin açıklaması ve Daha sonra, Geri, İleri düğmeleri](gorseller/sihirbaz.png)
 
 **1. Seçim: Çeviri nasıl yapılsın?** İki seçenek var:
 
@@ -119,7 +128,7 @@ kendiliğinden yapay zekâya geçer.
 
 ## 2. Bölgeyi seçin
 
-Ana sayfadaki **Çevrilecek bölge** bölümü (geniş pencerede sağda, büyük) OBS'in önizlemesi gibi kaynağın canlı
+Canlı sayfasındaki **Çevrilecek bölge** bölümü (geniş pencerede sağda, büyük) OBS'in önizlemesi gibi kaynağın canlı
 görüntüsünü gösterir: ekranınızın ya da seçtiğiniz pencerenin tamamı. Okunan bölge bu görüntünün üstünde
 camgöbeği çerçeveyle işaretlidir; çerçevenin dışı karartılır, çerçevenin üstünde bölgenin boyutu (piksel)
 yazar. Bölümün başlığındaki seçimle iki yoldan birini seçersiniz:
@@ -164,14 +173,14 @@ yerler yeşile boyanır, yanında *Metin var* ya da *Metin yok* yazar; altyazı 
 bölge ya da eşik ayarı yanlıştır.
 
 Canlı önizleme yalnız ekranda gösterilir; kaydedilmez, hiçbir yere gönderilmez. Az yük bindirir (saniyede
-birkaç kare, küçültülmüş) ve Ana sayfa görünmüyorken ya da Robz Vision simge durumundayken durur.
+birkaç kare, küçültülmüş) ve Canlı sayfası görünmüyorken ya da Robz Vision simge durumundayken durur.
 
 ## 3. Başlatın
 
 **Başlat**'a basın. Üstteki çubukta *Çalışıyor* yazar. Oyunda altyazı belirince Türkçesi ekrandaki kutuda ve
 OBS'te görünür.
 
-![Ana sayfa: üstte Başlat düğmesi ve durum; solda Son çeviriler; sağda ekranın canlı önizlemesi, altyazı şeridi camgöbeği çerçeveyle işaretli, başlığında Tam ekranda seç ve Ekran / Uygulama penceresi seçimi; altta yan yana Ekranımda ve OBS; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı](gorseller/ana_pencere.png)
+![Canlı sayfası: üstte Başlat düğmesi ve durum; solda Son çeviriler; sağda ekranın canlı önizlemesi, altyazı şeridi camgöbeği çerçeveyle işaretli, başlığında Tam ekranda seç ve Ekran / Uygulama penceresi seçimi; altta yan yana Ekranımda ve OBS; kenar çubuğunun altında sürüm satırı ve Kick logolu Robz so good bağlantısı](gorseller/ana_pencere.png)
 
 - **Test** düğmesi ekranınızda ve OBS'te 5 saniyelik örnek bir altyazı gösterir. Oyun açmadan görünümü
   denemek için kullanın.
@@ -185,7 +194,7 @@ OBS'te görünür.
 
 En son satırın OCR ve çeviri süreleri üstteki çubukta, **Test** düğmesinin solunda durur.
 
-Ana sayfadaki **Son çeviriler** listesi (geniş pencerede solda, boydan boya) bu oturumda okunan satırları
+Canlı sayfasındaki **Son çeviriler** listesi (geniş pencerede solda, boydan boya) bu oturumda okunan satırları
 Türkçesi ve İngilizcesiyle gösterir, en yenisi üstte. Kaçırdığınız bir satırı buradan okuyabilirsiniz:
 
 - Satırın üzerine gelip sağdaki kopyala simgesine basın, Türkçesi kopyalanır. Sağ tıklayıp
@@ -195,7 +204,7 @@ Türkçesi ve İngilizcesiyle gösterir, en yenisi üstte. Kaçırdığınız bi
 
 ## 4. Türkçe kutuyu ekranınıza yerleştirin
 
-Ana sayfadaki **Ekranımda** bölümü kendi ekranınızdaki altyazı kutusunu yönetir.
+Canlı sayfasındaki **Ekranımda** bölümü kendi ekranınızdaki altyazı kutusunu yönetir.
 
 1. **Ekranımda**'yı **Açık** yapın.
 2. **Konumu ayarla**'ya basın. Kutu, gerçek görünümüyle ve bir örnek cümleyle belirir.
@@ -224,19 +233,19 @@ gelirse Robz Vision *Kutu okunan bölgenin üstünde* uyarısı verir; kutuyu b�
 
 ## 5. OBS'e ekleyin
 
-İzleyicilerinizin de Türkçe altyazı görmesi için Ana sayfanın **OBS** bölümündeki adresi OBS'e ekleyin.
+İzleyicilerinizin de Türkçe altyazı görmesi için Canlı sayfasının **OBS** bölümündeki adresi OBS'e ekleyin.
 Adresin yanındaki soru işareti düğmesi aynı adımları uygulama içinde gösterir.
 
 ![OBS'e nasıl eklenir penceresi: dört adım ve kopyalanabilir adres](gorseller/obs_yardim.png)
 
 1. OBS'te **Kaynaklar** altındaki **+** düğmesine basıp **Tarayıcı**'yı seçin.
-2. **Yerel dosya** kutusunu boş bırakın, **URL** alanına Ana sayfadaki adresi yapıştırın
+2. **Yerel dosya** kutusunu boş bırakın, **URL** alanına Canlı sayfasındaki adresi yapıştırın
    (varsayılan: `http://127.0.0.1:8765/`).
 3. Genişlik ve yüksekliği tuvalle aynı yapın, örneğin 1920 × 1080. Varsayılan 800 × 600'de bırakırsanız
    altyazı küçük ve tuvalin sol üstünde kalır.
 4. Kaynağı listede oyun görüntüsünün üstüne taşıyın.
 
-Bağlantı kurulunca Ana sayfada ve kenar çubuğunda *OBS bağlı* yazar. Yalnızca OBS'teki kaynak sayılır; adresi
+Bağlantı kurulunca Canlı sayfasında ve kenar çubuğunda *OBS bağlı* yazar. Yalnızca OBS'teki kaynak sayılır; adresi
 bir web tarayıcısında açmak bu yazıyı değiştirmez. Görünüm değişiklikleri OBS'e anında yansır; kaynağı
 yeniden yüklemeniz gerekmez.
 
@@ -297,7 +306,7 @@ görünümüyle gösterir.
     uygulanır), küçülmez. Kutu yine İngilizceyi örter: Türkçe sığmazsa alt satıra geçer ve kutu yukarı büyür,
     tek bir kelime sığmazsa kutu iki yana genişler.
 - **Ölçek** (yalnız *Ekranımda*): kutudaki yazıyı kenarı ve arka planıyla birlikte büyütür ya da küçültür.
-  Kutunun yerini Ana sayfadaki **Konumu ayarla** belirler.
+  Kutunun yerini Canlı sayfasındaki **Konumu ayarla** belirler.
 - **Konum ve genişlik** (yalnız *Yayınımda*): OBS'teki altyazının alt kenara uzaklığı ve en fazla genişliği.
 - **Gelişmiş ayarlar:** konuşmacı adının rengi, belirme süresi, İngilizce orijinali çevirinin altında küçük
   gösterme. *Yayınımda*'da ayrıca OBS'te orijinali kapatma.
@@ -396,7 +405,7 @@ konsola kurulmaz. Robz Vision'ı henüz kurmadıysanız önce
 ![Yol 1: bilgisayar HDMI kablosuyla monitöre bağlı; monitörde İngilizce altyazının üstünde Robz Vision'ın Türkçe kutusu](gorseller/kurulum/yol1_bilgisayar.png)
 
 1. Oyunu *Pencereli tam ekran* modunda açın, İngilizce altyazıyı açın.
-2. Robz Vision'da **Ekran** seçiliyken Ana sayfadaki canlı önizlemede altyazı alanını çizin (ilk açılışta
+2. Robz Vision'da **Ekran** seçiliyken Canlı sayfasındaki canlı önizlemede altyazı alanını çizin (ilk açılışta
    alt-orta şerit seçili gelir; [Bölgeyi seçin](#2-bölgeyi-seçin)), **Başlat**'a basın.
 3. **Konumu ayarla** ile kutuyu İngilizce altyazının hemen üstüne yerleştirin
    ([Türkçe kutuyu yerleştirin](#4-türkçe-kutuyu-ekranınıza-yerleştirin)).
@@ -475,7 +484,7 @@ kutuyu *Ekranımda → Konumu ayarla* ile TV ekranına sürükleyin.
 
 **Kablo yerine kablosuz.** TV'niz kablosuz ekran yansıtmayı (Miracast) destekliyorsa bilgisayarda *Win+K*'ye
 basıp listeden TV'yi seçin (LG'de *Screen Share*). Gecikme artar; hikâye oyunlarında genelde sorun olmaz.
-Türkçe kutu TV'de görünmezse Ana sayfada **Yayında da görünsün**'ü açın; kutu okunan bölgenin üstüne gelirse
+Türkçe kutu TV'de görünmezse Canlı sayfasında **Yayında da görünsün**'ü açın; kutu okunan bölgenin üstüne gelirse
 Robz Vision uyarır, kutuyu biraz kaydırın.
 
 ### Yol 4: Capture kartıyla oynuyorum
@@ -496,7 +505,7 @@ da vardır.
    belirir, altyazı alanını üstünde çizin. Projektör penceresi başka pencerelerin arkasında kalabilir, ama simge
    durumuna küçültülmemeli.
 5. **Başlat**'a basın ve kutuyu yerleştirin.
-6. Yayın yapıyorsanız Ana sayfadaki adresi OBS'e **Tarayıcı** kaynağı olarak ekleyin ve capture kartı
+6. Yayın yapıyorsanız Canlı sayfasındaki adresi OBS'e **Tarayıcı** kaynağı olarak ekleyin ve capture kartı
    kaynağının üstüne taşıyın. İsterseniz *Görünüm → Yayınımda → Gelişmiş ayarlar → OBS'te orijinali kapat* ile
    İngilizce altyazıyı yayında gizleyin.
 
@@ -514,7 +523,7 @@ Yolunuz hangisi olursa olsun yayın aynıdır:
 1. Oyun görüntüsünü OBS'e her zamanki gibi ekleyin: PC oyununu *Oyun Yakalama* ya da *Ekran Yakalama* ile,
    PS5'i chiaki-ng penceresi ya da capture kartı kaynağı olarak.
 2. Robz Vision'da bölgeyi seçin, **Başlat**'a basın, kendi kutunuzu yerleştirin.
-3. İzleyiciler için Ana sayfadaki adresi **Tarayıcı** kaynağı olarak ekleyin ve oyun görüntüsünün üstüne
+3. İzleyiciler için Canlı sayfasındaki adresi **Tarayıcı** kaynağı olarak ekleyin ve oyun görüntüsünün üstüne
    taşıyın ([OBS'e ekleyin](#5-obse-ekleyin)). İzleyiciler Kick, Twitch ya da YouTube'da Türkçe altyazıyı görür.
 
 Ekrandaki kutu varsayılan olarak yayına girmez, izleyiciler altyazıyı iki kez görmez. Tarayıcı kaynağı
