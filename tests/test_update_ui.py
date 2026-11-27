@@ -563,8 +563,77 @@ def test_default_window_size():
 
     from altyazitr.gui.main_window import WINDOW_DEFAULT, default_window_size
 
-    assert WINDOW_DEFAULT == (1440, 900)
-    assert default_window_size(QRect(0, 0, 1920, 1032)) == (1440, 900)  # 1080p (görev çubuğu hariç)
-    assert default_window_size(QRect(0, 0, 2560, 1400)) == (1440, 900)
+    assert WINDOW_DEFAULT == (1280, 800)
+    assert default_window_size(QRect(0, 0, 1920, 1032)) == (1280, 800)  # 1080p (görev çubuğu hariç)
+    assert default_window_size(QRect(0, 0, 2560, 1400)) == (1280, 800)
     assert default_window_size(QRect(0, 0, 1366, 728)) == (1256, 760)  # küçük ekran: %92, en az 980×760
     assert default_window_size(None) == (980, 760)
+
+
+def test_tam_ekran_gecisi_ve_pencere_dugmeleri(qapp, gh, tmp_path):
+    """Varsayılan açılış pencerede; F11 / sağ üstteki düğme tam ekran ile pencere arasında geçer, seçim ayara
+    yazılır; pencere düğmeleri yalnız tam ekranda görünür."""
+    assert Settings().open_fullscreen is False
+    svc = _service(gh, tmp_path)
+    win = _window(qapp, svc)
+    ctl = win._win_controls
+    assert not win.isFullScreen() and not ctl.isVisibleTo(win)
+    win.toggle_fullscreen()
+    _pump(qapp)
+    assert win.isFullScreen() and win.ctx.s.open_fullscreen is True and ctl.isVisibleTo(win)
+    assert set(ctl.buttons) == {"window", "minimize", "close"}
+    ctl.buttons["window"].click()  # pencerede göster
+    _pump(qapp)
+    assert not win.isFullScreen() and win.ctx.s.open_fullscreen is False and not ctl.isVisibleTo(win)
+
+
+def test_kurulum_sihirbazi(qapp, gh, tmp_path):
+    """Başla → adım: kurulum sihirbazı adımın sayfasını açar, balonun üstünde "Adım 1 / 4 · Oyunu göster" yazar.
+    Adımın son parçasından ileri gidilince adım onaylanır (ayara yazılır) ve sıradakine geçilir; Geri önceki parçaya
+    döner; Daha sonra kapatır (onaylananlar kalır); Bitir Başla'da biter. Tanıtım turu ilk açılışta kendiliğinden
+    açılmaz: yeni kullanıcıyı Başla karşılar."""
+    from altyazitr.gui import tour
+    from altyazitr.gui.main_window import PAGES
+
+    keys = [k for k, _t, _c in PAGES]
+    svc = _service(gh, tmp_path)
+    win = _window(qapp, svc)
+    win.ctx.s.guide_done = []
+    win.ctx.s.tour_seen = False
+    win._maybe_tour()
+    assert tour.active_tour(win) is None
+
+    win.start_guide("source")
+    _pump(qapp)
+    wiz = tour.active_tour(win)
+    assert wiz is not None and keys[win.nav.currentRow()] == "home"
+    b = wiz.bubble
+    assert b.kicker.text() == "Adım 1 / 4 · Oyunu göster" and b.title.text() == "Oyun nerede görünüyor?"
+    assert b.count.text() == "1/2" and b.next_btn.text() == "İleri" and not b.back_btn.isVisibleTo(b)
+    b.next_btn.click()
+    _pump(qapp)
+    assert b.count.text() == "2/2" and b.next_btn.text() == "Sonraki adım" and win.ctx.s.guide_done == []
+    b.next_btn.click()
+    _pump(qapp)
+    assert win.ctx.s.guide_done == ["source"] and b.kicker.text().startswith("Adım 2 / 4")
+    b.back_btn.click()
+    _pump(qapp)
+    assert b.kicker.text().startswith("Adım 1 / 4") and b.count.text() == "2/2"
+    b.later_btn.click()  # Daha sonra: kapanır, onaylanan adım kalır
+    _pump(qapp)
+    assert tour.active_tour(win) is None and win.ctx.s.guide_done == ["source"]
+
+    win.start_guide("translate")
+    _pump(qapp)
+    wiz = tour.active_tour(win)
+    b = wiz.bubble
+    assert keys[win.nav.currentRow()] == "translate" and b.kicker.text() == "Adım 3 / 4 · Çeviriyi seç"
+    for _ in range(4):  # çeviri (1 parça) → görünüm (3 parça) → hazırsınız
+        b.next_btn.click()
+        _pump(qapp)
+    assert b.title.text() == "Hazırsınız" and b.next_btn.text() == "Bitir" and keys[win.nav.currentRow()] == "start"
+    assert win.ctx.s.guide_done == ["source", "translate", "style"]
+    b.next_btn.click()
+    _pump(qapp)
+    assert tour.active_tour(win) is None and keys[win.nav.currentRow()] == "start"
+    assert win.ctx.s.tour_seen is False  # sihirbazı bitirmek tanıtım turunu görülmüş saymaz

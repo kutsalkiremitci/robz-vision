@@ -21,7 +21,7 @@ from altyazitr.config import StyleCfg, new_style
 from altyazitr.gui import icons
 from altyazitr.gui.controls import Collapsible, FontPicker, PresetCard, Segmented, SliderRow, SubtitlePreview, SwatchRow
 from altyazitr.gui.tokens import C, ICON, RADIUS, SPACE
-from altyazitr.gui.widgets import Card, button_icon, label, page, row
+from altyazitr.gui.widgets import Card, button_icon, label, page, page_head, row
 
 # --- iki görünüm ---------------------------------------------------------------------
 SCREEN, STREAM = "screen", "stream"
@@ -88,7 +88,7 @@ MASK_COLORS = [("#101010", "Siyah"), ("#2A2A2A", "Koyu gri"), ("#0B1A3A", "Laciv
 COVER_TIP = "Oyunun İngilizce altyazısını koyu bir kutuyla örter, Türkçesini tam onun yerine, ortalı yazar."
 COVER_COLOR_TIP = "Kutu tamamen kapalıdır, İngilizce yazı arkadan görünmez."
 COVER_HINT = {
-    SCREEN: "Kutu her satırda oyunun altyazısının yerine ve genişliğine oturur. Ana sayfadaki 'Konumu ayarla' "
+    SCREEN: "Kutu her satırda oyunun altyazısının yerine ve genişliğine oturur. Canlı sayfasındaki 'Konumu ayarla' "
             "bu kapalıyken geçerlidir.",
     STREAM: "Altyazı OBS'te oyunun altyazısının yerine yazılır; alttan uzaklık, genişlik ve maske kullanılmaz. "
             "Oyun görüntüsü OBS tuvalini tam kaplamalı (Ctrl+F).",
@@ -378,7 +378,7 @@ class StylePage(QWidget):
         self.ov_scale.setValue(ov.scale)
         self.ov_scale.changed.connect(self._set_scale)
         self.ov_scale.setToolTip("Kutudaki altyazıyı yazı, kenar ve arka planıyla birlikte büyütür ya da "
-                                 "küçültür; yayını etkilemez. Kutunun yerini Ana sayfadaki 'Konumu ayarla' ile "
+                                 "küçültür; yayını etkilemez. Kutunun yerini Canlı sayfasındaki 'Konumu ayarla' ile "
                                  "değiştirin.")
         self._bottom_row = self._field("OBS'te alttan", self.bottom, stretch=True)
         self._maxw_row = self._field("OBS'te genişlik", self.maxw, stretch=True)
@@ -462,7 +462,7 @@ class StylePage(QWidget):
         hl = QVBoxLayout(head)
         hl.setContentsMargins(left, top, right, bottom)
         hl.setSpacing(0)
-        hl.addWidget(label("Görünüm", "pageTitle"))
+        hl.addWidget(page_head("Görünüm", "Türkçe altyazının ekranınızda ve yayında nasıl göründüğü"))
         hl.addSpacing(SPACE["m"])
 
         self.side = Segmented([("Ekranımda", SCREEN), ("Yayınımda", STREAM)], icons=["monitor", "broadcast"])

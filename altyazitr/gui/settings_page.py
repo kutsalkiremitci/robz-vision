@@ -40,7 +40,7 @@ FLOW_TIP = "Ekranınızdaki kutuda ve OBS'te aynı çalışır"
 FLOW_MODE_TIPS = ("Son çeviriler alt alta kalır; hızlı konuşmada satır kaybolmaz",
                   "Yalnız en son çeviri görünür; yeni satır gelince öncekinin yerine geçer")
 FLOW_LINES_TIP = ("Aynı anda en fazla kaç çeviri alt alta dursun. Yeni satır gelince en eskisi kalkar. "
-                  "Ekranınızdaki kutu küçükse yalnızca en yeni satırlar sığar: Ana sayfa → Konumu ayarla ile "
+                  "Ekranınızdaki kutu küçükse yalnızca en yeni satırlar sığar: Canlı → Konumu ayarla ile "
                   "kutuyu yukarı doğru büyütün.")
 FLOW_MIN_TIP = "Her çeviri, oyun sonraki satıra geçse de en az bu kadar ekranda kalır. Yetişemiyorsanız artırın."
 FLOW_MAX_TIP = ("Oyundaki yazı ekranda dursa bile çeviri en fazla bu kadar görünür. Uzun satırlara okuma süresi "
@@ -121,7 +121,7 @@ class SettingsPage(QWidget):
         self.win = win
         self.ctx = win.ctx
         s = self.ctx.s
-        sa, lay = page("Ayarlar")
+        sa, lay = page("Ayarlar", "Kısayollar, altyazı akışı ve uygulama")
         outer = row(sa)
         outer.setContentsMargins(0, 0, 0, 0)
         self.setLayout(outer)

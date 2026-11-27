@@ -1,6 +1,7 @@
 """Arayüzün tüm ekranlarını masaüstünde pencere açmadan PNG olarak kaydeder (tasarım denetimi için).
 
-Kullanım:  python tools/arayuz_goruntusu.py ÇIKTI_KLASÖRÜ [--genislik 1280] [--yukseklik 840]
+Kullanım:  python tools/arayuz_goruntusu.py ÇIKTI_KLASÖRÜ [--genislik 1280] [--yukseklik 840] [--sihirbaz]
+--sihirbaz: kurulum sihirbazının her parçası da kaydedilir (sihirbaz_1.png …; Başla → Kuruluma başla).
 Çıktı: ana_pencere.png, sayfa_<ad>.png (tam yükseklik), secici.png, overlay_ayar.png, overlay_altyazi.png,
        bolge_penceresi.png, obs_yardim.png, guncelleme.png, ikonlar.png
 Pencere varsayılan olarak uygulamanın 1080p ekrandaki açılış boyutunda (1280×840): Ana sayfa geniş düzende.
@@ -159,6 +160,22 @@ def main() -> int:
         pump(0.2)
         fake_source()
         win.grab().save(str(out / "ana_pencere.png"))
+
+        if "--sihirbaz" in sys.argv:  # kurulum sihirbazı: her parçada sayfa, vurgu ve balon
+            from altyazitr.gui import tour
+
+            s.guide_done = []
+            win.goto("start")
+            pump(0.2)
+            tour.start_setup_wizard(win, "source")
+            wiz = tour.active_tour(win)
+            for i in range(wiz.count if wiz is not None else 0):
+                pump(0.3)
+                if wiz.steps[wiz.index].page == "home":
+                    fake_source()
+                win.grab().save(str(out / f"sihirbaz_{i + 1}.png"))
+                wiz.next()
+            pump(0.1)
 
         # bölge seçici
         from altyazitr.gui import region_picker as rp

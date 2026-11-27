@@ -422,8 +422,37 @@ class Collapsible(QWidget):
 
 
 # --- önizleme sahnesi ------------------------------------------------------------------
+_SCENE_FILES = {False: "sahne_gunduz.jpg", True: "sahne_gece.jpg"}
+_scene_cache: dict[bool, object] = {}
+
+
+def _scene_image(dark: bool):
+    """Önizleme zemini: GTA VI resmî tanıtım görseli (gündüz: Jason ve Lucia; gece: Vice City gecesi; sitedeki
+    görsellerle aynı sahneler, 1280×720). Dosya yoksa ya da okunamazsa None (çizilmiş sahneye dönülür)."""
+    if dark not in _scene_cache:
+        from PySide6.QtGui import QImage
+
+        from altyazitr.paths import resource_dir
+
+        img = QImage(str(resource_dir() / "data" / _SCENE_FILES[dark]))
+        _scene_cache[dark] = None if img.isNull() else img
+    return _scene_cache[dark]
+
+
 def paint_scene(p: QPainter, r: QRectF, dark: bool) -> None:
-    """Oyun benzeri örnek arka plan: aydınlık (gündüz, parlak gökyüzü) veya karanlık (gece)."""
+    """Örnek oyun arka planı: aydınlık (gündüz) veya karanlık (gece). GTA VI görseli varsa o, alanı dolduracak
+    biçimde ortadan kırpılarak çizilir; yoksa çizilmiş şehir sahnesi."""
+    img = _scene_image(dark)
+    if img is not None:
+        iw, ih = img.width(), img.height()
+        scale = max(r.width() / iw, r.height() / ih)
+        sw, sh = r.width() / scale, r.height() / scale
+        src = QRectF((iw - sw) / 2, 0 if not dark else (ih - sh) / 2, sw, sh)  # gündüz sahnesinde yüzler üstte
+        p.save()
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        p.drawImage(r, img, src)
+        p.restore()
+        return
     p.save()
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
     W, H = r.width(), r.height()

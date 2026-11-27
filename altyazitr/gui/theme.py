@@ -1,8 +1,8 @@
-"""Koyu tema "Ocean Drive gecesi" (Fusion + QPalette + QSS) ve uygulama simgesi (hazır logo).
+"""Koyu tema "Gölge" (Fusion + QPalette + QSS) ve uygulama simgesi (hazır logo).
 
 Tüm renkler/yazılar gui/tokens.py'den gelir; bileşen sözleşmesi DESIGN.md'de anlatılır.
 Klavye odağı "focus-visible" mantığıyla gösterilir: düğme, onay kutusu, kaydırıcı gibi öğelerde
-camgöbeği odak halkası yalnızca Tab/kısayolla gelindiğinde çizilir (fareyle tıklayınca değil);
+camgöbeği odak çerçevesi yalnızca Tab/kısayolla gelindiğinde çizilir (fareyle tıklayınca değil);
 metin giriş alanlarında ise odak her zaman görünür.
 """
 
@@ -44,6 +44,7 @@ QLabel:disabled {{ color: {C.TEXT_DISABLED}; }}
 QLabel#pageTitle {{
     font-family: {_DISPLAY_COND}; font-size: {F.PAGE_TITLE}px; color: {C.TEXT}; padding-top: 3px;
 }}
+QLabel#pageSub {{ font-family: {_DISPLAY}; font-size: {F.PAGE_SUB}px; color: {C.TEXT_3}; }}
 QLabel#section {{ font-family: {_DISPLAY_SB}; font-size: {F.SECTION}px; color: {C.TEXT}; padding-top: 2px; }}
 QLabel#status {{ font-family: {_DISPLAY_SB}; font-size: {F.STATUS}px; color: {C.TEXT}; padding-top: 3px; }}
 /* QSS iç boşluğu QLabel'e çerçeve kazandırır ve Qt metni yarım "x" kadar içeri iter; bunu sıfırla */
@@ -71,11 +72,11 @@ QPushButton {{
     background: {C.RAISED}; border: 1px solid {C.LINE_STRONG}; border-radius: {_RM}px; padding: 6px 14px;
     outline: none;
 }}
-QPushButton:hover {{ background: {C.HOVER}; border-color: {_BORDER_HOVER}; }}
+QPushButton:hover {{ background: {C.PINK_SOFT}; border-color: {C.PINK_LINE}; }}
 QPushButton:pressed {{ background: {C.PRESSED}; }}
 QPushButton:checked {{ background: {C.CYAN_SOFT}; border-color: {C.CYAN}; }}
 QPushButton:disabled {{ color: {C.TEXT_DISABLED}; background: transparent; border-color: {C.LINE}; }}
-QPushButton{_KB} {{ border-color: {C.CYAN}; }}
+QPushButton{_KB} {{ border: 2px solid {C.CYAN}; padding: 5px 13px; }}
 
 QPushButton#primary {{
     font-family: {_DISPLAY_SB}; color: {C.INVERSE}; background: {C.PINK}; border: 1px solid {C.PINK};
@@ -96,14 +97,14 @@ QPushButton#danger:disabled {{ color: {C.TEXT_DISABLED}; border-color: {C.LINE};
 QPushButton#danger{_KB} {{ border: 2px solid {C.CYAN}; padding: 5px 17px; }}
 
 QPushButton#ghost {{ color: {C.TEXT_2}; background: transparent; border: 1px solid transparent; }}
-QPushButton#ghost:hover {{ color: {C.TEXT}; background: {C.HOVER}; }}
+QPushButton#ghost:hover {{ color: {C.TEXT}; background: {C.PINK_SOFT}; }}
 QPushButton#ghost:pressed {{ background: {C.PRESSED}; }}
 QPushButton#ghost:checked {{ color: {C.TEXT}; background: {C.CYAN_SOFT}; border-color: {C.CYAN}; }}
 QPushButton#ghost:disabled {{ color: {C.TEXT_DISABLED}; background: transparent; }}
 QPushButton#ghost{_KB} {{ border-color: {C.CYAN}; }}
 
 QPushButton#icon {{
-    padding: 0; min-width: 30px; max-width: 30px; min-height: 30px; max-height: 30px;
+    padding: 0; min-width: 32px; max-width: 32px; min-height: 32px; max-height: 32px;
 }}
 QPushButton#icon:disabled {{ background: transparent; }}
 
@@ -112,13 +113,13 @@ QPushButton#collapse {{
     font-family: {_DISPLAY}; font-size: {F.BUTTON}px; color: {C.TEXT_2}; background: transparent;
     border: 1px solid transparent; border-radius: {_RS}px; padding: 5px 8px 5px 2px; text-align: left;
 }}
-QPushButton#collapse:hover {{ color: {C.TEXT}; background: transparent; }}
+QPushButton#collapse:hover {{ color: {C.TEXT}; background: {C.PINK_SOFT}; }}
 QPushButton#collapse:pressed {{ background: transparent; }}
 QPushButton#collapse{_KB} {{ border-color: {C.CYAN}; }}
 
 /* hazır stil kartı (seçili halka kodda çizilir) */
 QPushButton#preset {{ background: {C.PANEL}; border: 1px solid {C.LINE}; border-radius: {_RL}px; padding: 0; }}
-QPushButton#preset:hover {{ background: {C.RAISED}; border-color: {C.LINE_STRONG}; }}
+QPushButton#preset:hover {{ background: {C.PINK_SOFT}; border-color: {C.PINK_LINE}; }}
 QPushButton#preset:pressed {{ background: {C.PRESSED}; }}
 QPushButton#preset{_KB} {{ border-color: {C.CYAN}; }}
 
@@ -128,14 +129,14 @@ QPushButton#swatch, QPushButton#swatch:hover, QPushButton#swatch:pressed, QPushB
 }}
 
 /* ---------- segmentli seçici ---------- */
-QFrame#segmented {{ background: {C.RAISED}; border: 1px solid {C.LINE_STRONG}; border-radius: 7px; }}
+QFrame#segmented {{ background: {C.PANEL}; border: 1px solid {C.LINE_STRONG}; border-radius: 9px; }}
 QFrame#segmented:disabled {{ background: transparent; border-color: {C.LINE}; }}
 QFrame#segmented QPushButton#segL, QFrame#segmented QPushButton#segM, QFrame#segmented QPushButton#segR {{
     font-family: {_DISPLAY}; font-size: {F.BODY_SIZE + 1}px; color: {C.TEXT_2}; background: transparent;
-    border: 1px solid transparent; border-radius: {_RS + 1}px; padding: 3px 12px; margin: 0;
+    border: 1px solid transparent; border-radius: {_RS}px; padding: 4px 12px; margin: 0;
 }}
 QFrame#segmented QPushButton#segL:hover, QFrame#segmented QPushButton#segM:hover,
-QFrame#segmented QPushButton#segR:hover {{ color: {C.TEXT}; background: {C.HOVER}; }}
+QFrame#segmented QPushButton#segR:hover {{ color: {C.TEXT}; background: {C.PINK_SOFT}; }}
 QFrame#segmented QPushButton#segL:checked, QFrame#segmented QPushButton#segM:checked,
 QFrame#segmented QPushButton#segR:checked {{ color: {C.TEXT}; background: {C.CYAN_SOFT}; border-color: {C.CYAN}; }}
 QFrame#segmented QPushButton#segL:disabled, QFrame#segmented QPushButton#segM:disabled,
@@ -148,9 +149,10 @@ QFrame#segmented QPushButton#segR{_KB} {{ border-color: {C.CYAN}; }}
 /* ---------- metin girişleri ---------- */
 QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {{
     color: {C.TEXT}; background: {C.RAISED}; border: 1px solid {C.LINE_STRONG}; border-radius: {_RM}px;
-    padding: 5px 10px; selection-background-color: {C.CYAN}; selection-color: {C.INVERSE};
+    padding: 5px 10px; selection-background-color: {C.PINK}; selection-color: {C.INVERSE};
 }}
-QLineEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover, QComboBox:hover {{ border-color: {_BORDER_HOVER}; }}
+QLineEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover {{ border-color: {_BORDER_HOVER}; }}
+QComboBox:hover {{ background: {C.PINK_SOFT}; border-color: {C.PINK_LINE}; }}
 QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:editable:focus, QComboBox:on,
 QComboBox{_KB} {{ border-color: {C.CYAN}; }}
 QLineEdit:read-only {{ background: {C.PANEL}; }}
@@ -165,7 +167,7 @@ QSpinBox, QDoubleSpinBox {{ font-family: {_DISPLAY}; font-size: {F.BUTTON}px; pa
 
 /* kısayol kutusu: odaktayken tuş dinler */
 QLineEdit#hotkey {{ font-family: {_DISPLAY}; font-size: {F.BUTTON}px; background: {C.RAISED}; }}
-QLineEdit#hotkey:hover {{ background: {C.HOVER}; }}
+QLineEdit#hotkey:hover {{ background: {C.PINK_SOFT}; }}
 QLineEdit#hotkey:focus {{ background: {C.CYAN_SOFT}; border-color: {C.CYAN}; }}
 
 /* açılır liste */
@@ -175,11 +177,11 @@ QComboBox::drop-down {{
 }}
 QComboBox QAbstractItemView {{
     background: {C.RAISED}; color: {C.TEXT}; border: 1px solid {C.LINE_STRONG}; padding: 4px; outline: 0;
-    selection-background-color: {C.CYAN_SOFT}; selection-color: {C.TEXT};
+    selection-background-color: {C.PINK_SOFT}; selection-color: {C.TEXT};
 }}
-QComboBox QAbstractItemView::item {{ min-height: 28px; padding: 0 8px; border-radius: {_RS}px; }}
-QComboBox QAbstractItemView::item:hover {{ background: {C.HOVER}; }}
-QComboBox QAbstractItemView::item:selected {{ background: {C.CYAN_SOFT}; color: {C.TEXT}; }}
+QComboBox QAbstractItemView::item {{ min-height: 30px; padding: 0 8px; border-radius: {_RS}px; }}
+QComboBox QAbstractItemView::item:hover {{ background: {C.PINK_SOFT}; }}
+QComboBox QAbstractItemView::item:selected {{ background: {C.PINK_SOFT}; color: {C.TEXT}; }}
 
 /* ---------- onay kutusu ---------- */
 QCheckBox {{ color: {C.TEXT}; spacing: 10px; background: transparent; outline: none; }}
@@ -188,13 +190,13 @@ QCheckBox:disabled {{ color: {C.TEXT_DISABLED}; }}
 /* ---------- kaydırıcı ---------- */
 QSlider {{ background: transparent; min-height: 22px; outline: none; }}
 QSlider::groove:horizontal {{ height: 4px; background: {C.LINE_STRONG}; border-radius: 2px; }}
-QSlider::sub-page:horizontal {{ height: 4px; background: {C.CYAN}; border-radius: 2px; }}
+QSlider::sub-page:horizontal {{ height: 4px; background: {C.PINK}; border-radius: 2px; }}
 QSlider::add-page:horizontal {{ height: 4px; background: {C.LINE_STRONG}; border-radius: 2px; }}
 QSlider::handle:horizontal {{
     background: {C.TEXT}; border: 2px solid {C.TEXT}; width: 12px; height: 12px; margin: -6px 0;
     border-radius: 8px;
 }}
-QSlider::handle:horizontal:hover, QSlider::handle:horizontal:pressed {{ background: {C.CYAN}; border-color: {C.CYAN}; }}
+QSlider::handle:horizontal:hover, QSlider::handle:horizontal:pressed {{ background: {C.PINK_HOVER}; border-color: {C.PINK_HOVER}; }}
 QSlider{_KBP}::handle:horizontal:focus {{ background: {C.TEXT}; border-color: {C.CYAN}; }}
 QSlider::sub-page:horizontal:disabled {{ background: {C.TEXT_DISABLED}; }}
 QSlider::handle:horizontal:disabled {{ background: {C.TEXT_DISABLED}; border-color: {C.TEXT_DISABLED}; }}
@@ -238,7 +240,7 @@ QToolTip {{
 }}
 QMenu {{ color: {C.TEXT}; background: {C.RAISED}; border: 1px solid {C.LINE_STRONG}; padding: 6px; }}
 QMenu::item {{ padding: 7px 28px 7px 12px; border-radius: {_RS}px; background: transparent; }}
-QMenu::item:selected {{ background: {C.HOVER}; }}
+QMenu::item:selected {{ background: {C.PINK_SOFT}; }}
 QMenu::item:disabled {{ color: {C.TEXT_DISABLED}; }}
 QMenu::separator {{ height: 1px; background: {C.LINE_STRONG}; margin: 6px 4px; }}
 QMessageBox QLabel {{ color: {C.TEXT}; }}
@@ -268,7 +270,7 @@ def _ui_images() -> dict[str, str]:
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         draw(p)
         p.end()
-        path = d / f"od_{name}.png"
+        path = d / f"gl_{name}.png"
         pm.save(str(path))
         out[name] = path.as_posix()
 
@@ -311,7 +313,7 @@ QSpinBox::down-button, QDoubleSpinBox::down-button {{
     border-left: 1px solid {C.LINE_STRONG}; border-bottom-right-radius: {_RM}px; background: transparent;
 }}
 QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
-QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {{ background: {C.HOVER}; }}
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {{ background: {C.PINK_SOFT}; }}
 QSpinBox::up-button:pressed, QDoubleSpinBox::up-button:pressed,
 QSpinBox::down-button:pressed, QDoubleSpinBox::down-button:pressed {{ background: {C.PRESSED}; }}
 QSpinBox::up-button:disabled, QDoubleSpinBox::up-button:disabled,
@@ -392,6 +394,9 @@ def _palette() -> QPalette:
 
 
 def apply_theme(app: QApplication) -> None:
+    from altyazitr.gui import wheel_guard
+
+    wheel_guard.install(app)  # kaydırırken seçim kutusu / sayı kutusu / kaydırıcı yanlışlıkla değişmesin
     app.setStyle("Fusion")
     try:
         app.styleHints().setColorScheme(Qt.ColorScheme.Dark)

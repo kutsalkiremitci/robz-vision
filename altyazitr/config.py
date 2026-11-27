@@ -207,6 +207,12 @@ class Settings:
     ai: AiCfg = field(default_factory=AiCfg)  # yerel yapay zekâ kurulumu
     update: UpdateCfg = field(default_factory=UpdateCfg)  # güncelleme denetimi
     first_run: bool = True
+    # Tam ekran açılış: varsayılan kapalı (pencere ekranın ortasında, WINDOW_DEFAULT boyunda açılır; kullanıcı
+    # büyütüp küçültebilir). F11 ya da tam ekrandaki sağ üst düğme geçiş yapar; seçim saklanır.
+    open_fullscreen: bool = False
+    # Başla → Adım adım: kullanıcının rehberde "Sonraki adım" ile onayladığı adımlar. Yeni kurulumda boştur (her
+    # adım bir kez gösterilir; bkz. new_settings); eski ayar dosyasında anahtar yoksa hepsi onaylı sayılır.
+    guide_done: list[str] = field(default_factory=lambda: ["source", "region", "translate", "style"])
     tour_seen: bool = False  # tanıtım turu tamamlandı mı ("Daha sonra" denirse bir sonraki açılışta yine gösterilir)
     minimize_to_tray: bool = True
     # Ayar dosyası biçimi. 2: varsayılan OCR motoru RapidOCR oldu (eski dosyalardaki "windows" bir kez taşınır).
@@ -258,6 +264,7 @@ def new_settings() -> Settings:
     girmez (overlay.ScreenOverlay._affinity): Robz Vision kendi Türkçe yazısını okumaz."""
     s = Settings(style=new_style(), screen_style=new_style())
     s.overlay.visible_in_stream = True
+    s.guide_done = []  # Başla'daki adımlar sırayla gösterilsin
     return s
 
 

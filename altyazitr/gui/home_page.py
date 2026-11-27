@@ -25,7 +25,7 @@ from altyazitr.gui.region_picker import logical_to_physical
 from altyazitr.gui.source_view import (IDLE_S, RUNNING_S, SourceGrabber, SourceView, frac_to_rect,
                                        list_monitors, monitor_index_for, rect_to_frac)
 from altyazitr.gui.tokens import ICON, RADIUS, SPACE, SUNSET_STOPS, C, F, motion_ms
-from altyazitr.gui.widgets import Card, bind_check, label, page
+from altyazitr.gui.widgets import PAGE_MARGIN, Card, bind_check, label, page, page_head
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ SOURCE_NOTE = "Önizlemede çizin, taşıyın, köşelerinden boyutlandırın"
 WIDE_MIN = 900                 # sayfa bu genişlikten itibaren iki sütun: solda çeviriler, sağda büyük kaynak
 LEFT_MIN, LEFT_MAX = 290, 400  # geniş düzende "Son çeviriler" sütunu
 LEFT_SHARE = 0.32              # ... sayfaya oranı; kalan genişlik kaynağa gider
+SOURCE_MAX_SHARE = 0.5         # kaynak önizlemesi en çok sayfa yüksekliğinin yarısı (tam ekranda dev olmasın)
 PILL_H = 22  # durum rozeti yüksekliği (temadaki rozet köşe yarıçapının iki katı)
 WINDOW_LIST_TICKS = 2  # pencere modunda pencere listesi bu kadar saniyede bir yenilenir (bkz. HomePage._watchdog)
 HEAD_H = 32  # bölüm başlık satırının en küçük yüksekliği: yan yana bölümlerin başlıkları aynı hizada durur
@@ -263,7 +264,7 @@ class HomePage(QWidget):
         self.win = win
         self.ctx = ctx = win.ctx
         s = ctx.s
-        m = SPACE["xxl"]
+        m = PAGE_MARGIN
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -273,7 +274,7 @@ class HomePage(QWidget):
         hl = QVBoxLayout(head)
         hl.setContentsMargins(m, m - 6, m, 0)
         hl.setSpacing(SPACE["l"])
-        hl.addWidget(label("Ana sayfa", "pageTitle"))
+        hl.addWidget(page_head("Canlı", "Oyunun görüntüsü, okunan bölge ve son çeviriler"))
         hl.addWidget(self._build_live())
         root.addWidget(head)
 
@@ -294,19 +295,28 @@ class HomePage(QWidget):
         self._lay.setContentsMargins(m, SPACE["xl"], m, m)
         body.addWidget(self._sa, 1)
         # geniş düzen: solda tam boy çeviriler (liste kendi içinde kayar), sağda kaynak + paneller (gerekirse kayar)
+        # geniş düzen: iki sütun tek kayan sayfada (tekerlek nerede olursa olsun sayfa kayar; Son çeviriler listesi
+        # yalnız kendi içinde kayacak satırı varsa önce kendisi kayar, ucuna gelince sayfaya bırakır)
+        self._wide_sa, wide_lay = page(None)
+        wide_lay.setContentsMargins(0, 0, 0, 0)
+        wide_lay.setSpacing(0)
+        self._wide_sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        cols = QHBoxLayout()
+        cols.setContentsMargins(0, 0, 0, 0)
+        cols.setSpacing(0)
+        wide_lay.addLayout(cols, 1)
         self._left = QWidget()
-        self._left.setObjectName("page")
         self._left_lay = QVBoxLayout(self._left)
         self._left_lay.setContentsMargins(m, SPACE["xl"], SPACE["l"], m)
         self._left_lay.setSpacing(0)
-        self._left.hide()
-        body.addWidget(self._left)
-        self._right, self._right_lay = page(None)
+        cols.addWidget(self._left)
+        self._right = QWidget()
+        self._right_lay = QVBoxLayout(self._right)
         self._right_lay.setContentsMargins(SPACE["l"], SPACE["xl"], m, SPACE["xl"])
         self._right_lay.setSpacing(SPACE["l"])
-        self._right.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._right.hide()
-        body.addWidget(self._right, 1)
+        cols.addWidget(self._right, 1)
+        self._wide_sa.hide()
+        body.addWidget(self._wide_sa, 1)
         self._docks = QWidget()
         self._docks_lay = QHBoxLayout(self._docks)
         self._docks_lay.setContentsMargins(0, 0, 0, 0)
@@ -524,9 +534,10 @@ class HomePage(QWidget):
     # --- duyarlı düzen ---------------------------------------------------------------------------
     def resizeEvent(self, e) -> None:  # noqa: N802
         super().resizeEvent(e)
+        self.source.set_height_cap(round(self.height() * SOURCE_MAX_SHARE))
         self._relayout()
         # önizleme karesi yeni genişliğe göre küçültülsün (ilk açılışta düzen oturunca da keskin)
-        self.grabber.set_max_width(round(self.source.width() * self.source.devicePixelRatioF()))
+        self.grabber.set_max_width(round(self.source.display_width() * self.source.devicePixelRatioF()))
 
     def _relayout(self) -> None:
         """Geniş pencerede: solda tam boy çeviriler, sağda büyük kaynak ve altında yan yana Ekranımda / OBS. Darda tek
@@ -552,8 +563,7 @@ class HomePage(QWidget):
                     self._lay.insertWidget(i, card)
             self.history.set_fill(wide)
             self._sa.setVisible(not wide)
-            self._left.setVisible(wide)
-            self._right.setVisible(wide)
+            self._wide_sa.setVisible(wide)
             for card in cards:
                 card.show()
         if wide:
@@ -712,7 +722,7 @@ class HomePage(QWidget):
             self.grabber.set_borrow(None)
             self.grabber.set_screen(self._target[1] if len(self._target) > 1 else None)
         self.grabber.set_interval(RUNNING_S if running else IDLE_S)
-        self.grabber.set_max_width(round(self.source.width() * self.source.devicePixelRatioF()))
+        self.grabber.set_max_width(round(self.source.display_width() * self.source.devicePixelRatioF()))
         self.grabber.start()
 
     def _watchdog(self) -> None:

@@ -198,7 +198,7 @@ def build_obs_help(parent: QWidget | None, url: str) -> QDialog:
     info.setPixmap(icons.pixmap("info", ICON["s"], C.TEXT_2))
     info.setFixedSize(ICON["s"], 20)
     alt.addWidget(info, 0, Qt.AlignmentFlag.AlignTop)
-    alt.addWidget(_body("Ekran Yakalama kullanıyorsanız tarayıcı kaynağı gerekmez; Ana sayfa'da "
+    alt.addWidget(_body("Ekran Yakalama kullanıyorsanız tarayıcı kaynağı gerekmez; Canlı sayfasında "
                         "“Yayında da görünsün”ü açın.", C.TEXT_2), 1)
     lay.addLayout(alt)
 

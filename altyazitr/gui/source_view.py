@@ -156,6 +156,7 @@ class SourceView(QWidget):
         self._editable = True
         self._drag: tuple[str, QPointF, Frac | None] | None = None
         self._hover = ""
+        self._max_h = 0         # en büyük yükseklik (0: sınırsız); büyük pencerede önizleme dev görünmesin
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(240, 135)
@@ -222,14 +223,31 @@ class SourceView(QWidget):
     def hasHeightForWidth(self) -> bool:  # noqa: N802 - Qt
         return True
 
+    def set_height_cap(self, h: int) -> None:
+        """Önizlemenin en büyük yüksekliği (0: sınırsız). Geniş alanda görüntü bu boyda kalır ve ortalanır."""
+        h = max(0, int(h))
+        if h != self._max_h:
+            self._max_h = h
+            self.updateGeometry()
+            self.update()
+
     def heightForWidth(self, w: int) -> int:  # noqa: N802 - Qt
         sw, sh = max(1, self._src.width()), max(1, self._src.height())
-        return max(self.minimumHeight(), min(int(w * sh / sw), int(w * 1.25)))
+        h = min(int(w * sh / sw), int(w * 1.25))
+        if self._max_h:
+            h = min(h, self._max_h)
+        return max(self.minimumHeight(), h)
 
     def sizeHint(self) -> QSize:  # noqa: N802 - Qt
         return QSize(640, self.heightForWidth(640))
 
     # --- geometri ----------------------------------------------------------------------------
+    def display_width(self) -> int:
+        """Görüntünün ekranda kapladığı genişlik (yükseklik sınırında widget'tan dar olabilir)."""
+        sw, sh = max(1, self._src.width()), max(1, self._src.height())
+        h = self.heightForWidth(self.width())
+        return max(1, min(self.width(), round(h * sw / sh)))
+
     def _img_rect(self) -> QRectF:
         """Kaynağın widget içindeki yeri (oran korunur, ortalanır)."""
         r = QRectF(self.rect())
@@ -363,7 +381,8 @@ class SourceView(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        outer = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        # çerçeve görüntünün kendisi: alan görüntüden genişse (yükseklik sınırı) yanlar boş kalır, görüntü ortada
+        outer = self._img_rect().adjusted(0.5, 0.5, -0.5, -0.5)
         clip = QPainterPath()
         clip.addRoundedRect(outer, RADIUS["l"], RADIUS["l"])
         p.fillPath(clip, QColor(C.PANEL))
@@ -374,7 +393,7 @@ class SourceView(QWidget):
         elif self._message:
             p.setPen(QColor(C.TEXT_3))
             p.setFont(self._font(F.BODY, 13))
-            p.drawText(QRectF(self.rect()).adjusted(SPACE["l"], 0, -SPACE["l"], 0),
+            p.drawText(outer.adjusted(SPACE["l"], 0, -SPACE["l"], 0),
                        Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap, self._message)
         rr = self._region_rect()
         if rr is not None and self._img is not None:

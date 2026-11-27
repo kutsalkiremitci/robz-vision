@@ -346,8 +346,20 @@ class HistoryView(QListView):
                 return self.MAX_H
         return total
 
+    def wheelEvent(self, e) -> None:  # noqa: N802 - Qt
+        """Liste kendi içinde kayacak yer varsa kayar; ucuna geldiyse (ya da hiç taşmıyorsa) tekerlek sayfaya geçer:
+        Canlı sayfası, fare Son çeviriler'in üstündeyken de kayar."""
+        bar = self.verticalScrollBar()
+        dy = e.angleDelta().y() or e.pixelDelta().y()
+        at_end = bar.maximum() <= bar.minimum() or (dy > 0 and bar.value() <= bar.minimum()) or (
+            dy < 0 and bar.value() >= bar.maximum())
+        if dy and at_end:
+            e.ignore()  # üst öğeye (sayfanın kaydırma alanına) geçer
+            return
+        super().wheelEvent(e)
+
     def set_fill(self, on: bool) -> None:
-        """Doldurma kipi (Ana sayfanın geniş düzenindeki tam boy sütun): liste içeriğine göre büyümez, bulunduğu
+        """Doldurma kipi (Canlı sayfasının geniş düzenindeki tam boy sütun): liste içeriğine göre büyümez, bulunduğu
         alanı doldurur ve kendi içinde kayar. Kapalıyken içeriğe göre büyür, MAX_H'de durur."""
         self._fill = bool(on)
         if on:

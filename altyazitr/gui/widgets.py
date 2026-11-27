@@ -16,7 +16,7 @@ Changed = Callable[[], None]
 
 # Bahnschrift ile yazılan etiket stilleri (gui/theme.py). Seçilebilir QLabel metni QTextDocument ile
 # çizer ve satır üstünü kırpar; Bahnschrift'te "İ" noktası kaybolur. Bu yüzden bunlar seçilebilir yapılmaz.
-DISPLAY_LABELS = frozenset({"pageTitle", "section", "status", "value", "pill", "pillOn", "pillWarn"})
+DISPLAY_LABELS = frozenset({"pageTitle", "pageSub", "section", "status", "value", "pill", "pillOn", "pillWarn"})
 
 
 def label(text: str, obj: str | None = None, wrap: bool = False) -> QLabel:
@@ -48,21 +48,32 @@ class Card(QFrame):
             self.lay.addLayout(layout)
 
 
-def page(title: str | None) -> tuple[QScrollArea, QVBoxLayout]:
-    """Kaydırılabilir sayfa iskeleti: 32 px kenar boşluğu, bölümler arası 24 px.
+PAGE_MARGIN = 32  # içerik pencere kenarından bu kadar içeride
+
+
+def page_head(title: str, subtitle: str = "") -> QWidget:
+    """Sayfa başlığı ve altında tek satırlık açıklaması (ne işe yaradığı)."""
+    w = QWidget()
+    v = QVBoxLayout(w)
+    v.setContentsMargins(0, 0, 0, 0)
+    v.setSpacing(3)
+    v.addWidget(label(title, "pageTitle"))
+    if subtitle:
+        v.addWidget(label(subtitle, "pageSub"))
+    return w
+
+
+def page(title: str | None, subtitle: str = "") -> tuple[QScrollArea, QVBoxLayout]:
+    """Kaydırılabilir sayfa iskeleti: PAGE_MARGIN kenar boşluğu, bölümler arası 24 px.
     title None: başlık kaydırılan alana konmaz (sayfa onu kendi sabit üst bandına yerleştirir)."""
     inner = QWidget()
     inner.setObjectName("page")
     lay = QVBoxLayout(inner)
-    m = SPACE["xxl"]
-    lay.setContentsMargins(m, m - 6, m, m)
+    m = PAGE_MARGIN
+    lay.setContentsMargins(m, m - 8, m, m)
     lay.setSpacing(SPACE["xl"])
     if title:
-        head = QVBoxLayout()
-        head.setContentsMargins(0, 0, 0, 0)
-        head.setSpacing(SPACE["xs"])
-        head.addWidget(label(title, "pageTitle"))
-        lay.addLayout(head)
+        lay.addWidget(page_head(title, subtitle))
     sa = QScrollArea()
     sa.setWidgetResizable(True)
     sa.setFrameShape(QFrame.Shape.NoFrame)

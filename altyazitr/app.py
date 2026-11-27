@@ -352,7 +352,7 @@ def main() -> int:
     from altyazitr.gui.main_window import MainWindow
 
     win = MainWindow(ctx)
-    win.show()
+    win.show_initial()  # ekranın ortasında pencere; kullanıcı seçtiyse tam ekran (Settings.open_fullscreen)
     ctx.updater.start()  # ilk denetim 10 sn sonra, sonra saatte bir (arka planda)
     if "--start" in sys.argv:
         QTimer.singleShot(500, ctx.pipeline.start)

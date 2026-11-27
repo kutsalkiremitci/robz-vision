@@ -308,7 +308,7 @@ class TranslatePage(QWidget):
         self.ctx = win.ctx
         self.ai = self.ctx.ai  # yerel yapay zekâ kurulum servisi (altyazitr.ai_setup.AiSetup)
         t = self.ctx.s.translate
-        sa, lay = page("Çeviri")
+        sa, lay = page("Çeviri", "Altyazıların hangi motorla Türkçeye çevrildiği")
         outer = row(sa)
         outer.setContentsMargins(0, 0, 0, 0)
         self.setLayout(outer)

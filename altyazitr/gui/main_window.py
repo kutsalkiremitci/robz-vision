@@ -34,9 +34,11 @@ from PySide6.QtGui import (
     QGuiApplication,
     QImage,
     QPainter,
+    QKeySequence,
     QPainterPath,
     QPen,
     QPixmap,
+    QShortcut,
 )
 from PySide6.QtWidgets import (
     QAbstractButton,
@@ -48,6 +50,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
+    QPushButton,
     QStackedWidget,
     QStyle,
     QStyledItemDelegate,
@@ -70,27 +73,29 @@ from altyazitr.gui.settings_page import SettingsPage
 from altyazitr.gui.style_page import StylePage
 from altyazitr.gui.theme import app_icon
 from altyazitr.gui.toast import ToastHost
-from altyazitr.gui.tokens import RADIUS, SPACE, C, F
+from altyazitr.gui.tokens import RADIUS, SPACE, C, F, qcolor
 from altyazitr.gui.translate_page import TranslatePage, invite_offered
+from altyazitr.gui.tv_home import GUIDE, StartPage
 from altyazitr.gui.update_dialog import TOAST_MS, TOAST_TEXT, UpdateDialog, sidebar_status
 
 log = logging.getLogger(__name__)
 
 PAGES = [
-    ("home", "Ana sayfa", HomePage),
+    ("start", "Başla", StartPage),  # televizyon uygulaması gibi açılış ekranı (gui/tv_home.py)
+    ("home", "Canlı", HomePage),  # kaynak, bölge, canlı önizleme
     ("style", "Görünüm", StylePage),
     ("translate", "Çeviri", TranslatePage),
     ("settings", "Ayarlar", SettingsPage),
 ]
-NAV_ICONS = {"home": "home", "style": "palette", "translate": "languages", "settings": "settings"}
+NAV_ICONS = {"start": "play-circle", "home": "home", "style": "palette", "translate": "languages", "settings": "settings"}
 
 SIDEBAR_W = 212          # geniş kenar çubuğu
 SIDEBAR_COMPACT_W = 64   # yalnız ikon
 COMPACT_BELOW = 900      # pencere bundan darsa kenar çubuğu daralır
-NAV_ITEM_H = 40
+NAV_ITEM_H = 42           # menü öğesi
 ICON_COL = 20            # ikon sütunu: marka, menü ve durum ikonları aynı eksende hizalanır
 AI_ROW_H = 32            # yapay zekâ durum satırı (tıklanabilir)
-WINDOW_DEFAULT = (1440, 900)  # açılış boyu (ekranın kullanılabilir alanının %92'sini geçmez)
+WINDOW_DEFAULT = (1280, 800)  # açılış boyu (ekranın kullanılabilir alanının %92'sini geçmez)
 
 # Kenar çubuğu → Güncellemeleri denetle (bkz. _CheckRow, MainWindow._check_updates)
 CHECK_TEXT = "Güncellemeleri denetle"
@@ -184,12 +189,12 @@ class _Logo(QWidget):
 
 # --- kenar çubuğu --------------------------------------------------------------------------
 class _NavDelegate(QStyledItemDelegate):
-    """Menü öğesi: ikon + Bahnschrift etiket. Seçili öğe RAISED zemin + 3 px camgöbeği sol çizgi."""
+    """Menü öğesi: ikon + Bahnschrift etiket. Seçili öğe RAISED zemin + 3 px pembe sol çizgi."""
 
     def __init__(self, nav: _NavList):
         super().__init__(nav)
         self._nav = nav
-        self._font = _font(F.DISPLAY, 14)
+        self._font = _font(F.DISPLAY, 15)
         self._icons: dict[tuple[str, str, float], QPixmap] = {}
 
     def _icon(self, name: str, color: str, dpr: float) -> QPixmap:
@@ -215,14 +220,12 @@ class _NavDelegate(QStyledItemDelegate):
         pill.addRoundedRect(r, RADIUS["m"], RADIUS["m"])
         if selected:
             p.fillPath(pill, QColor(C.RAISED))
-            bar = QRectF(r.left(), r.center().y() - 9, 3, 18)
+            bar = QRectF(r.left(), r.center().y() - 10, 3, 20)
             p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor(C.CYAN))
+            p.setBrush(QColor(C.PINK))
             p.drawRoundedRect(bar, 1.5, 1.5)
         elif hover:
-            bg = QColor(C.RAISED)
-            bg.setAlphaF(0.55)
-            p.fillPath(pill, bg)
+            p.fillPath(pill, qcolor(C.PINK, 0.13))  # üzerine gelme: az opak pembe
         if focus:
             p.setBrush(Qt.BrushStyle.NoBrush)
             p.setPen(QPen(QColor(C.CYAN), 1.5))
@@ -415,8 +418,7 @@ class _RowButton(QAbstractButton):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
         if hover:
-            bg = QColor(C.RAISED)
-            bg.setAlphaF(1.0 if self.isDown() else 0.55)
+            bg = qcolor(C.PINK, 0.22 if self.isDown() else 0.13)  # üzerine gelme: az opak pembe
             path = QPainterPath()
             path.addRoundedRect(r, RADIUS["m"], RADIUS["m"])
             p.fillPath(path, bg)
@@ -509,6 +511,38 @@ class _CheckRow(_RowButton):
 
     def _hover_changed(self, hover: bool) -> None:
         self.tx.setStyleSheet(_qss_font(F.DISPLAY, 13, C.TEXT if hover and not self._checking else C.TEXT_2))
+
+
+class _WindowControls(QWidget):
+    """Tam ekranda sağ üstte pencere düğmeleri (başlık çubuğu görünmez): pencerede göster, küçült, kapat."""
+
+    def __init__(self, win: "MainWindow", parent: QWidget):
+        super().__init__(parent)
+        self.setObjectName("winControls")
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(SPACE["xs"])
+        self.buttons: dict[str, QPushButton] = {}
+        for key, name, tip, fn in (("window", "app-window", "Pencerede göster (F11)", win.toggle_fullscreen),
+                                   ("minimize", "minus", "Küçült", win.showMinimized),
+                                   ("close", "x", "Kapat", win.close)):
+            b = QPushButton()
+            b.setObjectName("winctl")
+            b.setIcon(icon(name, C.TEXT_2))
+            b.setIconSize(QSize(18, 18))
+            b.setToolTip(tip)
+            b.setAccessibleName(tip)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+            b.clicked.connect(fn)
+            h.addWidget(b)
+            self.buttons[key] = b
+        self.setStyleSheet(
+            "QPushButton#winctl { background: transparent; border: 1px solid transparent; border-radius: 8px;"
+            " min-width: 40px; max-width: 40px; min-height: 34px; max-height: 34px; padding: 0; }"
+            f"QPushButton#winctl:hover {{ background: {C.PINK_SOFT}; }}"
+            f"QPushButton#winctl:pressed {{ background: {C.PRESSED}; }}")
+        self.adjustSize()
 
 
 class _KickRow(_RowButton):
@@ -674,6 +708,10 @@ class MainWindow(QMainWindow):
         h.addWidget(side)
         h.addWidget(self.stack, 1)
         self.setCentralWidget(central)
+        # tam ekranda sağ üstte pencere düğmeleri (bkz. _sync_window_controls); F11 tam ekranı açar / kapatır
+        self._win_controls = _WindowControls(self, central)
+        self._win_controls.hide()
+        QShortcut(QKeySequence(Qt.Key.Key_F11), self, activated=self.toggle_fullscreen)
         self._toasts = ToastHost(self)
 
         ctx.pipeline.error.connect(self._show_error)
@@ -696,7 +734,7 @@ class MainWindow(QMainWindow):
         self._build_tray()
         if ctx.server_error:
             QMessageBox.warning(self, APP_NAME, ctx.server_error)
-        # ilk açılış: tanıtım turu (tur, ctx.s.tour_seen'e kendisi bakar)
+        # açılış işleri (ilk açılış işareti, yapay zekâ daveti, güncelleme bildirimi); kurulumu Başla sayfası anlatır
         QTimer.singleShot(700, self._maybe_tour)
 
     # --- gezinme -------------------------------------------------------------
@@ -710,6 +748,16 @@ class MainWindow(QMainWindow):
                 self.nav.setCurrentRow(i)
                 return
 
+    # --- kurulum sihirbazı (Başla) -------------------------------------------------------------
+    def start_guide(self, key: str) -> None:
+        """Başla'daki adım: kurulum sihirbazı o adımın sayfasını açar, ilgili denetimi ekranda vurgular ve ne
+        yapılacağını anlatır; adımlar sırayla ilerler (bkz. tour.start_setup_wizard)."""
+        if key not in GUIDE:
+            return
+        from altyazitr.gui import tour
+
+        tour.start_setup_wizard(self, key)
+
     def _open_translate(self) -> None:
         """Yapay zekâ durum satırı: ilerleme, İptal ve hatanın ayrıntısı Çeviri sayfasında."""
         self.goto("translate")
@@ -721,6 +769,54 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, e) -> None:  # noqa: N802
         super().resizeEvent(e)
         self._apply_compact(self.width() < COMPACT_BELOW)
+        self._sync_window_controls()
+
+    # --- tam ekran -------------------------------------------------------------------------
+    def show_initial(self) -> None:
+        """Açılış: varsayılan olarak ekranın ortasında normal pencere (WINDOW_DEFAULT; kullanıcı büyütüp
+        küçültebilir); kullanıcı tam ekranı seçtiyse (F11) tam ekran."""
+        if bool(getattr(self.ctx.s, "open_fullscreen", False)):
+            self.showFullScreen()
+        else:
+            scr = QGuiApplication.primaryScreen()
+            if scr is not None:
+                area = scr.availableGeometry()
+                self.move(area.center().x() - self.width() // 2, area.center().y() - self.height() // 2)
+            self.show()
+        self._sync_window_controls()
+
+    def toggle_fullscreen(self) -> None:
+        """F11 / sağ üstteki düğme: tam ekran ile pencere arasında geçer; seçim saklanır."""
+        full = not self.isFullScreen()
+        if full:
+            self.showFullScreen()
+        else:
+            self.showNormal()
+        self.ctx.s.open_fullscreen = full
+        save = getattr(self.ctx, "save_later", None)
+        if callable(save):
+            save()
+        self._sync_window_controls()
+
+    def changeEvent(self, e) -> None:  # noqa: N802
+        super().changeEvent(e)
+        from PySide6.QtCore import QEvent
+
+        if e.type() == QEvent.Type.WindowStateChange:
+            self._sync_window_controls()
+
+    def _sync_window_controls(self) -> None:
+        """Pencere düğmeleri yalnız tam ekranda, içeriğin sağ üst köşesinde."""
+        ctl = getattr(self, "_win_controls", None)
+        if ctl is None:
+            return
+        full = self.isFullScreen()
+        ctl.setVisible(full)
+        if full:
+            par = ctl.parentWidget()
+            ctl.adjustSize()
+            ctl.move(par.width() - ctl.width() - SPACE["m"], SPACE["m"])
+            ctl.raise_()
 
     def _apply_compact(self, compact: bool) -> None:
         if compact == self._compact:
@@ -1037,15 +1133,9 @@ class MainWindow(QMainWindow):
             self.tray.showMessage(APP_NAME, msg[:250], QSystemTrayIcon.MessageIcon.Warning, 8000)
 
     def _maybe_tour(self) -> None:
-        """Açılıştan kısa süre sonra: tur daha önce görülmediyse başlatır. Tur hatası açılışı asla bozmaz. Ardından
-        (tur yoksa) güncelleyen kullanıcıya yapay zekâ daveti."""
-        try:
-            if self.isVisible():  # tepsiden başlatıldıysa tur bir sonraki görünür açılışa kalır
-                from altyazitr.gui import tour
-
-                tour.maybe_start_tour(self)
-        except Exception:
-            log.exception("Tanıtım turu başlatılamadı")
+        """Açılıştan kısa süre sonra: ilk açılış işareti, ardından güncelleyen kullanıcıya yapay zekâ daveti.
+        Tanıtım turu kendiliğinden açılmaz: yeni kullanıcıyı Başla sayfasının kurulum adımları (sihirbaz) karşılar;
+        tur Başla > Yardım'dan ve Ayarlar'dan açılır."""
         self._first_run()
         self._startup_done = True
         self._maybe_invite()
@@ -1105,7 +1195,10 @@ class MainWindow(QMainWindow):
         self.tray.setToolTip(f"{APP_NAME} {'çalışıyor' if running else 'durduruldu'}")
 
     def _restore(self) -> None:
-        self.showNormal()
+        if bool(getattr(self.ctx.s, "open_fullscreen", False)):
+            self.showFullScreen()
+        else:
+            self.showNormal()
         self.raise_()
         self.activateWindow()
 

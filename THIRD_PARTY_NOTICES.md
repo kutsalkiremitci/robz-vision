@@ -67,7 +67,12 @@ rozeti; logo Simple Icons'tan) yalnız Robz so good'un Discord sunucusuna bağla
 (`docs/gorseller/gta6_*`, `site/img/gta6_*`, `site/img/og.jpg`) zemini Grand Theft Auto VI'nın resmî tanıtım
 görselleridir. Oyun görseli © Rockstar Games / Take-Two Interactive. Robz Vision bağımsız bir hayran projesidir,
 Rockstar Games ile bağlantılı değildir ve onlarca desteklenmez. Görseller yalnız uygulamanın ne yaptığını
-göstermek için kullanılır; Robz Vision'ın MIT lisansının kapsamında değildir ve programla birlikte dağıtılmaz.
+göstermek için kullanılır ve Robz Vision'ın MIT lisansının kapsamında değildir.
 Üzerlerindeki İngilizce altyazılar ve Türkçe çeviriler projeye özgü örneklerdir, oyunun metninden alıntı
-değildir; Rockstar Games'in logoları kullanılmaz. Kaynak görseller depoda yoktur; `tools/readme_gorselleri.py`
-onları yalnız `--kaynak` ile verilen klasörden okur.
+değildir; Rockstar Games'in logoları kullanılmaz. Tam boy kaynak görseller depoda yoktur;
+`tools/readme_gorselleri.py` onları yalnız `--kaynak` ile verilen klasörden okur.
+
+Uygulamadaki *Görünüm* sayfasının önizleme zemini (`altyazitr/data/sahne_gunduz.jpg`, `sahne_gece.jpg`) de
+aynı resmî tanıtım görsellerinden ikisinin 1280×720'ye küçültülmüş kopyasıdır ve programla birlikte gelir;
+Türkçe altyazının oyun üstünde nasıl görüneceğini göstermek için kullanılır. Oyun görseli © Rockstar Games /
+Take-Two Interactive; MIT lisansının kapsamında değildir. Dosyalar silinirse önizleme çizilmiş bir sahneye döner.

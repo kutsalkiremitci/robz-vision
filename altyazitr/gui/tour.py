@@ -15,6 +15,10 @@ Nasıl çalışır
   deliksiz gösterilir. Turdaki her hata kaydedilir ve tur kapanır; uygulama çökmez.
 * Klavye: Sağ ok / Enter ileri, Sol ok geri, Esc "Daha sonra". Odak balonun düğmelerinde kalır.
 * "Bitir" turu görüldü sayar (`tour_seen`); "Daha sonra" saymaz, tur bir sonraki açılışta yine gelir.
+
+Kurulum sihirbazı (`start_setup_wizard`, Başla sayfasındaki adımlar) aynı katmanı kullanır: her adımın sayfası
+açılır, ilgili denetim vurgulanır, balonun üstünde "Adım 1 / 4 · Oyunu göster" yazar. Bir adımın son parçasından
+ileri gidilince adım onaylanır (`guide_done`); vurgulanan denetim kullanılabilir (seçim, bölge çizme).
 """
 
 from __future__ import annotations
@@ -30,6 +34,7 @@ from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QS
 
 from altyazitr import APP_NAME
 from altyazitr.gui.tokens import RADIUS, SPACE, C, F, motion_ms, qcolor
+from altyazitr.gui.tv_home import GUIDE, GUIDE_ORDER
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +48,7 @@ GAP = SPACE["s"]          # delik kenarı → ok ucu
 ARROW_H = 9               # ok derinliği
 ARROW_W = 18              # ok tabanı
 BUBBLE_W = 360            # balon genişliği (dar pencerede küçülür)
+WIZARD_W = 400            # kurulum sihirbazının balonu (üç düğme ve adım başlığı sığsın)
 PAD_X, PAD_Y = SPACE["l"] + SPACE["xs"], SPACE["l"]   # balon iç boşluğu: 20 / 16
 TITLE_PX = 17
 TITLE_LIFT = 3            # Bahnschrift'te Ö/Ü/İ/Ğ noktaları yazı yüksekliğini 2–3 px aşar; kırpılmasın
@@ -69,6 +75,7 @@ class Step:
     page: str | None = None
     prefer: tuple[str, ...] = _DEFAULT_PREFER
     pad: int = HOLE_PAD
+    group: str = ""   # kurulum sihirbazında adımın anahtarı (tv_home.GUIDE_ORDER); boş: grup dışı
 
     def text(self, win) -> str:
         if callable(self.body):
@@ -89,8 +96,12 @@ def _dative(name: str) -> str:
     return f"{name}'{suffix}"
 
 
+def _page(page: str, attr: str) -> Resolver:
+    return lambda w: getattr(w.pages[page], attr)
+
+
 def _home(attr: str) -> Resolver:
-    return lambda w: getattr(w.pages["home"], attr)
+    return _page("home", attr)
 
 
 def _section_of(widget) -> QWidget | None:
@@ -105,18 +116,22 @@ def _section_of(widget) -> QWidget | None:
     return None
 
 
-def _home_section(attr: str) -> Resolver:
-    """Ana sayfadaki öğenin bölümü: görünen içeriği (başlık + denetimler); üstteki ayırıcı çizgi ve
-    bölüm boşluğu deliğin dışında kalır."""
+def _page_section(page: str, attr: str) -> Resolver:
+    """Sayfadaki öğenin bölümü: görünen içeriği (başlık + denetimler); üstteki ayırıcı çizgi ve bölüm boşluğu
+    deliğin dışında kalır."""
 
     def get(w):
-        card = _section_of(getattr(w.pages["home"], attr))
+        card = _section_of(getattr(w.pages[page], attr))
         if card is None:
             return None
         r = card.childrenRect()
         return card, (r if r.isValid() and not r.isEmpty() else card.rect())
 
     return get
+
+
+def _home_section(attr: str) -> Resolver:
+    return _page_section("home", attr)
 
 
 def _nav_item(title: str, index: int) -> Resolver:
@@ -254,7 +269,14 @@ class _Bubble(QWidget):
             f"QLabel#tourBody {{ font-family: '{F.BODY}', '{F.BODY_FALLBACK}'; font-size: {F.BODY_SIZE}px;"
             f" color: {C.TEXT_2}; background: transparent; }}"
             f"QLabel#tourCount {{ font-family: '{F.DISPLAY}', '{F.BODY_FALLBACK}'; font-size: {F.BODY_SIZE}px;"
-            f" color: {C.TEXT_3}; background: transparent; }}")
+            f" color: {C.TEXT_3}; background: transparent; }}"
+            f"QLabel#tourKicker {{ font-family: '{F.DISPLAY_SEMIBOLD}', '{F.DISPLAY}', '{F.BODY_FALLBACK}';"
+            f" font-size: 13px; color: {C.PINK}; background: transparent; }}")
+
+        self.kicker = QLabel()   # kurulum sihirbazında "Adım 1 / 4 · Oyunu göster"
+        self.kicker.setObjectName("tourKicker")
+        self.kicker.setContentsMargins(0, TITLE_LIFT, 0, SPACE["xs"])
+        self.kicker.hide()
 
         self.title = QLabel()
         self.title.setObjectName("tourTitle")
@@ -286,6 +308,7 @@ class _Bubble(QWidget):
 
         v = QVBoxLayout(self)
         v.setSpacing(0)
+        v.addWidget(self.kicker)
         v.addWidget(self.title)
         v.addSpacing(SPACE["s"] - 2)
         v.addWidget(self.body)
@@ -302,18 +325,28 @@ class _Bubble(QWidget):
         self.set_side(None)
 
     # --- içerik --------------------------------------------------------------------------------
-    def set_step(self, title: str, body: str, num: int, total: int) -> None:
+    def set_step(self, title: str, body: str, num: int, total: int, *, kicker: str = "", count: str | None = None,
+                 next_text: str = "", next_tip: str = "") -> None:
+        """kicker: başlığın üstündeki pembe satır; count: sayacın metni (None: "num/total", boş: gizli);
+        next_text / next_tip: İleri düğmesinin yazısı ve ipucu (boş: İleri / Bitir)."""
+        self.kicker.setText(kicker)
+        self.kicker.setVisible(bool(kicker))
         self.title.setText(title)
         self.body.setText(body)
         self.body.setVisible(bool(body))
-        self.count.setText(f"<span style=\"color: {C.TEXT_2};\">{num}</span>/{total}")
-        self.count.setAccessibleName(f"Adım {num} / {total}")
+        if count is None:
+            self.count.setText(f"<span style=\"color: {C.TEXT_2};\">{num}</span>/{total}")
+            self.count.setAccessibleName(f"Adım {num} / {total}")
+        else:
+            self.count.setText(count)
+            self.count.setAccessibleName(count)
+        self.count.setVisible(count is None or bool(count))
         self.back_btn.setVisible(num > 1)
         last = num >= total
         self.later_btn.setVisible(not last)   # son adımda ertelenecek bir şey kalmaz
-        self.next_btn.setText("Bitir" if last else "İleri")
-        self.next_btn.setToolTip("Turu bitirir (Enter)" if last else "Sonraki adım (Sağ ok veya Enter)")
-        self.setAccessibleName(f"Tanıtım turu: {title}")
+        self.next_btn.setText(next_text or ("Bitir" if last else "İleri"))
+        self.next_btn.setToolTip(next_tip or ("Turu bitirir (Enter)" if last else "Sonraki adım (Sağ ok veya Enter)"))
+        self.setAccessibleName(f"{kicker}: {title}" if kicker else f"Tanıtım turu: {title}")
         self.setAccessibleDescription(body)
         if self.focusWidget() is not None and not self.focusWidget().isVisibleTo(self):
             self.next_btn.setFocus(Qt.FocusReason.OtherFocusReason)
@@ -333,7 +366,7 @@ class _Bubble(QWidget):
 
     def body_height(self, width: int) -> int:
         """Oksuz balonun verilen genişlikteki yüksekliği."""
-        for w in (self, self.title, self.body, self.count, *self.buttons):
+        for w in (self, self.kicker, self.title, self.body, self.count, *self.buttons):
             w.ensurePolished()
         side = self.side
         self.set_side(None)
@@ -422,6 +455,7 @@ class _TourOverlay(QWidget):
         self.win = win
         self.steps = tuple(steps)
         self.index = 0
+        self.bubble_w = BUBBLE_W
         self._closed = False
         self._gen = 0
         self._hole: QRectF | None = None          # şu an çizilen delik
@@ -468,7 +502,7 @@ class _TourOverlay(QWidget):
         return self._closed
 
     @_guard
-    def start(self) -> None:
+    def start(self, index: int = 0) -> None:
         self._prev_focus = QApplication.focusWidget()
         self.win.installEventFilter(self)
         app = QApplication.instance()
@@ -479,7 +513,7 @@ class _TourOverlay(QWidget):
         self.raise_()
         self.bubble.show()
         self.bubble.raise_()
-        self._go(0, animate=False)
+        self._go(max(0, min(index, self.count - 1)), animate=False)
         self.bubble.next_btn.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def next(self, *_args) -> None:
@@ -510,8 +544,7 @@ class _TourOverlay(QWidget):
         self._closed = True
         if finished:
             try:
-                self.win.ctx.s.tour_seen = True
-                self.win.ctx.save_later()
+                self._mark_finished()
             except Exception:
                 log.exception("Tur durumu kaydedilemedi")
         for fn in (self._anim.stop, self._relayout.stop, self._unbind_target):
@@ -546,13 +579,23 @@ class _TourOverlay(QWidget):
             except Exception:
                 pass
 
+    def _mark_finished(self) -> None:
+        """Bitir: tanıtım turu görüldü sayılır."""
+        self.win.ctx.s.tour_seen = True
+        self.win.ctx.save_later()
+
+    def _texts(self, index: int) -> dict:
+        """Balonun bu adımdaki içeriği (Bubble.set_step argümanları)."""
+        step = self.steps[index]
+        return {"title": step.title, "body": step.text(self.win), "num": index + 1, "total": self.count}
+
     # --- adım geçişi -------------------------------------------------------------------------
     def _go(self, index: int, animate: bool) -> None:
         self.index = index
         self._gen += 1
         gen = self._gen
         step = self.steps[index]
-        self.bubble.set_step(step.title, step.text(self.win), index + 1, self.count)
+        self.bubble.set_step(**self._texts(index))
         if step.page:
             try:
                 self.win.goto(step.page)
@@ -765,7 +808,7 @@ class _TourOverlay(QWidget):
     def _bubble_rect(self, hole: QRectF | None, prefer: tuple[str, ...]) -> tuple[str | None, QRectF]:
         """Balonun yeri: tercih sırasıyla hedefin altı/üstü/sağı/solu; hiçbiri sığmazsa en az taşan yer."""
         area = QRectF(self.rect()).adjusted(EDGE, EDGE, -EDGE, -EDGE)
-        cw = float(min(BUBBLE_W, max(200.0, area.width())))
+        cw = float(min(self.bubble_w, max(200.0, area.width())))
         bh = float(self.bubble.body_height(round(cw)))
         if hole is None:
             c = area.center()
@@ -939,6 +982,132 @@ class _TourOverlay(QWidget):
                 pass
 
 
+# --- kurulum sihirbazı ----------------------------------------------------------------------------
+def _capture_mode(win) -> str:
+    try:
+        return str(win.ctx.s.capture.mode or "screen")
+    except Exception:
+        return "screen"
+
+
+def _view_body(win) -> str:
+    if _capture_mode(win) == "window":
+        return ("Listeden oyunun penceresini seçin (ör. Robz Play). Pencere seçilince önizlemede oyunun görüntüsü "
+                "belirir.")
+    return "Önizlemede ekranınızın görüntüsü belirir. Oyun açıkken burada görünüyorsa bu adım tamam."
+
+
+def _done_body(win) -> str:
+    hk = _toggle_hotkey(win)
+    tail = f" Oyundayken {hk} ile de başlatıp durdurabilirsiniz." if hk else ""
+    return ("Oyunu açın ve Çeviriyi başlat'a basın." + tail
+            + " Yayında da göstermek isterseniz 5. adımdan OBS'e ekleyin.")
+
+
+WIZARD_STEPS: tuple[Step, ...] = (
+    Step("w-mode", "Oyun nerede görünüyor?",
+         "Oyunu ekranda oynuyorsanız Ekran'ı seçin. Robz Play gibi bir uygulamanın penceresinde oynuyorsanız "
+         "Uygulama penceresi'ni seçin.",
+         (_home("mode"),), page="home", group="source"),
+    Step("w-view", "Oyunun görüntüsü", _view_body,
+         (_home("win_row"), _home("source")), page="home", group="source"),
+    Step("w-region", "Altyazının yerini işaretleyin",
+         "Çerçeveyi oyunun altyazısının çıktığı yere taşıyın, köşelerinden boyutlandırın. Çerçeve altyazıdan biraz "
+         "geniş olsun; iki satırlık altyazı da sığsın.",
+         (_home("source"),), page="home", group="region"),
+    Step("w-region-full", "İsterseniz tam ekranda",
+         "Tam ekranda seç ile bölgeyi ekranın üstünde, gerçek boyutunda çizebilirsiniz. Gerek yoksa Sonraki "
+         "adım'a basın.",
+         (_home("b_region"),), page="home", group="region"),
+    Step("w-engine", "Çeviri motorunu seçin",
+         "Hızlı çeviri kurulum istemez, hemen çalışır. Daha doğal çeviri için Önerilen kurulum yerel yapay "
+         "zekâyı arka planda kurar; bunu sonra da yapabilirsiniz.",
+         (_page_section("translate", "engine"), _page("translate", "engine")), page="translate",
+         group="translate"),
+    Step("w-side", "Ekranımda ve Yayınımda",
+         "Ekranınızdaki altyazı ile yayındaki altyazı ayrı ayarlanır. Hangisini düzenleyeceğinizi buradan seçin.",
+         (_page("style", "side"),), page="style", group="style"),
+    Step("w-cover", "Yerleşim",
+         "Açıkken Türkçe yazı oyunun İngilizce altyazısının üstüne oturur ve onu kapatır. Kapalıyken ayrı bir "
+         "altyazı kutusu çıkar.",
+         (_page_section("style", "cover"), _page("style", "cover")), page="style", group="style"),
+    Step("w-test", "Deneyin",
+         "Test et ile ekranınızda 5 saniyelik örnek altyazı görün. Yazı tipini ve boyutu bu sayfadan "
+         "değiştirebilirsiniz.",
+         (_page("style", "_test_btn"),), page="style", group="style"),
+    Step("w-done", "Hazırsınız", _done_body, (_page("start", "start"),), page="start"),
+)
+
+
+class _SetupWizard(_TourOverlay):
+    """Kurulum sihirbazı (Başla → adım): adımın sayfasını açar, ilgili denetimi vurgular ve ne yapılacağını
+    balonda anlatır. Adımın son parçasından ileri gidilince adım onaylanır (`guide_done`, kaydedilir) ve
+    sıradaki adıma geçilir; "Bitir" Başla sayfasında kalır. "Daha sonra" (Esc) kapatır: onaylanan adımlar kalır,
+    Başla kaldığı yerden devam eder."""
+
+    def __init__(self, win, steps: tuple[Step, ...] = WIZARD_STEPS):
+        super().__init__(win, steps)
+        self.bubble_w = WIZARD_W
+        self.setAccessibleName("Kurulum sihirbazı")
+        self.bubble.later_btn.setToolTip("Sihirbazı kapatır; Başla sayfasından kaldığınız yerden devam edersiniz "
+                                         "(Esc)")
+
+    def _texts(self, index: int) -> dict:
+        step = self.steps[index]
+        nxt = self.steps[index + 1] if index + 1 < self.count else None
+        group = step.group
+        if group:
+            kicker = f"Adım {GUIDE_ORDER.index(group) + 1} / {len(GUIDE_ORDER)} · {GUIDE[group][1]}"
+            parts = [s for s in self.steps if s.group == group]
+            count = f"{parts.index(step) + 1}/{len(parts)}" if len(parts) > 1 else ""
+        else:
+            kicker, count = "Kurulum tamam", ""
+        if nxt is None:
+            next_text, next_tip = "Bitir", "Sihirbazı kapatır (Enter)"
+        elif group and nxt.group != group:
+            next_text, next_tip = "Sonraki adım", "Bu adımı tamamlar, sıradakine geçer (Sağ ok veya Enter)"
+        else:
+            next_text, next_tip = "İleri", "Sonraki açıklama (Sağ ok veya Enter)"
+        return {"title": step.title, "body": step.text(self.win), "num": index + 1, "total": self.count,
+                "kicker": kicker, "count": count, "next_text": next_text, "next_tip": next_tip}
+
+    def next(self, *_args) -> None:
+        step = self.steps[self.index]
+        nxt = self.steps[self.index + 1] if self.index + 1 < self.count else None
+        if step.group and (nxt is None or nxt.group != step.group):
+            self._confirm(step.group)
+        super().next()
+
+    def later(self, *_args) -> None:
+        super().later()
+        self._refresh_start()
+
+    def _confirm(self, key: str) -> None:
+        """Adım tamam: Başla'da onaylı görünür (ayara yazılır)."""
+        try:
+            s = self.win.ctx.s
+            done = list(getattr(s, "guide_done", []) or [])
+            if key not in done:
+                done.append(key)
+                s.guide_done = done
+                self.win.ctx.save_later()
+        except Exception:
+            log.exception("Kurulum adımı kaydedilemedi")
+        self._refresh_start()
+
+    def _mark_finished(self) -> None:
+        self._refresh_start()
+
+    def _refresh_start(self) -> None:
+        try:
+            page = getattr(self.win, "pages", {}).get("start")
+            refresh = getattr(page, "refresh", None)
+            if callable(refresh):
+                refresh()
+        except Exception:
+            log.debug("Başla sayfası yenilenemedi", exc_info=True)
+
+
 # --- herkese açık API ----------------------------------------------------------------------------
 def active_tour(win) -> _TourOverlay | None:
     """Pencerede açık olan tur (yoksa None)."""
@@ -959,6 +1128,24 @@ def start_tour(win) -> None:
         tour.start()
     except Exception:
         log.exception("Tanıtım turu başlatılamadı")
+        t = getattr(win, _ATTR, None)
+        if t is not None and _alive(t):
+            t._fail()
+
+
+def start_setup_wizard(win, key: str = "") -> None:
+    """Kurulum sihirbazını `key` adımının ilk parçasından başlatır (bilinmiyorsa baştan); açık bir tur ya da
+    sihirbaz varsa kapanır. Hata uygulamayı bozmaz."""
+    try:
+        old = active_tour(win)
+        if old is not None:
+            old.close_tour(finished=False)
+        wiz = _SetupWizard(win)
+        setattr(win, _ATTR, wiz)
+        first = next((i for i, s in enumerate(wiz.steps) if s.group == key), 0)
+        wiz.start(first)
+    except Exception:
+        log.exception("Kurulum sihirbazı başlatılamadı")
         t = getattr(win, _ATTR, None)
         if t is not None and _alive(t):
             t._fail()

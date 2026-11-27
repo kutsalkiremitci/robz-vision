@@ -264,3 +264,18 @@ def test_varsayilan_altyazi_bolgesi(qapp):
     s3 = Settings()
     s3.capture.mode = "window"
     assert not apply_default_screen_region(s3, screen(1920, 1080, 1.0)) and s3.capture.rect == []
+
+
+def test_buyuk_pencerede_yukseklik_siniri(view):
+    """Büyük pencerede önizleme sınırlı yükseklikte kalır; görüntü oranını koruyarak ortalanır, bölge çizimi ve
+    yakalanacak karenin genişliği görüntünün kendisine göredir."""
+    v, _got = view
+    assert v.heightForWidth(1600) == 900
+    v.set_height_cap(500)
+    assert v.heightForWidth(1600) == 500 and v.heightForWidth(640) == 360  # dar alanda sınır devreye girmez
+    v.resize(1600, 500)
+    ir = v._img_rect()
+    assert round(ir.width()) == v.display_width() == round(500 * 1920 / 1080)
+    assert ir.left() == pytest.approx((1600 - ir.width()) / 2)
+    v.set_height_cap(0)
+    assert v.heightForWidth(1600) == 900
