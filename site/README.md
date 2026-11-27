@@ -12,7 +12,7 @@ Sayfa yalnızca GitHub API'sine istek atar (son sürüm ve dosya boyutu için). 
 
 Dış bağlantılar (başka alan adına giden her `<a>`) yeni sekmede açılır: `target="_blank" rel="noopener noreferrer"`. Yeni bağlantı eklerken bunu yazın; betik de sayfa açılınca ve tıklanınca denetler. Sayfa içi çapalar ve sitedeki dosyalar hariçtir.
 
-Uygulama ekran görüntüleri (`img/ana_pencere.webp`, `gorunum.webp`, `ceviri.webp`, `obs_yardim.webp`) `docs/gorseller/` altındaki PNG'lerden üretilir: WebP, `method=6`; ilk üçü kalite 82, `obs_yardim` kalite 88. Görsel değişince `<img>`'nin `width`/`height` değerlerini yeni boyuta göre güncelleyin.
+Uygulama ekran görüntüleri (`img/basla.webp`, `sihirbaz.webp`, `ana_pencere.webp`, `gorunum.webp`, `ceviri.webp`, `obs_yardim.webp`) `docs/gorseller/` altındaki PNG'lerden üretilir: WebP, `method=6`; `obs_yardim` kalite 88, diğerleri 82. Görsel değişince `<img>`'nin `width`/`height` değerlerini yeni boyuta göre güncelleyin.
 
 ## Kurulum sihirbazı
 
