@@ -14,7 +14,7 @@
 
 #define AppName "Robz Vision"
 #ifndef AppVersion
-  #define AppVersion "1.6.1"
+  #define AppVersion "1.7.0"
 #endif
 #define AppExe "RobzVision.exe"
 #define AppPublisher "Robz Vision"

@@ -6,6 +6,39 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
 
 ## [Yayımlanmadı]
 
+## [1.7.0] - 2026-11-27
+
+### Eklendi
+
+- **Başla sayfası.** Uygulama televizyon uygulaması gibi bir açılış ekranıyla açılır: büyük *Çeviriyi başlat* ve
+  *Test et* düğmeleri, canlı durum (çalışıyor mu, OBS bağlı mı) ve yardım karoları (tanıtım turu, kullanım
+  kılavuzu, Discord desteği, Kick). Ok tuşlarıyla gezilir, Enter açar.
+- **Kurulum sihirbazı.** Başla'daki *Kurulum adımları* numaralı bir çizgide durur: 1 Oyunu göster, 2 Altyazıyı
+  işaretle, 3 Çeviriyi seç, 4 Görünümü ayarla, 5 Yayına ekle (isteğe bağlı). Tamamlanan adım pembe ve onaylı,
+  sıradaki adım pembe halkalıdır; altındaki kutu sıradaki adımı anlatır. *Kuruluma başla* (ya da çizgideki bir
+  adım) sihirbazı açar: adımın sayfası açılır, ilgili düğme ekranda vurgulanır ve yanındaki balon ne yapılacağını
+  anlatır ("Adım 1 / 4 · Oyunu göster"). Vurgulanan yer kullanılabilir (ekran ya da pencere seçmek, bölgeyi
+  çizmek). *Sonraki adım* adımı tamamlar; *Daha sonra* kapatır, Başla kaldığı yerden devam eder.
+- **Tam ekran:** F11 açar ve kapatır; tam ekranda sağ üstte pencere düğmeleri (pencerede göster, küçült, kapat)
+  görünür. Seçim hatırlanır: tam ekranda bırakılan uygulama bir sonraki açılışta da tam ekran açılır.
+
+### Değişti
+
+- **Yeni görünüm ("Gölge").** Daha koyu zemin, Vice City pembesi vurgu rengi, daha küçük ve sade düğmeler;
+  düğmelerin ve menülerin üzerine gelince az opak pembe vurgu. Sayfalara kısa açıklama satırı eklendi.
+- **"Ana sayfa" artık "Canlı".** Canlı sayfası geniş pencerede de tek parça kayar: fare *Son çeviriler*
+  listesinin üstündeyken liste sonuna gelince sayfa kayar. Büyük pencerede *Çevrilecek bölge* önizlemesi en çok
+  pencere yüksekliğinin yarısı kadar büyür ve ortada durur.
+- **Tekerlek seçimleri değiştirmez.** Sayfayı kaydırırken fare bir açılır listenin, sayı kutusunun ya da
+  kaydırıcının üstünden geçerse değer değişmez, sayfa kayar. Sayı kutusu ve kaydırıcı tıklanıp seçilince
+  tekerlekle değişir.
+- Uygulama açılışta ekranın ortasında **1280×800** boyutunda açılır (küçük ekranda yine kullanılabilir alanın
+  %92'sini geçmez).
+- *Görünüm* sayfasının önizlemesinde çizilmiş sahne yerine Grand Theft Auto VI'nın resmî tanıtım görselinden bir
+  sahne (aydınlık ve karanlık) görünür.
+- Tanıtım turu ilk açılışta kendiliğinden başlamaz; yeni kullanıcıyı Başla sayfası karşılar. Tur Başla'daki
+  *Yardım*'dan ve *Ayarlar*'dan açılır.
+
 ## [1.6.1] - 2026-11-24
 
 ### Değişti
@@ -424,7 +457,8 @@ Bu projedeki önemli değişiklikler bu dosyada tutulur. Biçim
   Kurulum dosyası ARM işlemcili Windows 11'e de kurulur (x64 öykünmesi). Etiket gönderildiğinde GitHub
   Actions ile derleme ve Releases'e yükleme.
 
-[Yayımlanmadı]: ../../compare/v1.6.1...HEAD
+[Yayımlanmadı]: ../../compare/v1.7.0...HEAD
+[1.7.0]: ../../releases/tag/v1.7.0
 [1.6.1]: ../../releases/tag/v1.6.1
 [1.6.0]: ../../releases/tag/v1.6.0
 [1.5.0]: ../../releases/tag/v1.5.0
